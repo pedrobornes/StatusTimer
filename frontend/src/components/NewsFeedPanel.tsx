@@ -21,18 +21,17 @@ export default function NewsFeedPanel({ news }: NewsFeedPanelProps) {
         </div>
         <div>
           <p className="text-xs uppercase tracking-[0.35em] text-fuchsia-300/70">
-            AI Feed
+            Live Feed
           </p>
           <h2 className="font-[family-name:var(--font-cinzel)] text-2xl text-white">
-            Gaming News
+            NEWS & PATCH NOTES
           </h2>
         </div>
       </div>
 
       {news.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-fuchsia-400/15 px-4 py-10 text-center text-sm text-violet-200/50">
-          No articles published yet. Run the Python news writer to populate this
-          feed.
+          [DECRYPTING] No new patches detected. Standby for updates...
         </p>
       ) : (
         <div className="space-y-4">

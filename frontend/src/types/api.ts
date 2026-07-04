@@ -21,6 +21,7 @@ export interface UpcomingRelease {
   gameName: string;
   releaseDate: string;
   hypeCount: number;
+  genre?: "FPS" | "RPG" | "Survival" | "Sports";
 }
 
 export interface CountdownParts {

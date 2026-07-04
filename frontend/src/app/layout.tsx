@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Cinzel, Inter } from "next/font/google";
 import Footer from "@/components/Footer";
+import Navigation from "@/components/Navigation";
 import "./globals.css";
 
 const cinzel = Cinzel({
@@ -32,6 +33,22 @@ export const metadata: Metadata = {
     "Discord status",
     "gaming news",
     "live server monitor",
+    "Fortnite status tracker",
+    "live countdowns",
+    "Valorant network status",
+    "multiplayer server monitor",
+    "upcoming game release dates",
+    "GTA 6 release date countdown",
+    "Silksong launcher",
+    "Fortnite server status",
+    "Valorant server status",
+    "League of Legends server status",
+    "Call of Duty server status",
+    "Apex Legends server status",
+    "Minecraft server status",
+    "Roblox server status",
+    "gaming platform monitor",
+    "live gaming telemetry",
   ],
   openGraph: {
     title: "StatusTimer | Live Gaming Server Status & AI News",
@@ -62,6 +79,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${cinzel.variable} ${inter.variable}`}>
       <body className="flex min-h-screen flex-col">
+        <Navigation />
         <main className="flex-1">{children}</main>
         <Footer />
       </body>

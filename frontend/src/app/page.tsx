@@ -15,7 +15,11 @@ export default async function HomePage() {
     ]);
 
     return (
-      <Dashboard statuses={statuses} news={news} releases={releases} />
+      <Dashboard
+        statuses={statuses.slice(0, 4)}
+        news={news.slice(0, 4)}
+        releases={releases.slice(0, 4)}
+      />
     );
   } catch (error) {
     const message =

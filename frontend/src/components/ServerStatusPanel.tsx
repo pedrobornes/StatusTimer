@@ -12,6 +12,7 @@ interface CategoryConfig {
   label: string;
   icon: LucideIcon;
   accentClass: string;
+  emptyMessage: string;
 }
 
 const CATEGORY_CONFIG: Record<ServiceCategory, CategoryConfig> = {
@@ -19,16 +20,19 @@ const CATEGORY_CONFIG: Record<ServiceCategory, CategoryConfig> = {
     label: "Gaming",
     icon: Gamepad2,
     accentClass: "text-violet-300 border-violet-400/30 bg-violet-500/10",
+    emptyMessage: "[SCANNING SERVERS] All game networks online.",
   },
   SOCIAL: {
     label: "Social",
     icon: Users,
     accentClass: "text-fuchsia-300 border-fuchsia-400/30 bg-fuchsia-500/10",
+    emptyMessage: "[PING IDLE] Checking community channels...",
   },
   STREAMING: {
     label: "Streaming",
     icon: MonitorPlay,
     accentClass: "text-cyan-300 border-cyan-400/30 bg-cyan-500/10",
+    emptyMessage: "[FEED BLOCKED] Waiting for next live broadcast.",
   },
 };
 
@@ -62,7 +66,7 @@ export default function ServerStatusPanel({ statuses }: ServerStatusPanelProps) 
             Live Monitor
           </p>
           <h2 className="font-[family-name:var(--font-cinzel)] text-2xl text-white">
-            Server Status
+            SERVER LIVE STATUS
           </h2>
         </div>
       </div>
@@ -83,7 +87,7 @@ export default function ServerStatusPanel({ statuses }: ServerStatusPanelProps) 
 
               {items.length === 0 ? (
                 <p className="rounded-2xl border border-dashed border-violet-400/15 px-4 py-6 text-sm text-violet-200/50">
-                  No services tracked in this category yet.
+                  {config.emptyMessage}
                 </p>
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
