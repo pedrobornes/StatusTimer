@@ -15,3 +15,17 @@ export interface GamingNews {
   gameTag: string;
   createdAt: string;
 }
+
+export interface UpcomingRelease {
+  id: number;
+  gameName: string;
+  releaseDate: string;
+  hypeCount: number;
+}
+
+export interface CountdownParts {
+  days: number;
+  hours: number;
+  minutes: number;
+  isReleased: boolean;
+}

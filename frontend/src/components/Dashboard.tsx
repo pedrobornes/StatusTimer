@@ -1,14 +1,16 @@
 import { Eye, Sparkles } from "lucide-react";
 import NewsFeedPanel from "@/components/NewsFeedPanel";
 import ServerStatusPanel from "@/components/ServerStatusPanel";
-import type { GamingNews, ServerStatus } from "@/types/api";
+import UpcomingReleasesPanel from "@/components/UpcomingReleasesPanel";
+import type { GamingNews, ServerStatus, UpcomingRelease } from "@/types/api";
 
 interface DashboardProps {
   statuses: ServerStatus[];
   news: GamingNews[];
+  releases: UpcomingRelease[];
 }
 
-export default function Dashboard({ statuses, news }: DashboardProps) {
+export default function Dashboard({ statuses, news, releases }: DashboardProps) {
   return (
     <div className="mystery-grid min-h-screen">
       <div className="mx-auto max-w-7xl px-4 py-8 md:px-8 md:py-12">
@@ -34,7 +36,10 @@ export default function Dashboard({ statuses, news }: DashboardProps) {
         </header>
 
         <div className="grid gap-8 xl:grid-cols-[1.6fr_1fr]">
-          <ServerStatusPanel statuses={statuses} />
+          <div className="space-y-8">
+            <ServerStatusPanel statuses={statuses} />
+            <UpcomingReleasesPanel releases={releases} />
+          </div>
           <NewsFeedPanel news={news} />
         </div>
       </div>
