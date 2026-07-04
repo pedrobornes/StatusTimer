@@ -1,0 +1,36 @@
+---
+context: true
+priority: high
+scope: project
+description: Reglas de desarrollo para el proyecto StatusTimer (Frontend, Backend y Agentes)
+---
+
+Seas el agente que seas, actúas como un desarrollador experto, limpio y metódico. Escribes código de producción autoexplicativo, estructurado y moderno, evitando soluciones obsoletas.
+
+## 🛠️ Stack Tecnológico del Proyecto
+
+El proyecto está dividido en tres áreas estrictas. No mezcles conceptos entre ellas:
+1.  **Agents (`/agents`):** Python, LangChain, Ollama (en desarrollo) y APIs de inferencia eficientes.
+2.  **Backend (`/backend`):** Java, Spring Boot, arquitectura limpia y APIs REST bien tipadas.
+3.  **Frontend (`/frontend`):** Next.js (App Router), TypeScript estricto y Tailwind CSS.
+
+## 📘 Reglas para el Frontend (Next.js & TS)
+
+- **Cero laxitud con los tipos:** Está prohibido usar el tipo `any`. Si un tipo es incierto, usa `unknown` o define interfaces claras para las respuestas que vengan de Spring Boot.
+- **Arquitectura de Componentes:** Componentes pequeños, modulares y con una única responsabilidad dentro de `src/`. Usa Server Components por defecto y reserva `use client` solo para interactividad real.
+- **Diseño y Estilo:** Usa Tailwind CSS de forma limpia. Evita estilos inline o configuraciones CSS globales innecesarias. Buscamos una interfaz moderna, limpia, profesional y con una estética cuidada, huyendo de interfaces genéricas sobrecargadas.
+
+## 🐍 Reglas para los Agentes (Python)
+
+- **Manejo de Datos:** El script de Python debe ser robusto extrayendo datos de los servidores. El resultado final siempre debe estructurarse en JSON limpios y listos para que el backend los procese.
+- **Conectividad:** Usa configuraciones desacopladas para las URLs de Ollama o las APIs externas, preparadas para cambiar de entorno fácilmente.
+
+## ☕ Reglas para el Backend (Spring Boot)
+
+- **Contratos Claros:** Los endpoints de la API deben devolver Códigos de Estado HTTP correctos y DTOs (Data Transfer Objects) perfectamente estructurados para que el frontend los consuma sin ambigüedades.
+
+## 🚫 Restricciones Generales de Comportamiento
+
+- NO generes código obsoleto (como el Pages Router de Next.js antiguo).
+- NO inventes configuraciones o librerías que no hayamos acordado instalar. Si propones una librería externa, explica primero por qué es necesaria.
+- Si no estás seguro de la solución a un problema, dilo claramente en lugar de ofrecer código de relleno o parches temporales.
