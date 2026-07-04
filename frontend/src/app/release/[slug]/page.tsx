@@ -106,10 +106,10 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
             <p className="mb-3 text-xs uppercase tracking-[0.35em] text-cyan-300/70">
               Release Profile
             </p>
-            <h1 className="font-[family-name:var(--font-cinzel)] text-3xl tracking-[0.06em] text-white md:text-5xl">
+            <h1 className="heading-display text-3xl uppercase text-white md:text-5xl">
               {release.gameName}
             </h1>
-            <p className="mt-3 inline-flex items-center gap-2 text-sm text-violet-200/60">
+            <p className="mt-3 inline-flex items-center gap-2 text-sm text-slate-300">
               <CalendarClock className="h-4 w-4 text-cyan-300/80" />
               <time dateTime={release.releaseDate}>
                 Launch target: {formatReleaseDate(release.releaseDate)}
@@ -137,14 +137,14 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
                 <p className="text-xs uppercase tracking-[0.35em] text-violet-300/70">
                   Server Status
                 </p>
-                <h2 className="font-[family-name:var(--font-cinzel)] text-2xl text-white">
+                <h2 className="heading-section text-2xl uppercase text-white">
                   LIVE SERVERS
                 </h2>
               </div>
             </div>
 
             {gameStatuses.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-violet-400/15 px-4 py-6 text-sm text-violet-200/50">
+              <p className="rounded-2xl border border-dashed border-violet-400/20 px-4 py-6 text-sm text-slate-400">
                 [SCANNING SERVERS] No server data linked to this game yet.
               </p>
             ) : (
@@ -168,7 +168,7 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
                         {status.isUp ? "Online" : "Offline"}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-violet-200/55">
+                    <div className="flex items-center gap-2 text-xs text-slate-400">
                       <Radio className="h-3.5 w-3.5" />
                       <time dateTime={status.lastChecked}>
                         Last checked {formatTimestamp(status.lastChecked)}
@@ -189,14 +189,14 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
                 <p className="text-xs uppercase tracking-[0.35em] text-fuchsia-300/70">
                   Patch Log
                 </p>
-                <h2 className="font-[family-name:var(--font-cinzel)] text-2xl text-white">
+                <h2 className="heading-section text-2xl uppercase text-white">
                   PATCH NOTES
                 </h2>
               </div>
             </div>
 
             {gameNews.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-fuchsia-400/15 px-4 py-10 text-center text-sm text-violet-200/50">
+              <p className="rounded-2xl border border-dashed border-fuchsia-400/20 px-4 py-10 text-center text-sm text-slate-400">
                 [DECRYPTING] No new patches detected for this game yet. Standby
                 for updates...
               </p>
@@ -213,12 +213,12 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
                     <h3 className="mb-3 text-lg font-semibold text-white">
                       {article.title}
                     </h3>
-                    <p className="text-sm leading-7 text-violet-100/75">
+                    <p className="text-sm leading-7 text-slate-300">
                       {article.content}
                     </p>
                     <time
                       dateTime={article.createdAt}
-                      className="mt-4 block text-xs text-violet-200/50"
+                      className="mt-4 block text-xs text-slate-400"
                     >
                       {formatTimestamp(article.createdAt)}
                     </time>
@@ -228,7 +228,7 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
             )}
           </section>
 
-          <p className="mt-8 text-center text-xs text-violet-200/45">
+          <p className="mt-8 text-center text-xs text-slate-400">
             <Link href="/" className="transition hover:text-violet-200/70">
               Return to monitor
             </Link>

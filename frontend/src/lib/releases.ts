@@ -27,5 +27,13 @@ export function filterReleasesByGenre(
     return releases;
   }
 
-  return releases.filter((release) => release.genre === genre);
+  const genreMap: Record<Exclude<ReleaseGenreFilter, "All">, string> = {
+    FPS: "Shooter",
+    RPG: "RPG",
+    Survival: "Survival",
+    Sports: "Sports/Racing",
+  };
+
+  const targetGenre = genreMap[genre];
+  return releases.filter((release) => release.genre === targetGenre);
 }

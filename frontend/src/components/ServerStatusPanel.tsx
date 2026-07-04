@@ -62,10 +62,10 @@ export default function ServerStatusPanel({ statuses }: ServerStatusPanelProps) 
           <Activity className="h-5 w-5 text-violet-300" />
         </div>
         <div>
-          <p className="text-xs uppercase tracking-[0.35em] text-violet-300/70">
+          <p className="text-xs font-medium uppercase tracking-[0.35em] text-violet-200/85">
             Live Monitor
           </p>
-          <h2 className="font-[family-name:var(--font-cinzel)] text-2xl text-white">
+          <h2 className="heading-section text-2xl uppercase text-white">
             SERVER LIVE STATUS
           </h2>
         </div>
@@ -80,13 +80,13 @@ export default function ServerStatusPanel({ statuses }: ServerStatusPanelProps) 
             <div key={category}>
               <div className="mb-4 flex items-center gap-2">
                 <Icon className="h-4 w-4 text-violet-300/80" />
-                <h3 className="text-sm font-medium uppercase tracking-[0.25em] text-violet-200/70">
+                <h3 className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-300">
                   {config.label}
                 </h3>
               </div>
 
               {items.length === 0 ? (
-                <p className="rounded-2xl border border-dashed border-violet-400/15 px-4 py-6 text-sm text-violet-200/50">
+                <p className="rounded-2xl border border-dashed border-violet-400/20 px-4 py-6 text-sm text-slate-400">
                   {config.emptyMessage}
                 </p>
               ) : (
@@ -144,7 +144,7 @@ function StatusCard({ status, config }: StatusCardProps) {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 text-xs text-violet-200/55">
+      <div className="flex items-center gap-2 text-xs text-slate-400">
         <Radio className="h-3.5 w-3.5" />
         <time dateTime={status.lastChecked}>
           Last checked {formatTimestamp(status.lastChecked)}

@@ -14,7 +14,7 @@ export default function Footer() {
             </p>
           </div>
 
-          <p className="text-sm leading-relaxed text-violet-200/60">
+          <p className="text-sm leading-relaxed text-slate-300">
             StatusTimer is an independent tracking platform. It is not
             affiliated, associated, authorized, or endorsed by any company,
             brand, or trademark listed on this site. All product names, logos,
@@ -23,10 +23,10 @@ export default function Footer() {
           </p>
 
           <div className="mt-6 flex flex-col gap-2 border-t border-white/5 pt-6 sm:flex-row sm:items-center sm:justify-between">
-            <p className="font-[family-name:var(--font-cinzel)] text-sm tracking-[0.12em] text-white/90">
+            <p className="text-sm font-bold tracking-wide text-white">
               StatusTimer
             </p>
-            <p className="text-xs text-violet-200/45">
+            <p className="text-xs text-slate-400">
               &copy; {currentYear} StatusTimer. All rights reserved.
             </p>
           </div>

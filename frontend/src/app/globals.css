@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  --font-display: var(--font-cinzel);
+  --font-display: var(--font-inter);
   --font-body: var(--font-inter);
   --color-mystic-950: #07060f;
   --color-mystic-900: #0f0b1f;
@@ -30,7 +30,7 @@ body {
     radial-gradient(circle at top, rgba(109, 74, 255, 0.18), transparent 35%),
     radial-gradient(circle at 80% 20%, rgba(155, 123, 255, 0.12), transparent 25%),
     linear-gradient(180deg, var(--color-mystic-950), var(--color-mystic-900));
-  color: #e8e4ff;
+  color: #f4f0ff;
 }
 
 .mystery-grid {
@@ -51,4 +51,30 @@ body {
 
 .glow-ring {
   box-shadow: 0 0 24px rgba(109, 74, 255, 0.25);
+}
+
+.heading-display {
+  font-family: var(--font-inter), sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.heading-section {
+  font-family: var(--font-inter), sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.scrollbar-subtle {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(155, 123, 255, 0.35) transparent;
+}
+
+.scrollbar-subtle::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-subtle::-webkit-scrollbar-thumb {
+  background: rgba(155, 123, 255, 0.3);
+  border-radius: 999px;
 }

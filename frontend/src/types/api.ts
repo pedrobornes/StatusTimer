@@ -16,12 +16,19 @@ export interface GamingNews {
   createdAt: string;
 }
 
+export interface PlatformRelease {
+  platform: string;
+  releaseDate: string | null;
+}
+
 export interface UpcomingRelease {
   id: number;
   gameName: string;
+  slug: string;
+  genre: string;
   releaseDate: string;
   hypeCount: number;
-  genre?: "FPS" | "RPG" | "Survival" | "Sports";
+  platforms: PlatformRelease[];
 }
 
 export interface CountdownParts {

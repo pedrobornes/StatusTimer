@@ -34,10 +34,10 @@ export default function UpcomingReleasesPanel({
             <Rocket className="h-5 w-5 text-cyan-300" />
           </div>
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-cyan-300/70">
+            <p className="text-xs font-medium uppercase tracking-[0.35em] text-cyan-200/85">
               Countdown Radar
             </p>
-            <h2 className="font-[family-name:var(--font-cinzel)] text-2xl text-white">
+            <h2 className="heading-section text-2xl uppercase text-white">
               UPCOMING RELEASES
             </h2>
           </div>
@@ -45,7 +45,7 @@ export default function UpcomingReleasesPanel({
 
         <Link
           href="/releases"
-          className="text-xs uppercase tracking-[0.2em] text-cyan-200/60 transition hover:text-cyan-100"
+          className="text-xs font-medium uppercase tracking-[0.2em] text-cyan-200/80 transition-colors hover:text-cyan-100"
         >
           View all releases →
         </Link>

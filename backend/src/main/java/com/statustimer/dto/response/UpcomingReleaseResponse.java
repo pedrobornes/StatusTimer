@@ -1,21 +1,30 @@
 package com.statustimer.dto.response;
 
-import com.statustimer.entity.UpcomingRelease;
+import com.statustimer.entity.Game;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record UpcomingReleaseResponse(
         Long id,
         String gameName,
+        String slug,
+        String genre,
         LocalDateTime releaseDate,
-        Long hypeCount
+        Long hypeCount,
+        List<PlatformReleaseResponse> platforms
 ) {
 
-    public static UpcomingReleaseResponse fromEntity(UpcomingRelease entity) {
+    public static UpcomingReleaseResponse fromEntity(Game entity) {
         return new UpcomingReleaseResponse(
                 entity.getId(),
                 entity.getGameName(),
-                entity.getReleaseDate(),
-                entity.getHypeCount()
+                entity.getSlug(),
+                entity.getGenre().getLabel(),
+                entity.resolvePrimaryReleaseDate(),
+                entity.getHypeCount(),
+                entity.getPlatforms().stream()
+                        .map(PlatformReleaseResponse::fromEntity)
+                        .toList()
         );
     }
 }

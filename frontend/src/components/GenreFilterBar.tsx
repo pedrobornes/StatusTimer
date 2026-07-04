@@ -24,8 +24,8 @@ export default function GenreFilterBar({
             onClick={() => onGenreChange(genre)}
             className={`rounded-xl border px-3 py-1.5 text-xs font-medium uppercase tracking-[0.16em] transition ${
               isActive
-                ? "border-cyan-400/30 bg-cyan-500/15 text-cyan-100"
-                : "border-white/10 bg-white/[0.03] text-violet-200/55 hover:border-cyan-400/20 hover:text-violet-100"
+                ? "border-cyan-400/35 bg-cyan-500/20 text-cyan-50"
+                : "border-white/12 bg-white/[0.04] text-slate-300 hover:border-cyan-400/25 hover:text-white"
             }`}
           >
             {genre}

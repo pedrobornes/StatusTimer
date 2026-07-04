@@ -19,7 +19,7 @@ export default function ReleasesGrid({
 }: ReleasesGridProps) {
   if (releases.length === 0) {
     return (
-      <p className="rounded-2xl border border-dashed border-cyan-400/15 px-4 py-10 text-center text-sm text-violet-200/50">
+      <p className="rounded-2xl border border-dashed border-cyan-400/20 px-4 py-10 text-center text-sm text-slate-400">
         {emptyMessage}
       </p>
     );
@@ -35,9 +35,9 @@ export default function ReleasesGrid({
       {releases.map((release) => (
         <article
           key={release.id}
-          className="rounded-2xl border border-white/5 bg-white/[0.03] p-5 transition hover:border-cyan-400/20 hover:bg-white/[0.05]"
+          className="rounded-2xl border border-white/8 bg-white/[0.04] p-5 pb-7 transition hover:border-cyan-400/25 hover:bg-white/[0.06]"
         >
-          <div className="mb-4">
+          <div className="mb-5">
             <h3 className="text-lg font-semibold text-white">
               <Link
                 href={`/release/${toSlug(release.gameName)}`}
@@ -46,7 +46,7 @@ export default function ReleasesGrid({
                 {release.gameName}
               </Link>
             </h3>
-            <p className="mt-2 inline-flex items-center gap-2 text-xs text-violet-200/55">
+            <p className="mt-2 inline-flex items-center gap-2 text-xs text-slate-400">
               <CalendarClock className="h-3.5 w-3.5" />
               <time dateTime={release.releaseDate}>
                 Launch target: {formatReleaseDate(release.releaseDate)}
@@ -54,7 +54,7 @@ export default function ReleasesGrid({
             </p>
           </div>
 
-          <div className="mb-5">
+          <div className="mb-6">
             <ReleaseCountdown releaseDate={release.releaseDate} />
           </div>
 

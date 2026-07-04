@@ -15,7 +15,7 @@ interface CountdownUnitProps {
 function CountdownUnit({ label, value }: CountdownUnitProps) {
   return (
     <div className="rounded-2xl border border-cyan-400/15 bg-cyan-500/5 px-4 py-3 text-center">
-      <p className="font-[family-name:var(--font-cinzel)] text-2xl text-white">
+      <p className="font-bold tabular-nums text-2xl text-white">
         {String(value).padStart(2, "0")}
       </p>
       <p className="mt-1 text-[10px] uppercase tracking-[0.25em] text-cyan-200/60">

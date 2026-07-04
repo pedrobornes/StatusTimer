@@ -1,14 +1,8 @@
 import type { Metadata } from "next";
-import { Cinzel, Inter } from "next/font/google";
+import { Inter } from "next/font/google";
 import Footer from "@/components/Footer";
 import Navigation from "@/components/Navigation";
 import "./globals.css";
-
-const cinzel = Cinzel({
-  subsets: ["latin"],
-  variable: "--font-cinzel",
-  weight: ["500", "700"],
-});
 
 const inter = Inter({
   subsets: ["latin"],
@@ -77,7 +71,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${cinzel.variable} ${inter.variable}`}>
+    <html lang="en" className={inter.variable}>
       <body className="flex min-h-screen flex-col">
         <Navigation />
         <main className="flex-1">{children}</main>
