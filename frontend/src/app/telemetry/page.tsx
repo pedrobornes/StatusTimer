@@ -3,6 +3,7 @@ import PageShell from "@/components/PageShell";
 import ServerStatusPanel from "@/components/ServerStatusPanel";
 import DashboardError from "@/components/DashboardError";
 import { getServerStatuses } from "@/services/statusService";
+import { getGameTelemetry } from "@/services/telemetryService";
 
 export const metadata: Metadata = {
   title: "Server Live Status",
@@ -14,7 +15,10 @@ export const revalidate = 60;
 
 export default async function TelemetryPage() {
   try {
-    const statuses = await getServerStatuses();
+    const [statuses, gameTelemetry] = await Promise.all([
+      getServerStatuses(),
+      getGameTelemetry().catch(() => []),
+    ]);
 
     return (
       <PageShell
@@ -22,7 +26,7 @@ export default async function TelemetryPage() {
         subtitle="Every tracked platform in one view. Status signals refresh on each sync cycle."
         badge="Servers"
       >
-        <ServerStatusPanel statuses={statuses} />
+        <ServerStatusPanel statuses={statuses} gameTelemetry={gameTelemetry} />
       </PageShell>
     );
   } catch (error) {

@@ -1,9 +1,4 @@
-import Link from "next/link";
-import { CalendarClock } from "lucide-react";
-import HypeCounterButton from "@/components/HypeCounterButton";
-import ReleaseCountdown from "@/components/ReleaseCountdown";
-import { formatReleaseDate } from "@/lib/countdown";
-import { toSlug } from "@/lib/slug";
+import ReleaseCard from "@/components/ReleaseCard";
 import type { UpcomingRelease } from "@/types/api";
 
 interface ReleasesGridProps {
@@ -33,36 +28,7 @@ export default function ReleasesGrid({
   return (
     <div className={gridClass}>
       {releases.map((release) => (
-        <article
-          key={release.id}
-          className="rounded-2xl border border-white/8 bg-white/[0.04] p-5 pb-7 transition hover:border-cyan-400/25 hover:bg-white/[0.06]"
-        >
-          <div className="mb-5">
-            <h3 className="text-lg font-semibold text-white">
-              <Link
-                href={`/release/${toSlug(release.gameName)}`}
-                className="transition hover:text-cyan-200"
-              >
-                {release.gameName}
-              </Link>
-            </h3>
-            <p className="mt-2 inline-flex items-center gap-2 text-xs text-slate-400">
-              <CalendarClock className="h-3.5 w-3.5" />
-              <time dateTime={release.releaseDate}>
-                Launch target: {formatReleaseDate(release.releaseDate)}
-              </time>
-            </p>
-          </div>
-
-          <div className="mb-6">
-            <ReleaseCountdown releaseDate={release.releaseDate} />
-          </div>
-
-          <HypeCounterButton
-            releaseId={release.id}
-            initialHypeCount={release.hypeCount}
-          />
-        </article>
+        <ReleaseCard key={release.id} release={release} />
       ))}
     </div>
   );

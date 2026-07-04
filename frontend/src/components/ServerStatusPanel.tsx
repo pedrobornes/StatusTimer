@@ -6,7 +6,9 @@ import {
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import GameTelemetryCard from "@/components/GameTelemetryCard";
 import type { ServerStatus, ServiceCategory } from "@/types/api";
+import type { GameTelemetry } from "@/types/telemetry";
 
 interface CategoryConfig {
   label: string;
@@ -47,9 +49,13 @@ function formatTimestamp(value: string): string {
 
 interface ServerStatusPanelProps {
   statuses: ServerStatus[];
+  gameTelemetry?: GameTelemetry[];
 }
 
-export default function ServerStatusPanel({ statuses }: ServerStatusPanelProps) {
+export default function ServerStatusPanel({
+  statuses,
+  gameTelemetry = [],
+}: ServerStatusPanelProps) {
   const grouped = CATEGORY_ORDER.map((category) => ({
     category,
     items: statuses.filter((status) => status.category === category),
@@ -75,6 +81,9 @@ export default function ServerStatusPanel({ statuses }: ServerStatusPanelProps) 
         {grouped.map(({ category, items }) => {
           const config = CATEGORY_CONFIG[category];
           const Icon = config.icon;
+          const isGaming = category === "GAMING";
+          const hasGamingTelemetry = isGaming && gameTelemetry.length > 0;
+          const hasPlatformItems = items.length > 0;
 
           return (
             <div key={category}>
@@ -85,16 +94,28 @@ export default function ServerStatusPanel({ statuses }: ServerStatusPanelProps) 
                 </h3>
               </div>
 
-              {items.length === 0 ? (
-                <p className="rounded-2xl border border-dashed border-violet-400/20 px-4 py-6 text-sm text-slate-400">
-                  {config.emptyMessage}
-                </p>
-              ) : (
+              {isGaming ? (
+                hasGamingTelemetry ? (
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    {gameTelemetry.map((entry) => (
+                      <GameTelemetryCard key={entry.id} telemetry={entry} />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="rounded-2xl border border-dashed border-violet-400/20 px-4 py-6 text-sm text-slate-400">
+                    {config.emptyMessage}
+                  </p>
+                )
+              ) : hasPlatformItems ? (
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {items.map((status) => (
                     <StatusCard key={status.id} status={status} config={config} />
                   ))}
                 </div>
+              ) : (
+                <p className="rounded-2xl border border-dashed border-violet-400/20 px-4 py-6 text-sm text-slate-400">
+                  {config.emptyMessage}
+                </p>
               )}
             </div>
           );
@@ -113,7 +134,7 @@ function StatusCard({ status, config }: StatusCardProps) {
   const isOnline = status.isUp;
 
   return (
-    <article className="rounded-2xl border border-white/5 bg-white/[0.03] p-5 transition hover:border-violet-400/20 hover:bg-white/[0.05]">
+    <article className="rounded-2xl border border-white/8 bg-white/[0.04] p-5 transition hover:border-violet-400/25 hover:bg-white/[0.06]">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h4 className="text-base font-semibold text-white">

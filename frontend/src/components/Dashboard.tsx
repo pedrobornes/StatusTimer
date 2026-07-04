@@ -3,14 +3,21 @@ import NewsFeedPanel from "@/components/NewsFeedPanel";
 import ServerStatusPanel from "@/components/ServerStatusPanel";
 import UpcomingReleasesPanel from "@/components/UpcomingReleasesPanel";
 import type { GamingNews, ServerStatus, UpcomingRelease } from "@/types/api";
+import type { GameTelemetry } from "@/types/telemetry";
 
 interface DashboardProps {
   statuses: ServerStatus[];
+  gameTelemetry: GameTelemetry[];
   news: GamingNews[];
   releases: UpcomingRelease[];
 }
 
-export default function Dashboard({ statuses, news, releases }: DashboardProps) {
+export default function Dashboard({
+  statuses,
+  gameTelemetry,
+  news,
+  releases,
+}: DashboardProps) {
   return (
     <div className="mystery-grid min-h-screen">
       <div className="mx-auto max-w-7xl px-4 py-8 md:px-8 md:py-12">
@@ -30,7 +37,10 @@ export default function Dashboard({ statuses, news, releases }: DashboardProps) 
 
         <div className="grid gap-8 xl:grid-cols-[1.6fr_1fr] xl:items-stretch">
           <div className="space-y-8">
-            <ServerStatusPanel statuses={statuses} />
+            <ServerStatusPanel
+              statuses={statuses}
+              gameTelemetry={gameTelemetry}
+            />
             <UpcomingReleasesPanel releases={releases} />
           </div>
           <NewsFeedPanel news={news} fillHeight />

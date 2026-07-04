@@ -1,8 +1,10 @@
 package com.statustimer.controller;
 
+import com.statustimer.dto.response.GameTelemetryResponse;
 import com.statustimer.dto.response.GamingNewsResponse;
 import com.statustimer.dto.response.ServerStatusResponse;
 import com.statustimer.dto.response.UpcomingReleaseResponse;
+import com.statustimer.service.GameTelemetryService;
 import com.statustimer.service.GamingNewsService;
 import com.statustimer.service.ServerStatusService;
 import com.statustimer.service.UpcomingReleaseService;
@@ -20,12 +22,23 @@ import org.springframework.web.bind.annotation.RestController;
 public class PublicApiController {
 
     private final ServerStatusService serverStatusService;
+    private final GameTelemetryService gameTelemetryService;
     private final GamingNewsService gamingNewsService;
     private final UpcomingReleaseService upcomingReleaseService;
 
     @GetMapping("/status")
     public List<ServerStatusResponse> getServerStatuses() {
         return serverStatusService.findAll();
+    }
+
+    @GetMapping("/telemetry")
+    public List<GameTelemetryResponse> getGameTelemetry() {
+        return gameTelemetryService.findAll();
+    }
+
+    @GetMapping("/telemetry/{slug}")
+    public GameTelemetryResponse getGameTelemetryBySlug(@PathVariable String slug) {
+        return gameTelemetryService.findByGameSlug(slug);
     }
 
     @GetMapping("/news")

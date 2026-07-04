@@ -1,9 +1,13 @@
 import type { CountdownParts } from "@/types/api";
 
 export function getCountdownParts(
-  releaseDate: string,
+  releaseDate: string | null,
   now: number = Date.now(),
 ): CountdownParts {
+  if (releaseDate === null) {
+    return { days: 0, hours: 0, minutes: 0, isReleased: false };
+  }
+
   const targetTime = new Date(releaseDate).getTime();
   const difference = targetTime - now;
 
@@ -18,7 +22,11 @@ export function getCountdownParts(
   return { days, hours, minutes, isReleased: false };
 }
 
-export function formatReleaseDate(releaseDate: string): string {
+export function formatReleaseDate(releaseDate: string | null): string {
+  if (releaseDate === null) {
+    return "TBA";
+  }
+
   return new Intl.DateTimeFormat("en-US", {
     dateStyle: "long",
     timeStyle: "short",

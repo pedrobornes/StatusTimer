@@ -10,8 +10,10 @@ from clients.backend_client import BackendClient
 from clients.http_result import PushResult
 from config.settings import settings
 from models.schemas import PatchNotePayload, SyncGamesRequest
+from models.telemetry import SyncTelemetryRequest
 from pipeline.patch_notes import summarize_patch_notes
 from scrapers.releases import fetch_upcoming_releases
+from scrapers.status import fetch_game_telemetry
 
 logging.basicConfig(
     level=logging.INFO,
@@ -26,6 +28,8 @@ _shutdown_requested = False
 class HarvestCycleReport:
     releases_prepared: int
     release_sync: PushResult
+    telemetry_prepared: int
+    telemetry_sync: PushResult
     patch_note_push: PushResult
     backend_reachable: bool
 
@@ -84,6 +88,16 @@ def run_release_sync(client: BackendClient) -> tuple[int, PushResult]:
     return len(releases), result
 
 
+def run_status_sync(client: BackendClient) -> tuple[int, PushResult]:
+    telemetry_entries = fetch_game_telemetry()
+    payload = SyncTelemetryRequest(entries=telemetry_entries)
+
+    logger.info("Prepared %s telemetry payloads", len(telemetry_entries))
+    result = client.sync_game_telemetry(payload)
+    _log_push_result("Telemetry sync", result)
+    return len(telemetry_entries), result
+
+
 def run_patch_note_pipeline(client: BackendClient) -> PushResult:
     sample_raw_patch = (
         "Weapon balance: AR damage reduced from 34 to 31. "
@@ -114,6 +128,7 @@ def run_harvest_cycle(client: BackendClient) -> HarvestCycleReport:
 
     try:
         releases_prepared, release_sync = run_release_sync(client)
+        telemetry_prepared, telemetry_sync = run_status_sync(client)
         patch_note_push = run_patch_note_pipeline(client)
     except Exception:
         logger.exception(
@@ -122,6 +137,8 @@ def run_harvest_cycle(client: BackendClient) -> HarvestCycleReport:
         return HarvestCycleReport(
             releases_prepared=0,
             release_sync=PushResult(success=False, error_message="cycle exception"),
+            telemetry_prepared=0,
+            telemetry_sync=PushResult(success=False, error_message="cycle exception"),
             patch_note_push=PushResult(success=False, error_message="cycle exception"),
             backend_reachable=health.success,
         )
@@ -130,6 +147,8 @@ def run_harvest_cycle(client: BackendClient) -> HarvestCycleReport:
     return HarvestCycleReport(
         releases_prepared=releases_prepared,
         release_sync=release_sync,
+        telemetry_prepared=telemetry_prepared,
+        telemetry_sync=telemetry_sync,
         patch_note_push=patch_note_push,
         backend_reachable=health.success,
     )

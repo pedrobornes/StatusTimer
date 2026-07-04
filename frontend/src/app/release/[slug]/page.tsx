@@ -3,23 +3,22 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import {
   Activity,
-  CalendarClock,
   FileText,
   Radio,
 } from "lucide-react";
+import GameTelemetryCard from "@/components/GameTelemetryCard";
 import HypeCounterButton from "@/components/HypeCounterButton";
-import ReleaseCountdown from "@/components/ReleaseCountdown";
+import PlatformBadge from "@/components/PlatformBadge";
+import PlatformReleaseSchedule from "@/components/PlatformReleaseSchedule";
 import DashboardError from "@/components/DashboardError";
-import { formatReleaseDate } from "@/lib/countdown";
 import { toSlug } from "@/lib/slug";
 import { getGamingNews } from "@/services/newsService";
 import { getUpcomingReleases } from "@/services/releasesService";
 import { getServerStatuses } from "@/services/statusService";
+import { getGameTelemetry } from "@/services/telemetryService";
 import type { GamingNews, ServerStatus, UpcomingRelease } from "@/types/api";
 
 export const revalidate = 60;
-
-const HOME_PREVIEW_LIMIT = 4;
 
 interface ReleasePageProps {
   params: Promise<{ slug: string }>;
@@ -29,7 +28,7 @@ function findReleaseBySlug(
   releases: UpcomingRelease[],
   slug: string,
 ): UpcomingRelease | undefined {
-  return releases.find((release) => toSlug(release.gameName) === slug);
+  return releases.find((release) => release.slug === slug);
 }
 
 function filterStatusesForGame(
@@ -84,10 +83,11 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
   const { slug } = await params;
 
   try {
-    const [releases, statuses, news] = await Promise.all([
+    const [releases, statuses, news, gameTelemetry] = await Promise.all([
       getUpcomingReleases(),
       getServerStatuses(),
       getGamingNews(),
+      getGameTelemetry().catch(() => []),
     ]);
 
     const release = findReleaseBySlug(releases, slug);
@@ -96,6 +96,9 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
       notFound();
     }
 
+    const gameTelemetryEntry = gameTelemetry.find(
+      (entry) => entry.gameSlug === slug,
+    );
     const gameStatuses = filterStatusesForGame(statuses, release.gameName);
     const gameNews = filterNewsForGame(news, slug);
 
@@ -109,15 +112,18 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
             <h1 className="heading-display text-3xl uppercase text-white md:text-5xl">
               {release.gameName}
             </h1>
-            <p className="mt-3 inline-flex items-center gap-2 text-sm text-slate-300">
-              <CalendarClock className="h-4 w-4 text-cyan-300/80" />
-              <time dateTime={release.releaseDate}>
-                Launch target: {formatReleaseDate(release.releaseDate)}
-              </time>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {release.platforms.map((entry) => (
+                <PlatformBadge key={entry.platform} platform={entry.platform} />
+              ))}
+            </div>
+
+            <p className="mt-3 text-xs uppercase tracking-[0.16em] text-cyan-200/75">
+              {release.genre}
             </p>
 
-            <div className="mt-8 max-w-xl">
-              <ReleaseCountdown releaseDate={release.releaseDate} />
+            <div className="mt-8 max-w-2xl">
+              <PlatformReleaseSchedule platforms={release.platforms} />
             </div>
 
             <div className="mt-6 max-w-sm">
@@ -143,7 +149,12 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
               </div>
             </div>
 
-            {gameStatuses.length === 0 ? (
+            {gameTelemetryEntry ? (
+              <GameTelemetryCard
+                telemetry={gameTelemetryEntry}
+                linkToProfile={false}
+              />
+            ) : gameStatuses.length === 0 ? (
               <p className="rounded-2xl border border-dashed border-violet-400/20 px-4 py-6 text-sm text-slate-400">
                 [SCANNING SERVERS] No server data linked to this game yet.
               </p>

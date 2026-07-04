@@ -1,21 +1,39 @@
-import type { UpcomingRelease } from "@/types/api";
+import type { GameGenre, UpcomingRelease } from "@/types/api";
 
-export const RELEASE_GENRES = [
-  "All",
-  "FPS",
+export const OFFICIAL_GAME_GENRES = [
+  "Shooter",
   "RPG",
   "Survival",
-  "Sports",
-] as const;
+  "Action",
+  "Sports/Racing",
+  "Strategy",
+] as const satisfies readonly GameGenre[];
+
+export const RELEASE_GENRES = ["All", ...OFFICIAL_GAME_GENRES] as const;
 
 export type ReleaseGenreFilter = (typeof RELEASE_GENRES)[number];
+
+export function getPrimaryReleaseTimestamp(release: UpcomingRelease): number {
+  const platformDates = release.platforms
+    .map((platform) => platform.releaseDate)
+    .filter((date): date is string => date !== null)
+    .map((date) => new Date(date).getTime())
+    .filter((timestamp) => !Number.isNaN(timestamp));
+
+  if (platformDates.length > 0) {
+    return Math.min(...platformDates);
+  }
+
+  const fallback = new Date(release.releaseDate).getTime();
+  return Number.isNaN(fallback) ? Number.MAX_SAFE_INTEGER : fallback;
+}
 
 export function sortReleasesByDate(
   releases: UpcomingRelease[],
 ): UpcomingRelease[] {
   return [...releases].sort(
-    (a, b) =>
-      new Date(a.releaseDate).getTime() - new Date(b.releaseDate).getTime(),
+    (left, right) =>
+      getPrimaryReleaseTimestamp(left) - getPrimaryReleaseTimestamp(right),
   );
 }
 
@@ -27,13 +45,5 @@ export function filterReleasesByGenre(
     return releases;
   }
 
-  const genreMap: Record<Exclude<ReleaseGenreFilter, "All">, string> = {
-    FPS: "Shooter",
-    RPG: "RPG",
-    Survival: "Survival",
-    Sports: "Sports/Racing",
-  };
-
-  const targetGenre = genreMap[genre];
-  return releases.filter((release) => release.genre === targetGenre);
+  return releases.filter((release) => release.genre === genre);
 }

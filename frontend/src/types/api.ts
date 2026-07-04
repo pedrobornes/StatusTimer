@@ -16,8 +16,18 @@ export interface GamingNews {
   createdAt: string;
 }
 
-export interface PlatformRelease {
-  platform: string;
+export type GamePlatform = "PC" | "PS5" | "XBOX" | "SWITCH" | "SWITCH_2";
+
+export type GameGenre =
+  | "Shooter"
+  | "RPG"
+  | "Survival"
+  | "Action"
+  | "Sports/Racing"
+  | "Strategy";
+
+export interface PlatformDetail {
+  platform: GamePlatform;
   releaseDate: string | null;
 }
 
@@ -25,10 +35,10 @@ export interface UpcomingRelease {
   id: number;
   gameName: string;
   slug: string;
-  genre: string;
+  genre: GameGenre;
   releaseDate: string;
   hypeCount: number;
-  platforms: PlatformRelease[];
+  platforms: PlatformDetail[];
 }
 
 export interface CountdownParts {

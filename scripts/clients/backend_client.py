@@ -9,6 +9,7 @@ import requests
 from clients.http_result import PushResult
 from config.settings import settings
 from models.schemas import GameReleasePayload, PatchNotePayload, SyncGamesRequest
+from models.telemetry import SyncTelemetryRequest
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,7 @@ class BackendClient:
     """Secure requests wrapper for /api/v1/internal/** endpoints."""
 
     INTERNAL_STATUS_PATH = "/api/v1/internal/status"
+    INTERNAL_STATUS_SYNC_PATH = "/api/v1/internal/status/sync"
     INTERNAL_NEWS_PATH = "/api/v1/internal/news"
     INTERNAL_GAMES_SYNC_PATH = "/api/v1/internal/games/sync"
 
@@ -48,6 +50,14 @@ class BackendClient:
             self.INTERNAL_NEWS_PATH,
             patch_note.model_dump(mode="json", by_alias=True),
             "patch note",
+        )
+
+    def sync_game_telemetry(self, request: SyncTelemetryRequest) -> PushResult:
+        """POST live game telemetry metrics to the backend sync endpoint."""
+        return self._post(
+            self.INTERNAL_STATUS_SYNC_PATH,
+            request.model_dump(mode="json", by_alias=True),
+            "game telemetry sync",
         )
 
     def push_service_status(self, payload: dict[str, Any]) -> PushResult:
