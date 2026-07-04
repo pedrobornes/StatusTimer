@@ -5,6 +5,7 @@ import sys
 
 from dotenv import load_dotenv
 
+from agents.news_writer import run_news_writer
 from agents.status_checker import StatusChecker
 from clients.backend_client import BackendClient
 
@@ -40,6 +41,7 @@ def main() -> None:
     load_dotenv()
     logger.info("Starting StatusTimer agents orchestrator")
     sync_service_statuses()
+    run_news_writer()
     logger.info("StatusTimer agents run completed")
 
 

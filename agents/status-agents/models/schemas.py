@@ -3,7 +3,7 @@
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl
 
 
 class ServiceCategory(str, Enum):
@@ -27,3 +27,11 @@ class GamingNewsPayload(BaseModel):
     game_tag: str = Field(alias="gameTag")
 
     model_config = {"populate_by_name": True}
+
+
+class RawNewsFact(BaseModel):
+    headline: str
+    source_name: str
+    published_at: str
+    factual_summary: str
+    source_url: HttpUrl

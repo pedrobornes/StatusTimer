@@ -9,6 +9,12 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "deepseek-coder-v2:16b"
     request_timeout_seconds: int = 10
+    news_max_articles_per_run: int = 3
+    news_feed_urls: list[str] = [
+        "https://www.pcgamer.com/rss/",
+        "https://www.rockpapershotgun.com/feed",
+        "https://blog.playstation.com/feed/",
+    ]
 
     model_config = SettingsConfigDict(
         env_file=".env",
