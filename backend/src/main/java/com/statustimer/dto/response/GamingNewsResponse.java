@@ -8,16 +8,22 @@ public record GamingNewsResponse(
         String title,
         String content,
         String gameTag,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        LocalDateTime publishedAt
 ) {
 
     public static GamingNewsResponse fromEntity(GamingNews entity) {
+        LocalDateTime publishedAt = entity.getPublishedAt() != null
+                ? entity.getPublishedAt()
+                : entity.getCreatedAt();
+
         return new GamingNewsResponse(
                 entity.getId(),
                 entity.getTitle(),
                 entity.getContent(),
                 entity.getGameTag(),
-                entity.getCreatedAt()
+                entity.getCreatedAt(),
+                publishedAt
         );
     }
 }

@@ -10,6 +10,7 @@ from models.schemas import GameReleasePayload, PlatformRelease
 from scrapers.platform_images import (
     ROCKSTAR_GTA_VI_KEY_ART,
     resolve_release_image_url,
+    resolve_release_logo_url,
 )
 
 
@@ -78,6 +79,7 @@ def build_release_payload(
         steam_app_id=steam_app_id,
         direct_url=direct_image_url,
     )
+    logo_url = resolve_release_logo_url(steam_app_id=steam_app_id)
 
     return GameReleasePayload(
         gameName=game_name,
@@ -85,6 +87,7 @@ def build_release_payload(
         genre=normalize_genre(raw_genre_tags),
         platforms=platforms,
         imageUrl=image_url,
+        logoUrl=logo_url,
     )
 
 

@@ -1,6 +1,6 @@
 """Pydantic schemas for harvested release and patch-note payloads."""
 
-from datetime import date
+from datetime import date, datetime
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -32,16 +32,22 @@ class GameReleasePayload(BaseModel):
         max_length=2048,
         description="Direct CDN cover art URL from the source platform.",
     )
+    logo_url: str | None = Field(
+        default=None,
+        alias="logoUrl",
+        max_length=2048,
+        description="Direct CDN logo/icon URL for monitoring cards.",
+    )
 
     model_config = {"populate_by_name": True}
 
-    @field_validator("image_url")
+    @field_validator("image_url", "logo_url")
     @classmethod
-    def normalize_image_url(cls, image_url: str | None) -> str | None:
-        if image_url is None:
+    def normalize_optional_url(cls, value: str | None) -> str | None:
+        if value is None:
             return None
 
-        trimmed = image_url.strip()
+        trimmed = value.strip()
         return trimmed or None
 
     @field_validator("platforms")
@@ -74,5 +80,6 @@ class PatchNotePayload(BaseModel):
     title: str = Field(min_length=1)
     content: str = Field(min_length=1)
     game_tag: str = Field(alias="gameTag", min_length=1)
+    published_at: datetime = Field(alias="publishedAt")
 
     model_config = {"populate_by_name": True}

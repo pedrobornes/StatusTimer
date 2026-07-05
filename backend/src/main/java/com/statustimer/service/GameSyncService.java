@@ -23,7 +23,8 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class GameSyncService {
 
-    private static final int MAX_IMAGE_URL_LENGTH = 2048;
+    private static final int MAX_URL_LENGTH = 2048;
+    private static final int RECENT_RELEASE_WINDOW_DAYS = 7;
 
     private final GameRepository gameRepository;
 
@@ -62,7 +63,8 @@ public class GameSyncService {
 
         game.setGameName(payload.gameName());
         game.setGenre(payload.genre());
-        game.setImageUrl(resolveImageUrl(payload.imageUrl()));
+        game.setImageUrl(resolveOptionalUrl(payload.imageUrl(), "imageUrl"));
+        game.setLogoUrl(resolveOptionalUrl(payload.logoUrl(), "logoUrl"));
 
         if (isNew) {
             game.setHypeCount(resolveInitialHypeCount(payload.hypeCount()));
@@ -117,16 +119,16 @@ public class GameSyncService {
         return hypeCount;
     }
 
-    private String resolveImageUrl(String imageUrl) {
-        if (imageUrl == null || imageUrl.isBlank()) {
+    private String resolveOptionalUrl(String url, String fieldName) {
+        if (url == null || url.isBlank()) {
             return null;
         }
 
-        String trimmedUrl = imageUrl.trim();
-        if (trimmedUrl.length() > MAX_IMAGE_URL_LENGTH) {
+        String trimmedUrl = url.trim();
+        if (trimmedUrl.length() > MAX_URL_LENGTH) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "imageUrl must be " + MAX_IMAGE_URL_LENGTH + " characters or fewer"
+                    fieldName + " must be " + MAX_URL_LENGTH + " characters or fewer"
             );
         }
 

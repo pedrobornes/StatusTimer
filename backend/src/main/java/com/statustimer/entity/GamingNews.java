@@ -37,4 +37,7 @@ public class GamingNews {
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "published_at", nullable = false)
+    private LocalDateTime publishedAt;
 }

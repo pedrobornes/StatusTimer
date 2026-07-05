@@ -31,6 +31,9 @@ public class ReleaseDataSeeder implements CommandLineRunner {
                 .imageUrl(
                         "https://media-rockstargames-com.akamaized.net/tina-uploads/tina_rockstar_games/gta-vi-key-art.jpg"
                 )
+                .logoUrl(
+                        "https://media-rockstargames-com.akamaized.net/tina-uploads/tina_rockstar_games/gta-vi-logo-icon.png"
+                )
                 .build();
         gtaVi.replacePlatforms(List.of(
                 platform(GamePlatform.PS5, LocalDate.of(2026, 11, 19)),
@@ -46,6 +49,9 @@ public class ReleaseDataSeeder implements CommandLineRunner {
                 .hypeCount(9_620L)
                 .imageUrl(
                         "https://cdn.cloudflare.steamstatic.com/steam/apps/1030300/header.jpg"
+                )
+                .logoUrl(
+                        "https://cdn.cloudflare.steamstatic.com/steam/apps/1030300/logo.png"
                 )
                 .build();
         silksong.replacePlatforms(List.of(

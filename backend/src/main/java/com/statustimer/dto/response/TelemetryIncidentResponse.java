@@ -7,7 +7,7 @@ public record TelemetryIncidentResponse(
         String gameSlug,
         String status,
         String dataSource,
-        LocalDateTime timestamp
+        LocalDateTime publishedAt
 ) {
 
     public static TelemetryIncidentResponse fromEntity(GameTelemetryHistory entity) {

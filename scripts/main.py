@@ -9,9 +9,13 @@ from dataclasses import dataclass
 from clients.backend_client import BackendClient
 from clients.http_result import PushResult
 from config.settings import settings
-from models.schemas import PatchNotePayload, SyncGamesRequest
+from models.schemas import SyncGamesRequest
 from models.telemetry import SyncTelemetryRequest
-from pipeline.patch_notes import summarize_patch_notes
+from pipeline.context_pipeline import ingest_events_into_context_store
+from pipeline.deduplication import DedupStore, filter_new_events, filter_recent_events
+from pipeline.skill_router import SkillRouter
+from pipeline.sync_router import dispatch_skill_result
+from scrapers.platform_feeds import fetch_all_platform_feed_events
 from scrapers.releases import fetch_upcoming_releases
 from scrapers.status import fetch_game_telemetry
 
@@ -30,7 +34,10 @@ class HarvestCycleReport:
     release_sync: PushResult
     telemetry_prepared: int
     telemetry_sync: PushResult
-    patch_note_push: PushResult
+    platform_events_scraped: int
+    platform_events_pushed: int
+    context_chunks_indexed: int
+    platform_intel_sync: PushResult
     backend_reachable: bool
 
 
@@ -76,11 +83,12 @@ def run_release_sync(client: BackendClient) -> tuple[int, PushResult]:
             for entry in release.platforms
         )
         logger.info(
-            "[%s] %s | genre=%s | imageUrl=%s | platforms=[%s]",
+            "[%s] %s | genre=%s | imageUrl=%s | logoUrl=%s | platforms=[%s]",
             release.slug,
             release.game_name,
             release.genre.value,
             release.image_url or "none",
+            release.logo_url or "none",
             platform_summary,
         )
 
@@ -99,23 +107,66 @@ def run_status_sync(client: BackendClient) -> tuple[int, PushResult]:
     return len(telemetry_entries), result
 
 
-def run_patch_note_pipeline(client: BackendClient) -> PushResult:
-    sample_raw_patch = (
-        "Weapon balance: AR damage reduced from 34 to 31. "
-        "Server tick rate increased to 128Hz on competitive playlists."
-    )
-    tactical_markdown = summarize_patch_notes(sample_raw_patch)
+def run_platform_intel_pipeline(client: BackendClient) -> tuple[int, int, int, PushResult]:
+    scraped_events = fetch_all_platform_feed_events()
+    recent_events = filter_recent_events(scraped_events)
+    dedup_store = DedupStore.from_settings()
+    new_events = filter_new_events(recent_events, dedup_store)
+    dedup_store.persist()
 
-    patch_note = PatchNotePayload(
-        title="[PATCH SCAN] Competitive balance update",
-        content=tactical_markdown,
-        gameTag="valorant",
+    logger.info(
+        "Platform intel scraped=%s recent=%s new=%s",
+        len(scraped_events),
+        len(recent_events),
+        len(new_events),
     )
 
-    logger.info("Patch-note pipeline ready for gameTag=%s", patch_note.game_tag)
-    result = client.push_patch_note(patch_note)
-    _log_push_result("Patch note push", result)
-    return result
+    indexed_chunks, context_store = ingest_events_into_context_store(recent_events)
+    skill_router = SkillRouter(context_store=context_store)
+
+    if not new_events:
+        logger.info("No new platform intel events after deduplication")
+        return len(scraped_events), 0, indexed_chunks, PushResult(success=True, status_code=200)
+
+    pushed_count = 0
+    last_result = PushResult(success=False, error_message="No platform intel pushes attempted")
+
+    for event in new_events:
+        execution = skill_router.execute(event)
+        dispatch_report = dispatch_skill_result(client, event, execution)
+
+        if dispatch_report.skipped:
+            logger.info(
+                "Skill dispatch skipped for [%s]: %s",
+                event.game_tag,
+                dispatch_report.skip_reason,
+            )
+            continue
+
+        if dispatch_report.telemetry_push is not None:
+            _log_push_result(
+                f"Incident telemetry ({execution.skill_type.value})",
+                dispatch_report.telemetry_push,
+            )
+        if dispatch_report.news_push is not None:
+            _log_push_result(
+                f"Skill news ({execution.skill_type.value})",
+                dispatch_report.news_push,
+            )
+
+        if dispatch_report.success:
+            pushed_count += 1
+            last_result = dispatch_report.news_push or dispatch_report.telemetry_push or last_result
+        else:
+            last_result = dispatch_report.news_push or dispatch_report.telemetry_push or last_result
+
+    aggregate_result = PushResult(
+        success=pushed_count > 0,
+        status_code=last_result.status_code,
+        attempts=last_result.attempts,
+        error_message=last_result.error_message,
+    )
+    return len(scraped_events), pushed_count, indexed_chunks, aggregate_result
 
 
 def run_harvest_cycle(client: BackendClient) -> HarvestCycleReport:
@@ -130,7 +181,9 @@ def run_harvest_cycle(client: BackendClient) -> HarvestCycleReport:
     try:
         releases_prepared, release_sync = run_release_sync(client)
         telemetry_prepared, telemetry_sync = run_status_sync(client)
-        patch_note_push = run_patch_note_pipeline(client)
+        platform_events_scraped, platform_events_pushed, context_chunks_indexed, platform_intel_sync = (
+            run_platform_intel_pipeline(client)
+        )
     except Exception:
         logger.exception(
             "Unexpected error during harvest cycle. Loop will continue.",
@@ -140,7 +193,10 @@ def run_harvest_cycle(client: BackendClient) -> HarvestCycleReport:
             release_sync=PushResult(success=False, error_message="cycle exception"),
             telemetry_prepared=0,
             telemetry_sync=PushResult(success=False, error_message="cycle exception"),
-            patch_note_push=PushResult(success=False, error_message="cycle exception"),
+            platform_events_scraped=0,
+            platform_events_pushed=0,
+            context_chunks_indexed=0,
+            platform_intel_sync=PushResult(success=False, error_message="cycle exception"),
             backend_reachable=health.success,
         )
 
@@ -150,7 +206,10 @@ def run_harvest_cycle(client: BackendClient) -> HarvestCycleReport:
         release_sync=release_sync,
         telemetry_prepared=telemetry_prepared,
         telemetry_sync=telemetry_sync,
-        patch_note_push=patch_note_push,
+        platform_events_scraped=platform_events_scraped,
+        platform_events_pushed=platform_events_pushed,
+        context_chunks_indexed=context_chunks_indexed,
+        platform_intel_sync=platform_intel_sync,
         backend_reachable=health.success,
     )
 

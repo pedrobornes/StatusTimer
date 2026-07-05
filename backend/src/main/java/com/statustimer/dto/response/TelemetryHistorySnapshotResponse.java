@@ -5,12 +5,14 @@ import java.time.LocalDateTime;
 
 public record TelemetryHistorySnapshotResponse(
         LocalDateTime timestamp,
+        LocalDateTime publishedAt,
         String status,
         String dataSource
 ) {
 
     public static TelemetryHistorySnapshotResponse fromEntity(GameTelemetryHistory entity) {
         return new TelemetryHistorySnapshotResponse(
+                entity.getCheckedAt(),
                 entity.getCheckedAt(),
                 entity.getStatus().name(),
                 entity.getDataSource().name()

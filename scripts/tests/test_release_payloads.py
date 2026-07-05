@@ -42,7 +42,10 @@ class ReleasePayloadTests(unittest.TestCase):
 
         for release in serialized["releases"]:
             self.assertIn("imageUrl", release)
+            self.assertIn("logoUrl", release)
             self.assertIsNotNone(release["imageUrl"])
+            if release["slug"] == "hollow-knight-silksong":
+                self.assertIsNotNone(release["logoUrl"])
             self.assertLessEqual(len(release["imageUrl"]), 2048)
 
 

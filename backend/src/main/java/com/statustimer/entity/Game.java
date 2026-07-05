@@ -52,6 +52,9 @@ public class Game {
     @Column(name = "image_url", length = 2048)
     private String imageUrl;
 
+    @Column(name = "logo_url", length = 2048)
+    private String logoUrl;
+
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<GamePlatformDetail> platforms = new ArrayList<>();

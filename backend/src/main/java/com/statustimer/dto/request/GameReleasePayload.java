@@ -9,6 +9,7 @@ public record GameReleasePayload(
         GameGenre genre,
         List<PlatformReleasePayload> platforms,
         Long hypeCount,
-        String imageUrl
+        String imageUrl,
+        String logoUrl
 ) {
 }

@@ -3,6 +3,8 @@ package com.statustimer.service;
 import com.statustimer.dto.response.UpcomingReleaseResponse;
 import com.statustimer.entity.Game;
 import com.statustimer.repository.GameRepository;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -15,14 +17,25 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class UpcomingReleaseService {
 
+    static final int RECENT_RELEASE_WINDOW_DAYS = 7;
+
     private final GameRepository gameRepository;
 
     @Transactional(readOnly = true)
     public List<UpcomingReleaseResponse> findAll() {
+        LocalDateTime recentReleaseCutoff = LocalDate.now()
+                .minusDays(RECENT_RELEASE_WINDOW_DAYS)
+                .atStartOfDay();
+
         return gameRepository.findAll().stream()
+                .filter(game -> isUpcomingOrRecentlyReleased(game, recentReleaseCutoff))
                 .sorted(Comparator.comparing(Game::resolvePrimaryReleaseDate))
                 .map(UpcomingReleaseResponse::fromEntity)
                 .toList();
+    }
+
+    static boolean isUpcomingOrRecentlyReleased(Game game, LocalDateTime recentReleaseCutoff) {
+        return !game.resolvePrimaryReleaseDate().isBefore(recentReleaseCutoff);
     }
 
     @Transactional

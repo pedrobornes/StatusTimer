@@ -24,8 +24,9 @@ public class GamingNewsService {
 
     @Transactional
     public GamingNewsResponse create(CreateGamingNewsRequest request) {
+        LocalDateTime ingestedAt = LocalDateTime.now();
         return GamingNewsResponse.fromEntity(
-                gamingNewsRepository.save(request.toEntity(LocalDateTime.now()))
+                gamingNewsRepository.save(request.toEntity(ingestedAt))
         );
     }
 }

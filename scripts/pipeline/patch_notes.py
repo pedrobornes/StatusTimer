@@ -1,21 +1,30 @@
-"""AI patch-note extraction pipeline skeleton (Task 2)."""
+"""Legacy patch-note helper kept for backward-compatible imports."""
 
-BLACKWATCH_PATCH_PROMPT = """Analyze the following raw game patch notes. Extract the core bullet points.
-Retain all strict numerical balance modifications, bug fixes, and infrastructure changes.
-Format the output in high-contrast tactical markdown language.
+from pipeline.skill_router import SkillRouter
 
-RAW PATCH NOTES:
-{raw_text}
-"""
+_router = SkillRouter()
 
 
-def summarize_patch_notes(raw_text: str) -> str:
+def summarize_patch_notes(raw_text: str, *, game_tag: str = "unknown", title: str = "Patch update") -> str:
     """
-    Pass raw announcement text through the Blackwatch tactical intel prompt.
+    Backward-compatible wrapper that routes raw text through PATCH_NOTE_SKILL.
 
-    TODO: Wire this hook to Ollama / LangChain once the harvest loop is connected.
+    Prefer SkillRouter directly for new integrations.
     """
-    if not raw_text.strip():
-        raise ValueError("Patch note source text cannot be empty.")
+    from datetime import datetime, timezone
 
-    return BLACKWATCH_PATCH_PROMPT.format(raw_text=raw_text.strip())
+    from models.feed_events import FeedEventKind, FeedSource, ScrapedFeedEvent
+
+    event = ScrapedFeedEvent(
+        source=FeedSource.STEAM,
+        kind=FeedEventKind.NEWS,
+        external_id="legacy-patch-note",
+        game_tag=game_tag,
+        title=title,
+        plain_text=raw_text,
+        published_at=datetime.now(timezone.utc),
+    )
+    execution = _router.execute(event)
+    if execution.patch_note_output is None:
+        return raw_text.strip()
+    return execution.patch_note_output.summary_markdown
