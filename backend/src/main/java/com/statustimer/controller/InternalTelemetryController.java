@@ -10,13 +10,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/internal/status")
+@RequestMapping("/api/v1/internal")
 @RequiredArgsConstructor
 public class InternalTelemetryController {
 
     private final GameTelemetryService gameTelemetryService;
 
-    @PostMapping("/sync")
+    @PostMapping({"/status/sync", "/telemetry/update"})
     public SyncTelemetryResponse syncTelemetry(@RequestBody SyncTelemetryRequest request) {
         return gameTelemetryService.syncTelemetry(request);
     }

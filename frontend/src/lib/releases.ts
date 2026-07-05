@@ -1,4 +1,4 @@
-import type { GameGenre, UpcomingRelease } from "@/types/api";
+import type { GameGenre, PlatformDetail, UpcomingRelease } from "@/types/api";
 
 export const OFFICIAL_GAME_GENRES = [
   "Shooter",
@@ -46,4 +46,24 @@ export function filterReleasesByGenre(
   }
 
   return releases.filter((release) => release.genre === genre);
+}
+
+export function buildPlatformsBySlug(
+  releases: UpcomingRelease[],
+): Record<string, PlatformDetail[]> {
+  return Object.fromEntries(
+    releases.map((release) => [
+      release.slug,
+      getConfirmedPlatforms(release.platforms),
+    ]),
+  );
+}
+
+export function getConfirmedPlatforms(
+  platforms: PlatformDetail[],
+): PlatformDetail[] {
+  return platforms.filter(
+    (entry): entry is PlatformDetail & { releaseDate: string } =>
+      entry.releaseDate !== null,
+  );
 }

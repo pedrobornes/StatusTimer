@@ -18,15 +18,15 @@ function buildStatusAwareDescription(
   const base = buildGameStatusDescription(gameName);
 
   if (status === "DOWN") {
-    return `${base} Current telemetry reports ${gameName} as DOWN.`;
+    return `${base} Right now, ${gameName} looks down.`;
   }
 
   if (status === "MAINTENANCE") {
-    return `${base} Current telemetry reports ${gameName} under maintenance.`;
+    return `${base} Right now, ${gameName} is in maintenance.`;
   }
 
   if (status === "ONLINE") {
-    return `${base} Current telemetry reports ${gameName} as ONLINE.`;
+    return `${base} Right now, ${gameName} servers look online.`;
   }
 
   return base;
@@ -87,11 +87,11 @@ export function buildSiteWideMetadata(): Metadata {
   return {
     metadataBase: new URL(siteUrl),
     title: {
-      default: "StatusTimer | Live Gaming Server Status & AI News",
+      default: "StatusTimer | Live Gaming Server Status & Game News",
       template: "%s | StatusTimer",
     },
     description:
-      "Track live gaming server status, outages, and Ollama-processed patch intelligence for top multiplayer titles.",
+      "Check live gaming server status, outages, and game news for your favorite multiplayer titles.",
     robots: {
       index: true,
       follow: true,

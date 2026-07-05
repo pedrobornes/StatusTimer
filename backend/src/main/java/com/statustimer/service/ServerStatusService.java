@@ -5,6 +5,7 @@ import com.statustimer.dto.response.ServerStatusResponse;
 import com.statustimer.entity.ServerStatus;
 import com.statustimer.repository.ServerStatusRepository;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,8 +25,7 @@ public class ServerStatusService {
 
     @Transactional
     public ServerStatusResponse upsert(UpsertServerStatusRequest request) {
-        ServerStatus serverStatus = serverStatusRepository
-                .findByServiceName(request.serviceName())
+        ServerStatus serverStatus = resolveExisting(request)
                 .map(existing -> {
                     request.applyTo(existing);
                     return existing;
@@ -33,5 +33,16 @@ public class ServerStatusService {
                 .orElseGet(request::toNewEntity);
 
         return ServerStatusResponse.fromEntity(serverStatusRepository.save(serverStatus));
+    }
+
+    private Optional<ServerStatus> resolveExisting(UpsertServerStatusRequest request) {
+        if (request.serviceSlug() != null && !request.serviceSlug().isBlank()) {
+            Optional<ServerStatus> bySlug = serverStatusRepository.findByServiceSlug(request.serviceSlug());
+            if (bySlug.isPresent()) {
+                return bySlug;
+            }
+        }
+
+        return serverStatusRepository.findByServiceName(request.serviceName());
     }
 }

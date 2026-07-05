@@ -5,15 +5,16 @@ import NewsFeedPanel from "@/components/dashboard/NewsFeedPanel";
 import PageShell from "@/components/PageShell";
 import JsonLdScript from "@/components/seo/JsonLdScript";
 import { APP_ROUTES, TRACKED_GAME_SLUGS } from "@/config/routes";
+import {
+  resolveGameCoverUrl,
+  resolveGameDisplayName,
+} from "@/lib/gameAssets";
 import { buildStatusPageJsonLd } from "@/lib/seo/jsonLd";
 import { buildStatusPageMetadata } from "@/lib/seo/metadata";
-import { formatSlugLabel } from "@/lib/telemetry";
-import { getGamingNews } from "@/services/newsService";
-import {
-  getGameTelemetryBySlug,
-  getTelemetryHistory,
-  getTelemetryIncidents,
-} from "@/services/telemetryService";
+import { getConfirmedPlatforms } from "@/lib/releases";
+import { getGameStatusDetail } from "@/services/telemetryService";
+import { getUpcomingReleases } from "@/services/releasesService";
+import type { TelemetryStatus } from "@/types/telemetry";
 
 export const revalidate = 60;
 
@@ -32,22 +33,21 @@ export async function generateMetadata({ params }: StatusPageProps) {
 
 export default async function GameStatusPage({ params }: StatusPageProps) {
   const { slug } = await params;
-  const gameName = formatSlugLabel(slug);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const pageUrl = `${siteUrl}${APP_ROUTES.status(slug)}`;
 
   try {
-    const [telemetry, history, incidents, news] = await Promise.all([
-      getGameTelemetryBySlug(slug),
-      getTelemetryHistory(slug).catch(() => []),
-      getTelemetryIncidents().catch(() => []),
-      getGamingNews().catch(() => []),
+    const [{ telemetry, history, incidents, news }, releases] = await Promise.all([
+      getGameStatusDetail(slug),
+      getUpcomingReleases().catch(() => []),
     ]);
 
-    const gameIncidents = incidents.filter((incident) => incident.gameSlug === slug);
-    const gameNews = news
-      .filter((article) => article.gameTag === slug)
-      .slice(0, 6);
+    const releasePlatforms = getConfirmedPlatforms(
+      releases.find((release) => release.slug === slug)?.platforms ?? [],
+    );
+
+    const gameName = resolveGameDisplayName(slug, telemetry);
+    const coverUrl = resolveGameCoverUrl(slug, telemetry);
 
     const jsonLd = buildStatusPageJsonLd({
       gameSlug: slug,
@@ -55,7 +55,7 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
       lastChecked: telemetry.lastChecked,
       pageUrl,
       siteUrl,
-      incidentCount: gameIncidents.length,
+      incidentCount: incidents.length,
     });
 
     return (
@@ -66,36 +66,43 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
           badge="Live Server Status"
           title={`Is ${gameName} Down?`}
           subtitle={buildStatusPageSubtitle(gameName, telemetry.status)}
+          coverUrl={coverUrl}
+          coverAlt={gameName}
         >
           <div className="grid gap-8 xl:grid-cols-[1.4fr_1fr]">
             <div className="space-y-8">
               <section aria-labelledby="server-status-heading">
                 <h2
                   id="server-status-heading"
-                  className="heading-section mb-6 text-2xl uppercase text-white"
+                  className="heading-section mb-2 text-2xl uppercase text-white"
                 >
-                  {gameName} Server Status Monitor
+                  Live Server Report
                 </h2>
+                <p className="mb-6 text-sm leading-6 text-slate-400">
+                  Live status data compiled from official game status pages and
+                  player networks.
+                </p>
                 <GameTelemetryCard
                   telemetry={telemetry}
                   linkToStatusPage={false}
                   linkToProfile
                   history={history}
+                  platforms={releasePlatforms}
                 />
               </section>
 
               <IncidentLog
-                incidents={gameIncidents}
-                sectionTitle="Recent Incident Reports"
-                eyebrow="Outage History"
+                incidents={incidents}
+                sectionTitle="Recent Problems"
+                eyebrow="Crash & Maintenance Log"
               />
             </div>
 
             <NewsFeedPanel
-              news={gameNews}
+              news={news}
               fillHeight
-              sectionTitle="Recent Patch Intel"
-              eyebrow="AI Intelligence"
+              sectionTitle="Game News & Updates"
+              eyebrow="Latest Alerts"
             />
           </div>
         </PageShell>
@@ -108,15 +115,19 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
 
 function buildStatusPageSubtitle(
   gameName: string,
-  status: "ONLINE" | "MAINTENANCE" | "DOWN",
+  status: TelemetryStatus,
 ): string {
+  if (status === "UPCOMING") {
+    return `${gameName} hasn't launched yet. See the release date and latest news below.`;
+  }
+
   if (status === "DOWN") {
-    return `${gameName} is currently flagged DOWN. Review live telemetry, incident reports, and patch intel below.`;
+    return `${gameName} servers look down right now. Check the live report and recent alerts below.`;
   }
 
   if (status === "MAINTENANCE") {
-    return `${gameName} is under maintenance. Track live telemetry, incident reports, and patch intel below.`;
+    return `${gameName} is in maintenance. Follow the live report and alerts below.`;
   }
 
-  return `Live ${gameName} telemetry, incident reports, and Ollama-processed patch intelligence.`;
+  return `See if ${gameName} servers are up, check recent outages, and read the latest game news.`;
 }

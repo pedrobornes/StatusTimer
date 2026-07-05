@@ -8,6 +8,7 @@ import requests
 
 from clients.http_result import PushResult
 from config.settings import settings
+from models.service_status import ServiceStatusPayload
 from models.schemas import GameReleasePayload, PatchNotePayload, SyncGamesRequest
 from models.telemetry import SyncTelemetryRequest
 
@@ -19,6 +20,7 @@ class BackendClient:
 
     INTERNAL_STATUS_PATH = "/api/v1/internal/status"
     INTERNAL_STATUS_SYNC_PATH = "/api/v1/internal/status/sync"
+    INTERNAL_TELEMETRY_UPDATE_PATH = "/api/v1/internal/telemetry/update"
     INTERNAL_NEWS_PATH = "/api/v1/internal/news"
     INTERNAL_GAMES_SYNC_PATH = "/api/v1/internal/games/sync"
 
@@ -54,17 +56,30 @@ class BackendClient:
 
     def sync_game_telemetry(self, request: SyncTelemetryRequest) -> PushResult:
         """POST live game telemetry metrics to the backend sync endpoint."""
-        return self._post(
-            self.INTERNAL_STATUS_SYNC_PATH,
-            request.model_dump(mode="json", by_alias=True),
-            "game telemetry sync",
+        payload = request.model_dump(mode="json", by_alias=True)
+        result = self._post(
+            self.INTERNAL_TELEMETRY_UPDATE_PATH,
+            payload,
+            "game telemetry update",
         )
+        if result.is_endpoint_missing:
+            return self._post(
+                self.INTERNAL_STATUS_SYNC_PATH,
+                payload,
+                "game telemetry sync",
+            )
+        return result
 
-    def push_service_status(self, payload: dict[str, Any]) -> PushResult:
-        """POST server status upserts (compatible with existing internal contract)."""
+    def push_service_status(self, payload: ServiceStatusPayload | dict[str, Any]) -> PushResult:
+        """POST social/platform server status upserts to the internal contract."""
+        body = (
+            payload.model_dump(mode="json", by_alias=True)
+            if isinstance(payload, ServiceStatusPayload)
+            else payload
+        )
         return self._post(
             self.INTERNAL_STATUS_PATH,
-            payload,
+            body,
             "service status",
         )
 

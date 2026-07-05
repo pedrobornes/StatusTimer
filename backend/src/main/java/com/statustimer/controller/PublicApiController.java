@@ -1,11 +1,13 @@
 package com.statustimer.controller;
 
+import com.statustimer.dto.response.GameStatusDetailResponse;
 import com.statustimer.dto.response.GameTelemetryResponse;
 import com.statustimer.dto.response.GamingNewsResponse;
 import com.statustimer.dto.response.ServerStatusResponse;
 import com.statustimer.dto.response.TelemetryHistorySnapshotResponse;
 import com.statustimer.dto.response.TelemetryIncidentResponse;
 import com.statustimer.dto.response.UpcomingReleaseResponse;
+import com.statustimer.service.GameStatusService;
 import com.statustimer.service.GameTelemetryService;
 import com.statustimer.service.GamingNewsService;
 import com.statustimer.service.ServerStatusService;
@@ -26,6 +28,7 @@ public class PublicApiController {
 
     private final ServerStatusService serverStatusService;
     private final GameTelemetryService gameTelemetryService;
+    private final GameStatusService gameStatusService;
     private final GamingNewsService gamingNewsService;
     private final UpcomingReleaseService upcomingReleaseService;
 
@@ -34,9 +37,16 @@ public class PublicApiController {
         return serverStatusService.findAll();
     }
 
+    @GetMapping("/status/{slug}")
+    public GameStatusDetailResponse getGameStatusDetail(@PathVariable String slug) {
+        return gameStatusService.findByGameSlug(slug);
+    }
+
     @GetMapping("/telemetry")
-    public List<GameTelemetryResponse> getGameTelemetry() {
-        return gameTelemetryService.findAll();
+    public List<GameTelemetryResponse> getGameTelemetry(
+            @RequestParam(name = "featured", defaultValue = "false") boolean featured
+    ) {
+        return featured ? gameTelemetryService.findAllFeatured() : gameTelemetryService.findAll();
     }
 
     @GetMapping("/telemetry/history")

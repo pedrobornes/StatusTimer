@@ -1,17 +1,23 @@
-"""Release harvester skeleton (Task 1) with external CDN image URLs (Task 3)."""
+"""Release harvester with vendor watch and Ollama date validation."""
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import date
 
+import requests
+
 from models.normalization import normalize_genre, normalize_platform, to_slug
 from models.schemas import GameReleasePayload, PlatformRelease
+from scrapers.release_watch import ReleaseWatchAnalyzer, fetch_gta_vi_vendor_hint
 from scrapers.platform_images import (
     ROCKSTAR_GTA_VI_KEY_ART,
     resolve_release_image_url,
     resolve_release_logo_url,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -92,22 +98,49 @@ def build_release_payload(
 
 
 def fetch_upcoming_releases() -> list[GameReleasePayload]:
-    """
-    Placeholder harvester for external APIs (IGDB, Steam, Allkeyshop-style feeds).
-
-    Cover art is resolved from platform CDNs only. No local static assets are used.
-    """
+    """Harvest upcoming releases and validate vendor date shifts via Ollama."""
     releases: list[GameReleasePayload] = []
 
     for source in RAW_UPCOMING_RELEASES:
-        releases.append(
-            build_release_payload(
-                game_name=source.game_name,
-                raw_genre_tags=source.raw_genre_tags,
-                raw_platform_dates=source.raw_platform_dates,
-                steam_app_id=source.steam_app_id,
-                direct_image_url=source.direct_image_url,
-            ),
+        release = build_release_payload(
+            game_name=source.game_name,
+            raw_genre_tags=source.raw_genre_tags,
+            raw_platform_dates=dict(source.raw_platform_dates),
+            steam_app_id=source.steam_app_id,
+            direct_image_url=source.direct_image_url,
         )
 
+        if source.game_name == "GTA VI":
+            release = _apply_release_watch(release)
+
+        releases.append(release)
+
     return releases
+
+
+def _apply_release_watch(release: GameReleasePayload) -> GameReleasePayload:
+    analyzer = ReleaseWatchAnalyzer()
+    hint = fetch_gta_vi_vendor_hint(requests.Session())
+    validation = analyzer.validate_hint(hint)
+
+    if not validation.changed or validation.release_date is None:
+        logger.info("Release watch: %s", validation.incident_summary)
+        return release
+
+    parsed_date = date.fromisoformat(validation.release_date)
+    updated_platforms = [
+        PlatformRelease(
+            platform=entry.platform,
+            release_date=parsed_date if entry.release_date is not None else None,
+        )
+        for entry in release.platforms
+    ]
+
+    logger.info(
+        "Release watch updated %s to %s | %s",
+        release.slug,
+        validation.release_date,
+        validation.incident_summary,
+    )
+
+    return release.model_copy(update={"platforms": updated_platforms})

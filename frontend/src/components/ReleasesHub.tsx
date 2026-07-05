@@ -22,8 +22,8 @@ export default function ReleasesHub({ releases }: ReleasesHubProps) {
 
   const emptyMessage =
     currentGenre === "All"
-      ? "[STANDBY] No upcoming releases tracked yet."
-      : `[FILTER ACTIVE] No ${currentGenre} releases indexed yet. Genre tags will sync from the backend.`;
+      ? "No upcoming games found right now. Check back soon for new reveals!"
+      : `No ${currentGenre} releases tracked in this category yet.`;
 
   return (
     <>

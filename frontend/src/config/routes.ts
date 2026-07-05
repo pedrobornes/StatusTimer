@@ -2,6 +2,8 @@
  * Canonical route builders for SEO-friendly URL patterns.
  */
 
+import { getFeaturedGameSlugs } from "@/lib/gameAssets";
+
 export const TRACKED_GAME_SLUGS = [
   "counter-strike-2",
   "valorant",
@@ -9,7 +11,21 @@ export const TRACKED_GAME_SLUGS = [
   "pubg",
   "gta-vi",
   "fortnite",
+  "league-of-legends",
+  "minecraft",
+  "roblox",
+  "apex-legends",
+  "call-of-duty",
+  "gta-v",
+  "overwatch-2",
+  "rainbow-six-siege",
+  "rocket-league",
+  "destiny-2",
+  "rust",
+  "elden-ring",
 ] as const;
+
+export const FEATURED_GAME_SLUGS = getFeaturedGameSlugs(TRACKED_GAME_SLUGS);
 
 export type TrackedGameSlug = (typeof TRACKED_GAME_SLUGS)[number];
 
@@ -35,7 +51,7 @@ export function buildGameStatusTitle(gameName: string): string {
 }
 
 export function buildGameStatusDescription(gameName: string): string {
-  return `Check if ${gameName} servers are down or experiencing issues. Live telemetry, recent incident reports, and real-time status tracker.`;
+  return `Check if ${gameName} servers are down or having problems. Live status, recent outages, and real-time updates.`;
 }
 
 export function buildGameStatusKeywords(gameName: string, gameSlug: string): string[] {

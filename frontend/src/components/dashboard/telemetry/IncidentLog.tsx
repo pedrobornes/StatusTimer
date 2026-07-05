@@ -18,8 +18,8 @@ interface IncidentLogProps {
 export default function IncidentLog({
   incidents,
   embedded = false,
-  sectionTitle = "Recent Incidents",
-  eyebrow = "Incident Feed",
+  sectionTitle = "Recent Problems",
+  eyebrow = "Crash & Maintenance Log",
 }: IncidentLogProps) {
   const sectionClass = embedded
     ? ""
@@ -46,8 +46,8 @@ export default function IncidentLog({
           <div className="mb-3 inline-flex rounded-full border border-emerald-400/30 bg-emerald-500/15 p-2">
             <ShieldCheck className="h-5 w-5 text-emerald-300" />
           </div>
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-200">
-            [SYSTEMS FULLY OPERATIONAL - 0 RECENT INCIDENTS]
+          <p className="text-sm font-semibold text-emerald-200">
+            All servers are up and running. Time to game!
           </p>
         </div>
       ) : (

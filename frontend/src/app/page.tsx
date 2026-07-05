@@ -1,6 +1,6 @@
 import Dashboard from "@/components/dashboard/Dashboard";
 import DashboardError from "@/components/dashboard/DashboardError";
-import { TRACKED_GAME_SLUGS } from "@/config/routes";
+import { FEATURED_GAME_SLUGS } from "@/config/routes";
 import { getGamingNews } from "@/services/newsService";
 import { getUpcomingReleases } from "@/services/releasesService";
 import {
@@ -32,13 +32,13 @@ function buildTelemetryBySlug(entries: GameTelemetry[]): Record<string, GameTele
 export default async function HomePage() {
   try {
     const [gameTelemetry, news, releases, incidents] = await Promise.all([
-      getGameTelemetry().catch(() => []),
+      getGameTelemetry({ featured: true }).catch(() => []),
       getGamingNews(),
       getUpcomingReleases(),
       getTelemetryIncidents().catch(() => []),
     ]);
 
-    const historyBySlug = await loadTelemetryHistoryBySlug(TRACKED_GAME_SLUGS);
+    const historyBySlug = await loadTelemetryHistoryBySlug(FEATURED_GAME_SLUGS);
 
     return (
       <Dashboard

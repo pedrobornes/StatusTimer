@@ -1,5 +1,6 @@
 package com.statustimer.service;
 
+import com.statustimer.config.TrackedGameCatalog;
 import com.statustimer.dto.request.GameTelemetryPayload;
 import com.statustimer.dto.request.SyncTelemetryRequest;
 import com.statustimer.dto.response.GameTelemetryResponse;
@@ -10,11 +11,14 @@ import com.statustimer.entity.GameTelemetry;
 import com.statustimer.entity.GameTelemetryHistory;
 import com.statustimer.entity.TelemetrySource;
 import com.statustimer.entity.TelemetryStatus;
+import com.statustimer.repository.GameRepository;
 import com.statustimer.repository.GameTelemetryHistoryRepository;
 import com.statustimer.repository.GameTelemetryRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -23,6 +27,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class GameTelemetryService {
 
     private static final int HISTORY_RETENTION_DAYS = 7;
@@ -33,18 +38,36 @@ public class GameTelemetryService {
 
     private final GameTelemetryRepository gameTelemetryRepository;
     private final GameTelemetryHistoryRepository gameTelemetryHistoryRepository;
+    private final GameRepository gameRepository;
 
     @Transactional(readOnly = true)
     public List<GameTelemetryResponse> findAll() {
         return gameTelemetryRepository.findAll().stream()
-                .map(GameTelemetryResponse::fromEntity)
+                .map(entity -> GameTelemetryResponse.fromEntity(
+                        entity,
+                        gameRepository.findBySlug(entity.getGameSlug())
+                ))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<GameTelemetryResponse> findAllFeatured() {
+        return gameTelemetryRepository.findAll().stream()
+                .filter(entity -> TrackedGameCatalog.isFeatured(entity.getGameSlug()))
+                .map(entity -> GameTelemetryResponse.fromEntity(
+                        entity,
+                        gameRepository.findBySlug(entity.getGameSlug())
+                ))
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public GameTelemetryResponse findByGameSlug(String gameSlug) {
         return gameTelemetryRepository.findByGameSlug(gameSlug)
-                .map(GameTelemetryResponse::fromEntity)
+                .map(entity -> GameTelemetryResponse.fromEntity(
+                        entity,
+                        gameRepository.findBySlug(entity.getGameSlug())
+                ))
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Telemetry not found for slug: " + gameSlug
@@ -70,6 +93,20 @@ public class GameTelemetryService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<TelemetryIncidentResponse> findRecentIncidentsByGameSlug(
+            String gameSlug,
+            Pageable pageable
+    ) {
+        validateGameSlug(gameSlug);
+
+        return gameTelemetryRepository
+                .findRecentIncidentsByGameSlug(gameSlug, INCIDENT_STATUSES, pageable)
+                .stream()
+                .map(TelemetryIncidentResponse::fromEntity)
+                .toList();
+    }
+
     @Transactional
     public SyncTelemetryResponse syncTelemetry(SyncTelemetryRequest request) {
         if (request.entries() == null || request.entries().isEmpty()) {
@@ -81,17 +118,41 @@ public class GameTelemetryService {
 
         int created = 0;
         int updated = 0;
+        int skipped = 0;
 
         for (GameTelemetryPayload payload : request.entries()) {
-            boolean isNew = upsertTelemetry(payload);
-            if (isNew) {
-                created++;
-            } else {
-                updated++;
+            try {
+                boolean isNew = upsertTelemetry(payload);
+                if (isNew) {
+                    created++;
+                } else {
+                    updated++;
+                }
+            } catch (ResponseStatusException exception) {
+                skipped++;
+                log.warn(
+                        "Telemetry sync skipped for slug={}: {}",
+                        payload.gameSlug(),
+                        exception.getReason()
+                );
+            } catch (RuntimeException exception) {
+                skipped++;
+                log.error(
+                        "Telemetry sync failed for slug={}. Preserving last known state.",
+                        payload.gameSlug(),
+                        exception
+                );
             }
         }
 
-        return new SyncTelemetryResponse(created, updated, request.entries().size());
+        if (created == 0 && updated == 0 && skipped > 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "All telemetry entries failed validation or persistence"
+            );
+        }
+
+        return new SyncTelemetryResponse(created, updated, request.entries().size(), skipped);
     }
 
     private boolean upsertTelemetry(GameTelemetryPayload payload) {

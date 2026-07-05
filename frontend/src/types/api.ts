@@ -1,8 +1,9 @@
-export type ServiceCategory = "GAMING" | "SOCIAL" | "STREAMING";
+export type ServiceCategory = "GAMING" | "SOCIAL";
 
 export interface ServerStatus {
   id: number;
   serviceName: string;
+  serviceSlug: string;
   category: ServiceCategory;
   isUp: boolean;
   lastChecked: string;
@@ -39,6 +40,8 @@ export interface UpcomingRelease {
   genre: GameGenre;
   releaseDate: string;
   hypeCount: number;
+  imageUrl?: string | null;
+  logoUrl?: string | null;
   platforms: PlatformDetail[];
 }
 

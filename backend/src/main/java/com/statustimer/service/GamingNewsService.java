@@ -6,6 +6,7 @@ import com.statustimer.repository.GamingNewsRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +19,15 @@ public class GamingNewsService {
     @Transactional(readOnly = true)
     public List<GamingNewsResponse> findLatest() {
         return gamingNewsRepository.findAllByOrderByCreatedAtDesc().stream()
+                .map(GamingNewsResponse::fromEntity)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<GamingNewsResponse> findByGameTag(String gameTag, int limit) {
+        return gamingNewsRepository
+                .findByGameTagOrderByCreatedAtDesc(gameTag, Pageable.ofSize(limit))
+                .stream()
                 .map(GamingNewsResponse::fromEntity)
                 .toList();
     }

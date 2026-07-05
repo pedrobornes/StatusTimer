@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import PageShell from "@/components/PageShell";
-import ServerStatusPanel from "@/components/dashboard/ServerStatusPanel";
+import TelemetryStatusHub from "@/components/dashboard/TelemetryStatusHub";
 import DashboardError from "@/components/dashboard/DashboardError";
+import { buildPlatformsBySlug } from "@/lib/releases";
+import { getUpcomingReleases } from "@/services/releasesService";
 import { getServerStatuses } from "@/services/statusService";
 import {
   getGameTelemetry,
@@ -13,7 +15,7 @@ import type { TelemetryHistorySnapshot } from "@/types/telemetry";
 export const metadata: Metadata = {
   title: "Server Live Status",
   description:
-    "Full server status grid for all monitored gaming, social, and streaming platforms.",
+    "Full server status grid for all monitored games and social platforms.",
 };
 
 export const revalidate = 60;
@@ -33,11 +35,14 @@ async function loadTelemetryHistoryBySlug(
 
 export default async function TelemetryPage() {
   try {
-    const [statuses, gameTelemetry, incidents] = await Promise.all([
+    const [statuses, gameTelemetry, incidents, releases] = await Promise.all([
       getServerStatuses(),
       getGameTelemetry().catch(() => []),
       getTelemetryIncidents().catch(() => []),
+      getUpcomingReleases().catch(() => []),
     ]);
+
+    const platformsBySlug = buildPlatformsBySlug(releases);
 
     const telemetryHistoryBySlug = await loadTelemetryHistoryBySlug(
       gameTelemetry.map((entry) => entry.gameSlug),
@@ -46,13 +51,14 @@ export default async function TelemetryPage() {
     return (
       <PageShell
         title="SERVER LIVE STATUS"
-        subtitle="Every tracked platform in one view. Status signals refresh on each sync cycle."
+        subtitle="Every tracked game and social platform in one place. Status updates refresh automatically."
         badge="Servers"
       >
-        <ServerStatusPanel
+        <TelemetryStatusHub
           statuses={statuses}
           gameTelemetry={gameTelemetry}
           telemetryHistoryBySlug={telemetryHistoryBySlug}
+          platformsBySlug={platformsBySlug}
           incidents={incidents}
         />
       </PageShell>

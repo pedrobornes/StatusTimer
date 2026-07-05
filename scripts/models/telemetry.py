@@ -9,6 +9,7 @@ class TelemetryStatus(str, Enum):
     ONLINE = "ONLINE"
     MAINTENANCE = "MAINTENANCE"
     DOWN = "DOWN"
+    UPCOMING = "UPCOMING"
 
 
 class TelemetrySource(str, Enum):
@@ -25,6 +26,7 @@ class GameTelemetryPayload(BaseModel):
         default=TelemetrySource.NETWORK_PROBE,
         alias="dataSource",
     )
+    is_upcoming: bool = Field(default=False, alias="isUpcoming")
 
     model_config = {"populate_by_name": True}
 

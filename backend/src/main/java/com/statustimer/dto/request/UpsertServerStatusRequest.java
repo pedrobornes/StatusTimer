@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 
 public record UpsertServerStatusRequest(
         String serviceName,
+        String serviceSlug,
         ServiceCategory category,
         Boolean isUp,
         LocalDateTime lastChecked
@@ -14,6 +15,7 @@ public record UpsertServerStatusRequest(
     public ServerStatus toNewEntity() {
         return ServerStatus.builder()
                 .serviceName(serviceName)
+                .serviceSlug(serviceSlug)
                 .category(category)
                 .isUp(isUp)
                 .lastChecked(lastChecked)
@@ -21,6 +23,8 @@ public record UpsertServerStatusRequest(
     }
 
     public void applyTo(ServerStatus existing) {
+        existing.setServiceName(serviceName);
+        existing.setServiceSlug(serviceSlug);
         existing.setCategory(category);
         existing.setIsUp(isUp);
         existing.setLastChecked(lastChecked);

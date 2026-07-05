@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 public record ServerStatusResponse(
         Long id,
         String serviceName,
+        String serviceSlug,
         String category,
         Boolean isUp,
         LocalDateTime lastChecked
@@ -15,6 +16,7 @@ public record ServerStatusResponse(
         return new ServerStatusResponse(
                 entity.getId(),
                 entity.getServiceName(),
+                entity.getServiceSlug(),
                 entity.getCategory().name(),
                 entity.getIsUp(),
                 entity.getLastChecked()

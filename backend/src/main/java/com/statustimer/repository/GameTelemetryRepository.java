@@ -36,4 +36,16 @@ public interface GameTelemetryRepository extends JpaRepository<GameTelemetry, Lo
             @Param("statuses") Collection<TelemetryStatus> statuses,
             Pageable pageable
     );
+
+    @Query("""
+            SELECT h FROM GameTelemetryHistory h
+            WHERE h.gameSlug = :gameSlug
+              AND h.status IN :statuses
+            ORDER BY h.checkedAt DESC
+            """)
+    List<GameTelemetryHistory> findRecentIncidentsByGameSlug(
+            @Param("gameSlug") String gameSlug,
+            @Param("statuses") Collection<TelemetryStatus> statuses,
+            Pageable pageable
+    );
 }

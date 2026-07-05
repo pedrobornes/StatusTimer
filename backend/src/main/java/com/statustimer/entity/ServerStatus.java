@@ -31,6 +31,9 @@ public class ServerStatus {
     @Column(nullable = false, unique = true)
     private String serviceName;
 
+    @Column(nullable = false, unique = true)
+    private String serviceSlug;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ServiceCategory category;

@@ -7,6 +7,7 @@ public record GameTelemetryPayload(
         String gameSlug,
         TelemetryStatus status,
         Integer latencyMs,
-        TelemetrySource dataSource
+        TelemetrySource dataSource,
+        Boolean isUpcoming
 ) {
 }

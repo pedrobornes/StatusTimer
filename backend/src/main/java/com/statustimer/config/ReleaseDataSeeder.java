@@ -28,12 +28,8 @@ public class ReleaseDataSeeder implements CommandLineRunner {
                 .gameName("Grand Theft Auto VI")
                 .genre(GameGenre.ACTION)
                 .hypeCount(12_840L)
-                .imageUrl(
-                        "https://media-rockstargames-com.akamaized.net/tina-uploads/tina_rockstar_games/gta-vi-key-art.jpg"
-                )
-                .logoUrl(
-                        "https://media-rockstargames-com.akamaized.net/tina-uploads/tina_rockstar_games/gta-vi-logo-icon.png"
-                )
+                .imageUrl("/images/games/gta-vi-cover.jpg")
+                .logoUrl("/images/games/gta-vi-logo.png")
                 .build();
         gtaVi.replacePlatforms(List.of(
                 platform(GamePlatform.PS5, LocalDate.of(2026, 11, 19)),

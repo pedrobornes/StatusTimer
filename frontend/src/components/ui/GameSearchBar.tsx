@@ -1,0 +1,214 @@
+"use client";
+
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Search } from "lucide-react";
+import GameAssetImage from "@/components/ui/GameAssetImage";
+import { APP_ROUTES } from "@/config/routes";
+import type { SearchableGame } from "@/lib/gameAssets";
+
+interface GameSearchBarProps {
+  games: SearchableGame[];
+}
+
+export default function GameSearchBar({ games }: GameSearchBarProps) {
+  const router = useRouter();
+  const listboxId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const [query, setQuery] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const normalizedQuery = query.trim().toLowerCase();
+
+  const matches = useMemo(() => {
+    if (!normalizedQuery) {
+      return games;
+    }
+
+    return games.filter(
+      (game) =>
+        game.name.toLowerCase().includes(normalizedQuery) ||
+        game.slug.toLowerCase().includes(normalizedQuery),
+    );
+  }, [games, normalizedQuery]);
+
+  const navigateToGame = useCallback(
+    (slug: string) => {
+      setQuery("");
+      setIsOpen(false);
+      setIsFocused(false);
+      setActiveIndex(0);
+      inputRef.current?.blur();
+      router.push(APP_ROUTES.status(slug));
+    },
+    [router],
+  );
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [normalizedQuery]);
+
+  useEffect(() => {
+    function handleGlobalKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      const isTypingContext =
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.isContentEditable;
+
+      if (event.key === "/" && !isTypingContext) {
+        event.preventDefault();
+        inputRef.current?.focus();
+        setIsOpen(true);
+      }
+    }
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, []);
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+        setIsFocused(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, []);
+
+  function handleInputKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setIsOpen(true);
+      setActiveIndex((current) =>
+        matches.length === 0 ? 0 : Math.min(current + 1, matches.length - 1),
+      );
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveIndex((current) => Math.max(current - 1, 0));
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const selected = matches[activeIndex] ?? matches[0];
+      if (selected) {
+        navigateToGame(selected.slug);
+      }
+      return;
+    }
+
+    if (event.key === "Escape") {
+      setIsOpen(false);
+      setIsFocused(false);
+      inputRef.current?.blur();
+    }
+  }
+
+  const showDropdown = isOpen && isFocused;
+
+  return (
+    <div ref={containerRef} className="relative mt-6 w-full max-w-xl">
+      <label htmlFor={`${listboxId}-input`} className="sr-only">
+        Search tracked games
+      </label>
+
+      <div className="relative">
+        <Search
+          className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-violet-300/70"
+          aria-hidden
+        />
+        <input
+          ref={inputRef}
+          id={`${listboxId}-input`}
+          type="search"
+          role="combobox"
+          aria-expanded={showDropdown}
+          aria-controls={`${listboxId}-listbox`}
+          aria-autocomplete="list"
+          aria-activedescendant={
+            matches[activeIndex]
+              ? `${listboxId}-option-${matches[activeIndex].slug}`
+              : undefined
+          }
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => {
+            setIsFocused(true);
+            setIsOpen(true);
+          }}
+          onKeyDown={handleInputKeyDown}
+          placeholder="Search games..."
+          className="w-full rounded-2xl border border-violet-400/20 bg-white/[0.04] py-3 pl-11 pr-28 text-sm text-white placeholder:text-slate-500 outline-none transition focus:border-violet-400/45 focus:bg-white/[0.06] focus:ring-2 focus:ring-violet-500/20"
+        />
+        <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 items-center gap-1 rounded-md border border-white/10 bg-black/30 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-slate-400 sm:inline-flex">
+          Press <span className="text-violet-200">/</span> to search
+        </kbd>
+      </div>
+
+      {showDropdown ? (
+        <div
+          id={`${listboxId}-listbox`}
+          role="listbox"
+          className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border border-white/10 bg-[#0f0b1f]/95 shadow-[0_16px_48px_rgba(0,0,0,0.45)] backdrop-blur-md"
+        >
+          {matches.length === 0 ? (
+            <p className="px-4 py-6 text-center text-sm text-slate-400">
+              {normalizedQuery
+                ? `No games found matching '${query.trim()}'`
+                : "No games found"}
+            </p>
+          ) : (
+            <ul className="max-h-72 overflow-y-auto py-2">
+              {matches.map((game, index) => {
+                const isActive = index === activeIndex;
+
+                return (
+                  <li key={game.slug} role="presentation">
+                    <button
+                      id={`${listboxId}-option-${game.slug}`}
+                      type="button"
+                      role="option"
+                      aria-selected={isActive}
+                      onMouseEnter={() => setActiveIndex(index)}
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        navigateToGame(game.slug);
+                      }}
+                      className={`flex w-full items-center gap-3 px-4 py-2.5 text-left transition ${
+                        isActive
+                          ? "bg-violet-500/15 text-white"
+                          : "text-slate-200 hover:bg-white/[0.04]"
+                      }`}
+                    >
+                      <GameAssetImage
+                        name={game.name}
+                        src={game.logoUrl}
+                        className="h-9 w-20"
+                        imageClassName="object-contain p-0.5"
+                      />
+                      <span className="text-sm font-medium">{game.name}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}

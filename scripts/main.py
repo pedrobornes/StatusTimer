@@ -99,6 +99,13 @@ def run_release_sync(client: BackendClient) -> tuple[int, PushResult]:
 
 def run_status_sync(client: BackendClient) -> tuple[int, PushResult]:
     telemetry_entries = fetch_game_telemetry()
+
+    if not telemetry_entries:
+        logger.warning(
+            "No telemetry entries collected this cycle; backend state preserved.",
+        )
+        return 0, PushResult(success=True, status_code=204)
+
     payload = SyncTelemetryRequest(entries=telemetry_entries)
 
     logger.info("Prepared %s telemetry payloads", len(telemetry_entries))

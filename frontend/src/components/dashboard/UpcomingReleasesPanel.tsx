@@ -22,9 +22,7 @@ export default function UpcomingReleasesPanel({
   const filteredReleases = filterReleasesByGenre(releases, currentGenre);
 
   const emptyMessage =
-    currentGenre === "All"
-      ? "[STANDBY] No countdowns online yet."
-      : `[FILTER ACTIVE] No ${currentGenre} games in this preview. Full list on Releases hub.`;
+    "No upcoming games found in this category right now. Check back soon for new reveals!";
 
   return (
     <section className="glass-panel rounded-3xl p-6 md:p-8">

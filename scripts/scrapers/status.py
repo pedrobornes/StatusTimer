@@ -1,4 +1,4 @@
-"""Live game server telemetry harvester (Steam API + network fallback)."""
+"""Live game server telemetry harvester (multi-platform probes + Ollama)."""
 
 from __future__ import annotations
 
@@ -6,45 +6,58 @@ import logging
 import socket
 import time
 from dataclasses import dataclass
-from typing import Any
+from enum import Enum
 
 import requests
 
 from config.settings import settings
-from models.telemetry import (
-    GameTelemetryPayload,
-    TelemetrySource,
-    TelemetryStatus,
-)
+from models.telemetry import GameTelemetryPayload, TelemetrySource, TelemetryStatus
+from pipeline.telemetry_analyzer import TelemetryAnalyzer
+from scrapers.epic_lightswitch import probe_fortnite_status
+from scrapers.probe_models import ProbeOutcome
+from scrapers.riot_telemetry import probe_valorant_status
+from scrapers.steam_probe import probe_steam_game
 
 logger = logging.getLogger(__name__)
 
-STEAM_PLAYERS_URL = (
-    "https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/"
-)
+
+class ProbeStrategy(str, Enum):
+    STEAM = "steam"
+    RIOT = "riot"
+    EPIC_LIGHTSWITCH = "epic_lightswitch"
 
 
 @dataclass(frozen=True)
 class MonitoredGameTarget:
     slug: str
     display_name: str
+    strategy: ProbeStrategy
     steam_app_id: int | None = None
     fallback_host: str | None = None
     fallback_port: int = 443
-    status_page_url: str | None = None
+    skip_live_probe: bool = False
 
 
 MONITORED_GAME_TARGETS: tuple[MonitoredGameTarget, ...] = (
     MonitoredGameTarget(
         slug="counter-strike-2",
         display_name="Counter-Strike 2",
+        strategy=ProbeStrategy.STEAM,
         steam_app_id=730,
         fallback_host="162.254.196.0",
         fallback_port=27015,
     ),
     MonitoredGameTarget(
+        slug="valorant",
+        display_name="Valorant",
+        strategy=ProbeStrategy.RIOT,
+        fallback_host="104.160.131.3",
+        fallback_port=443,
+    ),
+    MonitoredGameTarget(
         slug="dota-2",
         display_name="Dota 2",
+        strategy=ProbeStrategy.STEAM,
         steam_app_id=570,
         fallback_host="146.66.158.0",
         fallback_port=27015,
@@ -52,6 +65,7 @@ MONITORED_GAME_TARGETS: tuple[MonitoredGameTarget, ...] = (
     MonitoredGameTarget(
         slug="pubg",
         display_name="PUBG",
+        strategy=ProbeStrategy.STEAM,
         steam_app_id=578080,
         fallback_host="52.84.31.105",
         fallback_port=443,
@@ -59,31 +73,117 @@ MONITORED_GAME_TARGETS: tuple[MonitoredGameTarget, ...] = (
     MonitoredGameTarget(
         slug="gta-vi",
         display_name="GTA VI",
-        steam_app_id=271590,
-        fallback_host="prod.cloud.rockstargames.com",
-        fallback_port=443,
-    ),
-    MonitoredGameTarget(
-        slug="valorant",
-        display_name="Valorant",
-        fallback_host="104.160.131.3",
-        fallback_port=443,
+        strategy=ProbeStrategy.STEAM,
+        skip_live_probe=True,
     ),
     MonitoredGameTarget(
         slug="fortnite",
         display_name="Fortnite",
+        strategy=ProbeStrategy.EPIC_LIGHTSWITCH,
         fallback_host="epicgames.com",
         fallback_port=443,
-        status_page_url="https://status.epicgames.com/api/v2/summary.json",
+    ),
+    MonitoredGameTarget(
+        slug="league-of-legends",
+        display_name="League of Legends",
+        strategy=ProbeStrategy.RIOT,
+        fallback_host="leagueoflegends.com",
+        fallback_port=443,
+    ),
+    MonitoredGameTarget(
+        slug="minecraft",
+        display_name="Minecraft",
+        strategy=ProbeStrategy.STEAM,
+        fallback_host="minecraft.net",
+        fallback_port=443,
+    ),
+    MonitoredGameTarget(
+        slug="roblox",
+        display_name="Roblox",
+        strategy=ProbeStrategy.STEAM,
+        fallback_host="roblox.com",
+        fallback_port=443,
+    ),
+    MonitoredGameTarget(
+        slug="apex-legends",
+        display_name="Apex Legends",
+        strategy=ProbeStrategy.STEAM,
+        steam_app_id=1172470,
+        fallback_host="ea.com",
+        fallback_port=443,
+    ),
+    MonitoredGameTarget(
+        slug="call-of-duty",
+        display_name="Call of Duty",
+        strategy=ProbeStrategy.STEAM,
+        steam_app_id=1938090,
+        fallback_host="callofduty.com",
+        fallback_port=443,
+    ),
+    MonitoredGameTarget(
+        slug="gta-v",
+        display_name="GTA V",
+        strategy=ProbeStrategy.STEAM,
+        steam_app_id=271590,
+        fallback_host="rockstargames.com",
+        fallback_port=443,
+    ),
+    MonitoredGameTarget(
+        slug="overwatch-2",
+        display_name="Overwatch 2",
+        strategy=ProbeStrategy.STEAM,
+        fallback_host="overwatch.blizzard.com",
+        fallback_port=443,
+    ),
+    MonitoredGameTarget(
+        slug="rainbow-six-siege",
+        display_name="Rainbow Six Siege",
+        strategy=ProbeStrategy.STEAM,
+        steam_app_id=359550,
+        fallback_host="ubisoft.com",
+        fallback_port=443,
+    ),
+    MonitoredGameTarget(
+        slug="rocket-league",
+        display_name="Rocket League",
+        strategy=ProbeStrategy.STEAM,
+        steam_app_id=252950,
+        fallback_host="psyonix.com",
+        fallback_port=443,
+    ),
+    MonitoredGameTarget(
+        slug="destiny-2",
+        display_name="Destiny 2",
+        strategy=ProbeStrategy.STEAM,
+        steam_app_id=1085660,
+        fallback_host="bungie.net",
+        fallback_port=443,
+    ),
+    MonitoredGameTarget(
+        slug="rust",
+        display_name="Rust",
+        strategy=ProbeStrategy.STEAM,
+        steam_app_id=252490,
+        fallback_host="facepunch.com",
+        fallback_port=443,
+    ),
+    MonitoredGameTarget(
+        slug="elden-ring",
+        display_name="Elden Ring",
+        strategy=ProbeStrategy.STEAM,
+        steam_app_id=1245620,
+        fallback_host="bandainamcoent.eu",
+        fallback_port=443,
     ),
 )
 
 
 class StatusHarvester:
-    """Collects telemetry using Steam Web API first, then real network probes."""
+    """Collects telemetry from structured platform APIs with graceful degradation."""
 
-    def __init__(self) -> None:
+    def __init__(self, analyzer: TelemetryAnalyzer | None = None) -> None:
         self._timeout = settings.request_timeout_seconds
+        self._analyzer = analyzer or TelemetryAnalyzer()
         self._session = requests.Session()
         self._session.headers.update(
             {
@@ -97,122 +197,97 @@ class StatusHarvester:
 
         for index, target in enumerate(MONITORED_GAME_TARGETS):
             payload = self._collect_target(target)
-            results.append(payload)
-            logger.info(
-                "[%s] %s | status=%s | latency=%sms | source=%s",
-                target.slug,
-                target.display_name,
-                payload.status.value,
-                payload.latency_ms,
-                payload.data_source.value,
-            )
+            if payload is not None:
+                results.append(payload)
+                logger.info(
+                    "[%s] %s | status=%s | latency=%sms | source=%s",
+                    target.slug,
+                    target.display_name,
+                    payload.status.value,
+                    payload.latency_ms,
+                    payload.data_source.value,
+                )
+            else:
+                logger.warning(
+                    "[%s] %s probe failed; preserving last known backend state",
+                    target.slug,
+                    target.display_name,
+                )
 
             if index < len(MONITORED_GAME_TARGETS) - 1:
-                time.sleep(0.4)
+                time.sleep(0.35)
 
         return results
 
-    def _collect_target(self, target: MonitoredGameTarget) -> GameTelemetryPayload:
-        if target.steam_app_id is not None and settings.steam_api_key:
-            steam_result = self._query_steam_players(target.steam_app_id)
-            if steam_result is not None:
-                return GameTelemetryPayload(
-                    gameSlug=target.slug,
-                    status=steam_result["status"],
-                    latencyMs=steam_result["latency_ms"],
-                    dataSource=TelemetrySource.STEAM_API,
-                )
-
-            logger.warning(
-                "Steam API unavailable for %s. Falling back to network probe.",
+    def _collect_target(self, target: MonitoredGameTarget) -> GameTelemetryPayload | None:
+        if target.skip_live_probe:
+            logger.info(
+                "Emitting UPCOMING telemetry for unreleased title %s",
                 target.display_name,
             )
+            return GameTelemetryPayload(
+                gameSlug=target.slug,
+                status=TelemetryStatus.UPCOMING,
+                latencyMs=0,
+                dataSource=TelemetrySource.STATUS_PAGE,
+                isUpcoming=True,
+            )
 
-        if target.status_page_url:
-            status_page_result = self._query_status_page(target.status_page_url)
-            if status_page_result is not None:
-                return GameTelemetryPayload(
-                    gameSlug=target.slug,
-                    status=status_page_result["status"],
-                    latencyMs=status_page_result["latency_ms"],
-                    dataSource=TelemetrySource.STATUS_PAGE,
-                )
+        outcome = self._run_primary_probe(target)
+        if outcome is None:
+            outcome = self._run_network_fallback(target)
 
-        if target.fallback_host:
-            probe = probe_tcp_latency(target.fallback_host, target.fallback_port)
-            if probe is not None:
-                return GameTelemetryPayload(
-                    gameSlug=target.slug,
-                    status=TelemetryStatus.ONLINE,
-                    latencyMs=probe,
-                    dataSource=TelemetrySource.NETWORK_PROBE,
-                )
+        if outcome is None:
+            return None
+
+        resolved = self._analyzer.resolve_probe(
+            game_name=target.display_name,
+            platform=target.strategy.value,
+            outcome=outcome,
+        )
 
         return GameTelemetryPayload(
             gameSlug=target.slug,
-            status=TelemetryStatus.DOWN,
-            latencyMs=0,
-            dataSource=TelemetrySource.NETWORK_PROBE,
+            status=resolved.status,
+            latencyMs=resolved.latency_ms,
+            dataSource=resolved.data_source,
         )
 
-    def _query_steam_players(self, app_id: int) -> dict[str, Any] | None:
-        started = time.perf_counter()
-
-        try:
-            response = self._session.get(
-                STEAM_PLAYERS_URL,
-                params={"appid": app_id, "key": settings.steam_api_key},
+    def _run_primary_probe(self, target: MonitoredGameTarget) -> ProbeOutcome | None:
+        if target.strategy == ProbeStrategy.STEAM and target.steam_app_id is not None:
+            return probe_steam_game(
+                app_id=target.steam_app_id,
+                display_name=target.display_name,
+                session=self._session,
                 timeout=self._timeout,
             )
-            response.raise_for_status()
-            payload = response.json()
-        except requests.RequestException as error:
-            logger.warning("Steam API request failed for app %s: %s", app_id, error)
+
+        if target.strategy == ProbeStrategy.RIOT:
+            return probe_valorant_status(self._session, self._timeout)
+
+        if target.strategy == ProbeStrategy.EPIC_LIGHTSWITCH:
+            return probe_fortnite_status(self._session, self._timeout)
+
+        return None
+
+    def _run_network_fallback(self, target: MonitoredGameTarget) -> ProbeOutcome | None:
+        if not target.fallback_host:
             return None
 
-        latency_ms = max(1, int((time.perf_counter() - started) * 1000))
-        response_body = payload.get("response", {})
-        result_code = response_body.get("result")
-
-        if result_code != 1:
-            return {
-                "status": TelemetryStatus.MAINTENANCE,
-                "latency_ms": latency_ms,
-            }
-
-        player_count = response_body.get("player_count", 0)
-        status = TelemetryStatus.ONLINE if player_count >= 0 else TelemetryStatus.DOWN
-
-        return {
-            "status": status,
-            "latency_ms": latency_ms,
-        }
-
-    def _query_status_page(self, summary_url: str) -> dict[str, Any] | None:
-        started = time.perf_counter()
-
-        try:
-            response = self._session.get(summary_url, timeout=self._timeout)
-            response.raise_for_status()
-            payload = response.json()
-        except requests.RequestException as error:
-            logger.warning("Status page request failed for %s: %s", summary_url, error)
+        latency = probe_tcp_latency(target.fallback_host, target.fallback_port)
+        if latency is None:
             return None
 
-        latency_ms = max(1, int((time.perf_counter() - started) * 1000))
-        indicator = payload.get("status", {}).get("indicator", "unknown")
-
-        if indicator in {"none", "minor"}:
-            status = TelemetryStatus.ONLINE
-        elif indicator in {"major", "critical"}:
-            status = TelemetryStatus.DOWN
-        else:
-            status = TelemetryStatus.MAINTENANCE
-
-        return {
-            "status": status,
-            "latency_ms": latency_ms,
-        }
+        return ProbeOutcome(
+            status=TelemetryStatus.ONLINE,
+            latency_ms=latency,
+            data_source=TelemetrySource.NETWORK_PROBE,
+            context=(
+                f"Network probe succeeded for {target.fallback_host}:"
+                f"{target.fallback_port} after API probe failure."
+            ),
+            ambiguous=False,
+        )
 
 
 def probe_tcp_latency(host: str, port: int, timeout: float | None = None) -> int | None:

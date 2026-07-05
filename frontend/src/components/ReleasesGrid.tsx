@@ -28,7 +28,11 @@ export default function ReleasesGrid({
   return (
     <div className={gridClass}>
       {releases.map((release) => (
-        <ReleaseCard key={release.id} release={release} />
+        <ReleaseCard
+          key={release.id}
+          release={release}
+          showCover={columns === "full"}
+        />
       ))}
     </div>
   );

@@ -11,14 +11,13 @@ STEAM_LOGO_CDN_TEMPLATE = (
 EPIC_FORTNITE_KEY_ART = (
     "https://cdn2.unrealengine.com/14fortnite-1920x1080-fortnite-key-art-1920x1080-432356386.jpg"
 )
-RIOT_VALORANT_KEY_ART = (
-    "https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/"
-    "blt82247fbe329e6d1b/618fd977baf3690a9509bca6/valorant_key_art.jpg"
+RIOT_VALORANT_LOGO = (
+    "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/"
+    "7b76209193f1bfe190d3ae6ef8728328870be9c3-736x138.png?accountingTag=VAL"
 )
-ROCKSTAR_GTA_VI_KEY_ART = (
-    "https://media-rockstargames-com.akamaized.net/tina-uploads/"
-    "tina_rockstar_games/gta-vi-key-art.jpg"
-)
+RIOT_VALORANT_KEY_ART = "/images/games/valorant-cover.jpg"
+ROCKSTAR_GTA_VI_LOGO = "/images/games/gta-vi-logo.png"
+ROCKSTAR_GTA_VI_KEY_ART = "/images/games/gta-vi-cover.jpg"
 
 
 def steam_header_url(app_id: int) -> str:

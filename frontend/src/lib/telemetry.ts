@@ -29,6 +29,11 @@ const STATUS_VISUALS: Record<TelemetryStatus, StatusVisual> = {
     badgeClass: "bg-rose-500/10 text-rose-300 ring-1 ring-rose-400/20",
     dotClass: "bg-rose-400 shadow-[0_0_10px_rgba(251,113,133,0.8)]",
   },
+  UPCOMING: {
+    label: "Upcoming",
+    badgeClass: "bg-amber-500/10 text-amber-300 ring-1 ring-amber-400/20",
+    dotClass: "bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.8)]",
+  },
 };
 
 const TIMELINE_BLOCK_CLASSES: Record<TelemetryStatus, string> = {
@@ -37,6 +42,7 @@ const TIMELINE_BLOCK_CLASSES: Record<TelemetryStatus, string> = {
   MAINTENANCE:
     "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.75)] ring-1 ring-amber-300/35",
   DOWN: "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.85)] ring-1 ring-rose-300/40",
+  UPCOMING: "bg-amber-400/60 ring-1 ring-amber-300/30",
 };
 
 export const TIMELINE_EMPTY_BLOCK_CLASS =
@@ -121,10 +127,49 @@ export function formatDataSource(source: string): string {
   return source.replaceAll("_", " ");
 }
 
+const PROBE_SOURCE_BY_SLUG: Record<string, string> = {
+  "counter-strike-2": "Official Steam servers",
+  "dota-2": "Official Steam servers",
+  pubg: "Official Steam servers",
+  valorant: "Official Riot status page",
+  fortnite: "Official Epic status page",
+  "gta-vi": "Official Rockstar updates",
+  "league-of-legends": "Official Riot status page",
+  "apex-legends": "Official EA / Steam servers",
+  "call-of-duty": "Official Activision networks",
+  "gta-v": "Official Rockstar servers",
+  "rainbow-six-siege": "Official Ubisoft servers",
+  "rocket-league": "Official Psyonix servers",
+  "destiny-2": "Official Bungie servers",
+  rust: "Official Facepunch servers",
+  "elden-ring": "Official game networks",
+};
+
+export function formatProbeSource(
+  gameSlug: string,
+  dataSource: string,
+): string {
+  const mapped = PROBE_SOURCE_BY_SLUG[gameSlug];
+  if (mapped) {
+    return mapped;
+  }
+
+  if (dataSource === "STEAM_API") {
+    return "Official Steam servers";
+  }
+
+  if (dataSource === "STATUS_PAGE") {
+    return "Official game status page";
+  }
+
+  return "Official game networks";
+}
+
 const INCIDENT_STATUS_LABELS: Record<Exclude<TelemetryStatus, "ONLINE">, string> =
   {
-    DOWN: "Outage Detected",
-    MAINTENANCE: "Maintenance Detected",
+    DOWN: "servers went down",
+    MAINTENANCE: "is in maintenance",
+    UPCOMING: "hasn't launched yet",
   };
 
 export function formatTimeAgo(
@@ -143,10 +188,10 @@ export function formatIncidentMessage(incident: TelemetryIncident): string {
   const game = formatSlugLabel(incident.gameSlug);
   const statusLabel =
     incident.status === "ONLINE"
-      ? "Status Change Detected"
+      ? "servers came back online"
       : INCIDENT_STATUS_LABELS[incident.status];
 
-  return `${game} - ${statusLabel} via ${incident.dataSource} - ${formatTimeAgo(incident)}`;
+  return `${game} ${statusLabel} · ${formatTimeAgo(incident)}`;
 }
 
 export function getIncidentAccentClass(status: TelemetryStatus): string {

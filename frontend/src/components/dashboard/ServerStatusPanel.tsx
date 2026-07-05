@@ -1,15 +1,15 @@
 import {
   Activity,
   Gamepad2,
-  MonitorPlay,
   Radio,
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import GameTelemetryCard from "@/components/dashboard/GameTelemetryCard";
+import SocialStatusCard from "@/components/dashboard/SocialStatusCard";
 import IncidentLog from "@/components/dashboard/telemetry/IncidentLog";
 import { formatLocalizedTimestamp } from "@/utils/dateFormatter";
-import type { ServerStatus, ServiceCategory } from "@/types/api";
+import type { PlatformDetail, ServerStatus, ServiceCategory } from "@/types/api";
 import type {
   GameTelemetry,
   TelemetryHistorySnapshot,
@@ -28,36 +28,34 @@ const CATEGORY_CONFIG: Record<ServiceCategory, CategoryConfig> = {
     label: "Gaming",
     icon: Gamepad2,
     accentClass: "text-violet-300 border-violet-400/30 bg-violet-500/10",
-    emptyMessage: "[SCANNING SERVERS] All game networks online.",
+    emptyMessage: "All game servers look good right now.",
   },
   SOCIAL: {
     label: "Social",
     icon: Users,
     accentClass: "text-fuchsia-300 border-fuchsia-400/30 bg-fuchsia-500/10",
-    emptyMessage: "[PING IDLE] Checking community channels...",
-  },
-  STREAMING: {
-    label: "Streaming",
-    icon: MonitorPlay,
-    accentClass: "text-cyan-300 border-cyan-400/30 bg-cyan-500/10",
-    emptyMessage: "[FEED BLOCKED] Waiting for next live broadcast.",
+    emptyMessage: "Checking social platforms now…",
   },
 };
 
-const CATEGORY_ORDER: ServiceCategory[] = ["GAMING", "SOCIAL", "STREAMING"];
+const CATEGORY_ORDER: ServiceCategory[] = ["GAMING", "SOCIAL"];
 
 interface ServerStatusPanelProps {
   statuses: ServerStatus[];
   gameTelemetry?: GameTelemetry[];
   telemetryHistoryBySlug?: Record<string, TelemetryHistorySnapshot[]>;
+  platformsBySlug?: Record<string, PlatformDetail[]>;
   incidents?: TelemetryIncident[];
+  gamingEmptyMessage?: string;
 }
 
 export default function ServerStatusPanel({
   statuses,
   gameTelemetry = [],
   telemetryHistoryBySlug = {},
+  platformsBySlug = {},
   incidents = [],
+  gamingEmptyMessage,
 }: ServerStatusPanelProps) {
   const grouped = CATEGORY_ORDER.map((category) => ({
     category,
@@ -87,6 +85,9 @@ export default function ServerStatusPanel({
           const isGaming = category === "GAMING";
           const hasGamingTelemetry = isGaming && gameTelemetry.length > 0;
           const hasPlatformItems = items.length > 0;
+          const emptyMessage = isGaming
+            ? (gamingEmptyMessage ?? config.emptyMessage)
+            : config.emptyMessage;
 
           return (
             <div key={category}>
@@ -105,23 +106,24 @@ export default function ServerStatusPanel({
                         key={entry.id}
                         telemetry={entry}
                         history={telemetryHistoryBySlug[entry.gameSlug] ?? []}
+                        platforms={platformsBySlug[entry.gameSlug] ?? []}
                       />
                     ))}
                   </div>
                 ) : (
                   <p className="rounded-2xl border border-dashed border-violet-400/20 px-4 py-6 text-sm text-slate-400">
-                    {config.emptyMessage}
+                    {emptyMessage}
                   </p>
                 )
               ) : hasPlatformItems ? (
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {items.map((status) => (
-                    <StatusCard key={status.id} status={status} config={config} />
+                    <SocialStatusCard key={status.id} status={status} />
                   ))}
                 </div>
               ) : (
                 <p className="rounded-2xl border border-dashed border-violet-400/20 px-4 py-6 text-sm text-slate-400">
-                  {config.emptyMessage}
+                  {emptyMessage}
                 </p>
               )}
             </div>
@@ -141,7 +143,7 @@ interface StatusCardProps {
   config: CategoryConfig;
 }
 
-function StatusCard({ status, config }: StatusCardProps) {
+export function StatusCard({ status, config }: StatusCardProps) {
   const isOnline = status.isUp;
 
   return (

@@ -37,20 +37,13 @@ export default function StatusTimeline({
   const hasData = snapshots.length > 0;
 
   return (
-    <div className="mt-4 border-t border-white/8 pt-4">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-slate-400">
-          Status Timeline
-        </p>
-        <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">
-          {hasData
-            ? `${Math.min(snapshots.length, blockCount)} checks · newest left, oldest right`
-            : "Awaiting harvester logs"}
-        </p>
-      </div>
+    <div className="border-t border-white/8 pt-4">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+        Status Timeline
+      </p>
 
       <div
-        className="grid gap-1"
+        className="grid w-full gap-1"
         style={{ gridTemplateColumns: `repeat(${blockCount}, minmax(0, 1fr))` }}
         role="list"
         aria-label={
@@ -96,21 +89,21 @@ export default function StatusTimeline({
         })}
       </div>
 
-      <p className="mt-2 text-[10px] text-slate-500">
-        Hover a block for check details (e.g. ONLINE - Jul 5, 11:02 AM).
+      <p className="mt-2 text-xs text-zinc-400">
+        Hover a block for check details.
       </p>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] uppercase tracking-[0.14em] text-slate-500">
-        <span className="inline-flex items-center gap-1.5">
-          <span className={`inline-block h-2.5 w-2.5 rounded-[2px] ${getTimelineBlockClass("ONLINE")}`} />
+      <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs uppercase tracking-wider text-zinc-400">
+        <span className="inline-flex items-center gap-2">
+          <span className={`inline-block h-3 w-3 rounded-[3px] ${getTimelineBlockClass("ONLINE")}`} />
           Online
         </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className={`inline-block h-2.5 w-2.5 rounded-[2px] ${getTimelineBlockClass("MAINTENANCE")}`} />
+        <span className="inline-flex items-center gap-2">
+          <span className={`inline-block h-3 w-3 rounded-[3px] ${getTimelineBlockClass("MAINTENANCE")}`} />
           Maintenance
         </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className={`inline-block h-2.5 w-2.5 rounded-[2px] ${getTimelineBlockClass("DOWN")}`} />
+        <span className="inline-flex items-center gap-2">
+          <span className={`inline-block h-3 w-3 rounded-[3px] ${getTimelineBlockClass("DOWN")}`} />
           Down
         </span>
       </div>
