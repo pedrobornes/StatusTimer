@@ -26,8 +26,23 @@ class GameReleasePayload(BaseModel):
     genre: GameGenre
     platforms: list[PlatformRelease] = Field(min_length=1)
     hype_count: int = Field(default=0, alias="hypeCount", ge=0)
+    image_url: str | None = Field(
+        default=None,
+        alias="imageUrl",
+        max_length=2048,
+        description="Direct CDN cover art URL from the source platform.",
+    )
 
     model_config = {"populate_by_name": True}
+
+    @field_validator("image_url")
+    @classmethod
+    def normalize_image_url(cls, image_url: str | None) -> str | None:
+        if image_url is None:
+            return None
+
+        trimmed = image_url.strip()
+        return trimmed or None
 
     @field_validator("platforms")
     @classmethod

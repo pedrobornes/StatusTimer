@@ -76,10 +76,11 @@ def run_release_sync(client: BackendClient) -> tuple[int, PushResult]:
             for entry in release.platforms
         )
         logger.info(
-            "[%s] %s | genre=%s | platforms=[%s]",
+            "[%s] %s | genre=%s | imageUrl=%s | platforms=[%s]",
             release.slug,
             release.game_name,
             release.genre.value,
+            release.image_url or "none",
             platform_summary,
         )
 

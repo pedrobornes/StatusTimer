@@ -11,6 +11,7 @@ public record UpcomingReleaseResponse(
         String genre,
         LocalDateTime releaseDate,
         Long hypeCount,
+        String imageUrl,
         List<PlatformReleaseResponse> platforms
 ) {
 
@@ -22,6 +23,7 @@ public record UpcomingReleaseResponse(
                 entity.getGenre().getLabel(),
                 entity.resolvePrimaryReleaseDate(),
                 entity.getHypeCount(),
+                entity.getImageUrl(),
                 entity.getPlatforms().stream()
                         .map(PlatformReleaseResponse::fromEntity)
                         .toList()

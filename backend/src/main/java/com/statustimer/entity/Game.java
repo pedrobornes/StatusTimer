@@ -49,6 +49,9 @@ public class Game {
     @Builder.Default
     private Long hypeCount = 0L;
 
+    @Column(name = "image_url", length = 2048)
+    private String imageUrl;
+
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<GamePlatformDetail> platforms = new ArrayList<>();

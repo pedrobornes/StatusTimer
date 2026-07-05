@@ -4,22 +4,11 @@ server:
 spring:
   application:
     name: statustimer-api
-  datasource:
-    url: jdbc:h2:mem:statustimer
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
-    hibernate:
-      ddl-auto: update
-    show-sql: true
     open-in-view: false
 
 app:
   security:
-    api-key: your-local-secret-key
+    api-key: ${APP_API_KEY:your-local-secret-key}

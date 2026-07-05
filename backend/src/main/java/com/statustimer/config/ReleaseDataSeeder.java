@@ -28,6 +28,9 @@ public class ReleaseDataSeeder implements CommandLineRunner {
                 .gameName("Grand Theft Auto VI")
                 .genre(GameGenre.ACTION)
                 .hypeCount(12_840L)
+                .imageUrl(
+                        "https://media-rockstargames-com.akamaized.net/tina-uploads/tina_rockstar_games/gta-vi-key-art.jpg"
+                )
                 .build();
         gtaVi.replacePlatforms(List.of(
                 platform(GamePlatform.PS5, LocalDate.of(2026, 11, 19)),
@@ -41,6 +44,9 @@ public class ReleaseDataSeeder implements CommandLineRunner {
                 .gameName("Hollow Knight: Silksong")
                 .genre(GameGenre.ACTION)
                 .hypeCount(9_620L)
+                .imageUrl(
+                        "https://cdn.cloudflare.steamstatic.com/steam/apps/1030300/header.jpg"
+                )
                 .build();
         silksong.replacePlatforms(List.of(
                 platform(GamePlatform.PC, LocalDate.of(2025, 9, 4)),
