@@ -1,73 +1,86 @@
+"use client";
+
+import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { Activity } from "lucide-react";
 import GameTelemetryCard from "@/components/dashboard/GameTelemetryCard";
-import { FEATURED_GAME_SLUGS } from "@/config/routes";
-import { filterLiveTelemetrySlugs } from "@/lib/gameAssets";
-import { formatSlugLabel } from "@/lib/telemetry";
+import GameTelemetrySortSelect from "@/components/ui/GameTelemetrySortSelect";
+import {
+  sortTelemetryEntries,
+  type TelemetrySortMode,
+} from "@/lib/telemetrySort";
 import type { GameTelemetry, TelemetryHistorySnapshot } from "@/types/telemetry";
 
 interface TelemetryGridProps {
-  telemetryBySlug: Record<string, GameTelemetry>;
+  gameTelemetry: GameTelemetry[];
   historyBySlug?: Record<string, TelemetryHistorySnapshot[]>;
   headerAction?: ReactNode;
 }
 
 export default function TelemetryGrid({
-  telemetryBySlug,
+  gameTelemetry,
   historyBySlug = {},
   headerAction,
 }: TelemetryGridProps) {
-  const liveSlugs = filterLiveTelemetrySlugs(FEATURED_GAME_SLUGS, telemetryBySlug);
+  const [sortMode, setSortMode] = useState<TelemetrySortMode>("trending");
+
+  const defaultOrder = useMemo(
+    () => gameTelemetry.map((entry) => entry.gameSlug),
+    [gameTelemetry],
+  );
+
+  const sortedTelemetry = useMemo(
+    () => sortTelemetryEntries(gameTelemetry, sortMode, defaultOrder),
+    [gameTelemetry, sortMode, defaultOrder],
+  );
 
   return (
     <section className="glass-panel glow-ring rounded-3xl p-6 md:p-8">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-3">
-            <Activity className="h-5 w-5 text-emerald-300" />
+      <div className="mb-6 space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-3">
+              <Activity className="h-5 w-5 text-emerald-300" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-medium uppercase tracking-[0.35em] text-emerald-200/85">
+                Live Game Status
+              </p>
+              <h2 className="heading-section text-2xl uppercase text-white">
+                TRACKED GAME STATUS
+              </h2>
+            </div>
           </div>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.35em] text-emerald-200/85">
-              Live Game Status
-            </p>
-            <h2 className="heading-section text-2xl uppercase text-white">
-              TRACKED GAME STATUS
-            </h2>
-          </div>
+
+          {headerAction ? (
+            <div className="shrink-0 pt-1">{headerAction}</div>
+          ) : null}
         </div>
 
-        {headerAction}
+        <GameTelemetrySortSelect
+          id="dashboard-telemetry-sort"
+          value={sortMode}
+          onChange={setSortMode}
+          compact
+        />
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2">
-        {liveSlugs.map((slug) => {
-          const telemetry = telemetryBySlug[slug];
-
-          if (!telemetry) {
-            return (
-              <article
-                key={slug}
-                className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-5"
-              >
-                <h3 className="text-base font-semibold text-slate-300">
-                  {formatSlugLabel(slug)}
-                </h3>
-                <p className="mt-3 text-xs uppercase tracking-[0.16em] text-slate-500">
-                  Checking servers now…
-                </p>
-              </article>
-            );
-          }
-
-          return (
+      {sortedTelemetry.length === 0 ? (
+        <p className="rounded-2xl border border-dashed border-white/10 px-4 py-10 text-center text-sm text-slate-400">
+          No live game status to show right now. Check back in a few minutes for
+          the latest updates.
+        </p>
+      ) : (
+        <div className="grid gap-5 transition-all duration-300 ease-out sm:grid-cols-2">
+          {sortedTelemetry.map((telemetry) => (
             <GameTelemetryCard
-              key={slug}
+              key={telemetry.gameSlug}
               telemetry={telemetry}
-              history={historyBySlug[slug] ?? []}
+              history={historyBySlug[telemetry.gameSlug] ?? []}
             />
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

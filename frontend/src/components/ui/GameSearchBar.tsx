@@ -1,44 +1,34 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import GameAssetImage from "@/components/ui/GameAssetImage";
 import { APP_ROUTES } from "@/config/routes";
-import type { SearchableGame } from "@/lib/gameAssets";
+import { getUserFacingErrorMessage } from "@/services/api";
+import { searchGames } from "@/services/catalogService";
+import type { GameCatalogSearchResult } from "@/services/catalogService";
 
-interface GameSearchBarProps {
-  games: SearchableGame[];
-}
-
-export default function GameSearchBar({ games }: GameSearchBarProps) {
+export default function GameSearchBar() {
   const router = useRouter();
   const listboxId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [query, setQuery] = useState("");
+  const [matches, setMatches] = useState<GameCatalogSearchResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
-  const normalizedQuery = query.trim().toLowerCase();
-
-  const matches = useMemo(() => {
-    if (!normalizedQuery) {
-      return games;
-    }
-
-    return games.filter(
-      (game) =>
-        game.name.toLowerCase().includes(normalizedQuery) ||
-        game.slug.toLowerCase().includes(normalizedQuery),
-    );
-  }, [games, normalizedQuery]);
+  const normalizedQuery = query.trim();
 
   const navigateToGame = useCallback(
     (slug: string) => {
       setQuery("");
+      setMatches([]);
       setIsOpen(false);
       setIsFocused(false);
       setActiveIndex(0);
@@ -50,6 +40,42 @@ export default function GameSearchBar({ games }: GameSearchBarProps) {
 
   useEffect(() => {
     setActiveIndex(0);
+  }, [normalizedQuery, matches]);
+
+  useEffect(() => {
+    if (!normalizedQuery) {
+      setMatches([]);
+      setSearchError(null);
+      setIsSearching(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timeoutId = window.setTimeout(async () => {
+      setIsSearching(true);
+      setSearchError(null);
+
+      try {
+        const results = await searchGames(normalizedQuery);
+        if (!cancelled) {
+          setMatches(results);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setMatches([]);
+          setSearchError(getUserFacingErrorMessage(error));
+        }
+      } finally {
+        if (!cancelled) {
+          setIsSearching(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
   }, [normalizedQuery]);
 
   useEffect(() => {
@@ -115,7 +141,7 @@ export default function GameSearchBar({ games }: GameSearchBarProps) {
     }
   }
 
-  const showDropdown = isOpen && isFocused;
+  const showDropdown = isOpen && isFocused && normalizedQuery.length > 0;
 
   return (
     <div ref={containerRef} className="relative mt-6 w-full max-w-xl">
@@ -165,11 +191,17 @@ export default function GameSearchBar({ games }: GameSearchBarProps) {
           role="listbox"
           className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border border-white/10 bg-[#0f0b1f]/95 shadow-[0_16px_48px_rgba(0,0,0,0.45)] backdrop-blur-md"
         >
-          {matches.length === 0 ? (
+          {isSearching ? (
             <p className="px-4 py-6 text-center text-sm text-slate-400">
-              {normalizedQuery
-                ? `No games found matching '${query.trim()}'`
-                : "No games found"}
+              Searching games...
+            </p>
+          ) : searchError ? (
+            <p className="px-4 py-6 text-center text-sm text-rose-300/90">
+              {searchError}
+            </p>
+          ) : matches.length === 0 ? (
+            <p className="px-4 py-6 text-center text-sm text-slate-400">
+              {`No games found matching '${normalizedQuery}'`}
             </p>
           ) : (
             <ul className="max-h-72 overflow-y-auto py-2">
@@ -195,12 +227,12 @@ export default function GameSearchBar({ games }: GameSearchBarProps) {
                       }`}
                     >
                       <GameAssetImage
-                        name={game.name}
+                        name={game.gameName}
                         src={game.logoUrl}
                         className="h-9 w-20"
                         imageClassName="object-contain p-0.5"
                       />
-                      <span className="text-sm font-medium">{game.name}</span>
+                      <span className="text-sm font-medium">{game.gameName}</span>
                     </button>
                   </li>
                 );

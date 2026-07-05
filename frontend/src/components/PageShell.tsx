@@ -14,7 +14,7 @@ export default function PageShell({
   children,
   title,
   subtitle,
-  badge = "Blackwatch",
+  badge = "StatusTimer",
   coverUrl,
   coverAlt,
 }: PageShellProps) {

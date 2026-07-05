@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import GameTelemetryCard from "@/components/dashboard/GameTelemetryCard";
 import IncidentLog from "@/components/dashboard/telemetry/IncidentLog";
 import NewsFeedPanel from "@/components/dashboard/NewsFeedPanel";
@@ -11,6 +11,7 @@ import {
 } from "@/lib/gameAssets";
 import { buildStatusPageJsonLd } from "@/lib/seo/jsonLd";
 import { buildStatusPageMetadata } from "@/lib/seo/metadata";
+import { resolveCanonicalGameSlug } from "@/lib/gameSlugs";
 import { getConfirmedPlatforms } from "@/lib/releases";
 import { getGameStatusDetail } from "@/services/telemetryService";
 import { getUpcomingReleases } from "@/services/releasesService";
@@ -33,6 +34,12 @@ export async function generateMetadata({ params }: StatusPageProps) {
 
 export default async function GameStatusPage({ params }: StatusPageProps) {
   const { slug } = await params;
+  const canonicalSlug = resolveCanonicalGameSlug(slug);
+
+  if (canonicalSlug !== slug) {
+    redirect(APP_ROUTES.status(canonicalSlug));
+  }
+
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const pageUrl = `${siteUrl}${APP_ROUTES.status(slug)}`;
 
@@ -85,7 +92,7 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
                 <GameTelemetryCard
                   telemetry={telemetry}
                   linkToStatusPage={false}
-                  linkToProfile
+                  linkToProfile={false}
                   history={history}
                   platforms={releasePlatforms}
                 />

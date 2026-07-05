@@ -1,5 +1,6 @@
 package com.statustimer.controller;
 
+import com.statustimer.dto.response.GameCatalogSearchResponse;
 import com.statustimer.dto.response.GameStatusDetailResponse;
 import com.statustimer.dto.response.GameTelemetryResponse;
 import com.statustimer.dto.response.GamingNewsResponse;
@@ -7,6 +8,7 @@ import com.statustimer.dto.response.ServerStatusResponse;
 import com.statustimer.dto.response.TelemetryHistorySnapshotResponse;
 import com.statustimer.dto.response.TelemetryIncidentResponse;
 import com.statustimer.dto.response.UpcomingReleaseResponse;
+import com.statustimer.service.GameCatalogService;
 import com.statustimer.service.GameStatusService;
 import com.statustimer.service.GameTelemetryService;
 import com.statustimer.service.GamingNewsService;
@@ -27,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class PublicApiController {
 
     private final ServerStatusService serverStatusService;
+    private final GameCatalogService gameCatalogService;
     private final GameTelemetryService gameTelemetryService;
     private final GameStatusService gameStatusService;
     private final GamingNewsService gamingNewsService;
@@ -47,6 +50,22 @@ public class PublicApiController {
             @RequestParam(name = "featured", defaultValue = "false") boolean featured
     ) {
         return featured ? gameTelemetryService.findAllFeatured() : gameTelemetryService.findAll();
+    }
+
+    @GetMapping("/telemetry/dashboard")
+    public List<GameTelemetryResponse> getDashboardTelemetry(
+            @RequestParam(name = "limit", defaultValue = "6") int limit
+    ) {
+        return gameTelemetryService.findDashboardTopGames(limit);
+    }
+
+    @GetMapping("/games/search")
+    public List<GameCatalogSearchResponse> searchGames(@RequestParam("q") String query) {
+        List<GameCatalogSearchResponse> results = gameCatalogService.search(query);
+        for (GameCatalogSearchResponse result : results) {
+            gameTelemetryService.ensureTelemetryStub(result.slug());
+        }
+        return results;
     }
 
     @GetMapping("/telemetry/history")

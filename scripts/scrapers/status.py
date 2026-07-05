@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import socket
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from enum import Enum
 
@@ -14,6 +15,7 @@ from config.settings import settings
 from models.telemetry import GameTelemetryPayload, TelemetrySource, TelemetryStatus
 from pipeline.telemetry_analyzer import TelemetryAnalyzer
 from scrapers.epic_lightswitch import probe_fortnite_status
+from scrapers.parallel_utils import PARALLEL_HTTP_MAX_WORKERS
 from scrapers.probe_models import ProbeOutcome
 from scrapers.riot_telemetry import probe_valorant_status
 from scrapers.steam_probe import probe_steam_game
@@ -193,10 +195,15 @@ class StatusHarvester:
         )
 
     def fetch_all(self) -> list[GameTelemetryPayload]:
-        results: list[GameTelemetryPayload] = []
+        workers = min(PARALLEL_HTTP_MAX_WORKERS, len(MONITORED_GAME_TARGETS))
 
-        for index, target in enumerate(MONITORED_GAME_TARGETS):
-            payload = self._collect_target(target)
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            raw_results = list(
+                executor.map(self._collect_target_isolated, MONITORED_GAME_TARGETS)
+            )
+
+        results: list[GameTelemetryPayload] = []
+        for target, payload in zip(MONITORED_GAME_TARGETS, raw_results, strict=True):
             if payload is not None:
                 results.append(payload)
                 logger.info(
@@ -214,10 +221,15 @@ class StatusHarvester:
                     target.display_name,
                 )
 
-            if index < len(MONITORED_GAME_TARGETS) - 1:
-                time.sleep(0.35)
-
         return results
+
+    def _collect_target_isolated(
+        self,
+        target: MonitoredGameTarget,
+    ) -> GameTelemetryPayload | None:
+        """Thread-safe probe: each worker gets its own HTTP session."""
+        worker = StatusHarvester(analyzer=self._analyzer)
+        return worker._collect_target(target)
 
     def _collect_target(self, target: MonitoredGameTarget) -> GameTelemetryPayload | None:
         if target.skip_live_probe:

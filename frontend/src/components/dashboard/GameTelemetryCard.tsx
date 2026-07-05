@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CalendarDays, Gauge } from "lucide-react";
 import StatusTimeline from "@/components/dashboard/telemetry/StatusTimeline";
+import GameLiveMetricsRow from "@/components/dashboard/GameLiveMetricsRow";
 import GameAssetImage from "@/components/ui/GameAssetImage";
 import PlatformBadge from "@/components/ui/PlatformBadge";
 import StatusBadge from "@/components/ui/StatusBadge";
@@ -46,7 +47,7 @@ export default function GameTelemetryCard({
 
   const headerHref = linkToStatusPage
     ? statusHref
-    : linkToProfile
+    : linkToProfile && upcoming
       ? profileHref
       : null;
 
@@ -68,6 +69,11 @@ export default function GameTelemetryCard({
           {title}
         </h3>
       </div>
+
+      <GameLiveMetricsRow
+        livePlayers={telemetry.livePlayers}
+        twitchViewers={telemetry.twitchViewers}
+      />
     </>
   );
 

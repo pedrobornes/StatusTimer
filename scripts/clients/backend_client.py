@@ -8,8 +8,9 @@ import requests
 
 from clients.http_result import PushResult
 from config.settings import settings
-from models.service_status import ServiceStatusPayload
+from models.catalog_schemas import SyncGameCatalogRequest
 from models.schemas import GameReleasePayload, PatchNotePayload, SyncGamesRequest
+from models.service_status import ServiceStatusPayload
 from models.telemetry import SyncTelemetryRequest
 
 logger = logging.getLogger(__name__)
@@ -23,6 +24,7 @@ class BackendClient:
     INTERNAL_TELEMETRY_UPDATE_PATH = "/api/v1/internal/telemetry/update"
     INTERNAL_NEWS_PATH = "/api/v1/internal/news"
     INTERNAL_GAMES_SYNC_PATH = "/api/v1/internal/games/sync"
+    INTERNAL_GAMES_CATALOG_SYNC_PATH = "/api/v1/internal/games/catalog/sync"
 
     def __init__(self) -> None:
         self._base_url = settings.backend_base_url.rstrip("/")
@@ -40,6 +42,14 @@ class BackendClient:
             self.INTERNAL_GAMES_SYNC_PATH,
             request.model_dump(mode="json", by_alias=True),
             "game releases sync",
+        )
+
+    def sync_game_catalog(self, request: SyncGameCatalogRequest) -> PushResult:
+        """POST harvested Steam catalog entries to the backend upsert endpoint."""
+        return self._post(
+            self.INTERNAL_GAMES_CATALOG_SYNC_PATH,
+            request.model_dump(mode="json", by_alias=True),
+            "game catalog sync",
         )
 
     def upsert_game_release(self, release: GameReleasePayload) -> PushResult:

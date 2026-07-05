@@ -19,13 +19,9 @@ export function buildSearchableGames(
   });
 }
 
-const STEAM_CDN = "https://cdn.cloudflare.steamstatic.com/steam/apps";
-
 export interface GameAssetCatalogEntry {
   gameName: string;
   appId?: number;
-  logoUrl?: string;
-  coverUrl?: string;
   isUpcoming?: boolean;
   isFeatured?: boolean;
   releaseDate?: string;
@@ -40,9 +36,6 @@ const TRACKED_GAME_ASSETS: Record<string, GameAssetCatalogEntry> = {
   valorant: {
     gameName: "Valorant",
     isFeatured: true,
-    logoUrl:
-      "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/7b76209193f1bfe190d3ae6ef8728328870be9c3-736x138.png?accountingTag=VAL",
-    coverUrl: "/images/games/valorant-cover.jpg",
   },
   "dota-2": {
     gameName: "Dota 2",
@@ -57,22 +50,15 @@ const TRACKED_GAME_ASSETS: Record<string, GameAssetCatalogEntry> = {
   "gta-vi": {
     gameName: "Grand Theft Auto VI",
     isFeatured: true,
-    logoUrl: "/images/games/gta-vi-logo.png",
-    coverUrl: "/images/games/gta-vi-cover.jpg",
     isUpcoming: true,
     releaseDate: "2026-11-19",
   },
   fortnite: {
     gameName: "Fortnite",
     isFeatured: true,
-    logoUrl:
-      "https://cdn2.unrealengine.com/en-og-logo-egs-logo-350x100-350x100-ba7b388d26a7.png",
-    coverUrl:
-      "https://cdn2.unrealengine.com/en-fn-og-41-10-c1s9-egs-launcher-blade-2560x1440-2560x1440-d42b9403bb49.jpg",
   },
   "league-of-legends": {
     gameName: "League of Legends",
-    logoUrl: "https://static.developer.riotgames.com/img/logo.png",
   },
   minecraft: {
     gameName: "Minecraft",
@@ -117,20 +103,6 @@ const TRACKED_GAME_ASSETS: Record<string, GameAssetCatalogEntry> = {
   },
 };
 
-function steamCapsuleUrl(appId: number): string {
-  return `${STEAM_CDN}/${appId}/capsule_184x69.jpg`;
-}
-
-function steamLibraryHeroUrl(appId: number): string {
-  return `${STEAM_CDN}/${appId}/library_hero.jpg`;
-}
-
-function isLowResSteamHeader(url: string): boolean {
-  return (
-    url.includes("steamstatic.com/steam/apps/") && url.endsWith("/header.jpg")
-  );
-}
-
 export function getGameCatalogEntry(slug: string): GameAssetCatalogEntry | null {
   return TRACKED_GAME_ASSETS[slug] ?? null;
 }
@@ -154,89 +126,49 @@ export function resolveGameDisplayName(
   return TRACKED_GAME_ASSETS[slug]?.gameName ?? slug;
 }
 
-function isBrokenRiotDarkroomUrl(url: string): boolean {
-  return url.includes("riotgames.com/darkroom/original");
+export function isValidLogoUrl(url: string | null | undefined): boolean {
+  if (!url?.trim()) {
+    return false;
+  }
+
+  return url.trim().toLowerCase() !== "none";
 }
 
-function isBrokenRockstarAkamaizedUrl(url: string): boolean {
-  return url.includes("media-rockstargames-com.akamaized.net");
+export function isRenderableLogoUrl(
+  url: string | null | undefined,
+): boolean {
+  if (!isValidLogoUrl(url)) {
+    return false;
+  }
+
+  const trimmed = url!.trim();
+  return (
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("https://") ||
+    trimmed.startsWith("/images/")
+  );
 }
 
 export function resolveGameLogoUrl(
-  slug: string,
-  telemetry?: Pick<GameTelemetry, "appId" | "logoUrl">,
+  _slug: string,
+  telemetry?: Pick<GameTelemetry, "logoUrl">,
 ): string | null {
-  const catalog = TRACKED_GAME_ASSETS[slug];
-  const catalogLogo = catalog?.logoUrl ?? null;
-
-  if (telemetry?.logoUrl) {
-    if (isBrokenRiotDarkroomUrl(telemetry.logoUrl) && catalogLogo) {
-      return catalogLogo;
-    }
-
-    if (isBrokenRockstarAkamaizedUrl(telemetry.logoUrl) && catalogLogo) {
-      return catalogLogo;
-    }
-
-    return telemetry.logoUrl;
+  if (!telemetry?.logoUrl || !isRenderableLogoUrl(telemetry.logoUrl)) {
+    return null;
   }
 
-  if (catalogLogo) {
-    return catalogLogo;
-  }
-
-  const appId = telemetry?.appId ?? catalog?.appId;
-  if (appId != null) {
-    return steamCapsuleUrl(appId);
-  }
-
-  return null;
+  return telemetry.logoUrl.trim();
 }
 
 export function resolveGameCoverUrl(
-  slug: string,
-  telemetry?: Pick<GameTelemetry, "appId" | "coverUrl">,
+  _slug: string,
+  telemetry?: Pick<GameTelemetry, "coverUrl">,
 ): string | null {
-  const catalog = TRACKED_GAME_ASSETS[slug];
-  const catalogCover = catalog?.coverUrl ?? null;
-
-  if (telemetry?.coverUrl) {
-    if (isBrokenRiotDarkroomUrl(telemetry.coverUrl) && catalogCover) {
-      return catalogCover;
-    }
-
-    if (isBrokenRockstarAkamaizedUrl(telemetry.coverUrl) && catalogCover) {
-      return catalogCover;
-    }
-
-    if (isLowResSteamHeader(telemetry.coverUrl)) {
-      const appId = telemetry.appId ?? catalog?.appId;
-      if (appId != null) {
-        return steamLibraryHeroUrl(appId);
-      }
-    }
-
-    if (
-      slug === "valorant" &&
-      catalogCover &&
-      telemetry.coverUrl.includes("cmsassets.rgpub.io")
-    ) {
-      return catalogCover;
-    }
-
-    return telemetry.coverUrl;
+  if (!telemetry?.coverUrl?.trim()) {
+    return null;
   }
 
-  if (catalogCover) {
-    return catalogCover;
-  }
-
-  const appId = telemetry?.appId ?? catalog?.appId;
-  if (appId != null) {
-    return steamLibraryHeroUrl(appId);
-  }
-
-  return null;
+  return telemetry.coverUrl.trim();
 }
 
 export function getGameInitials(name: string): string {

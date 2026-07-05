@@ -17,6 +17,11 @@ export interface GameTelemetry {
   coverUrl?: string;
   isUpcoming?: boolean;
   releaseDate?: string | null;
+  twitchRank?: number | null;
+  steamReleaseDate?: string | null;
+  steamAdultContent?: boolean;
+  livePlayers?: number | null;
+  twitchViewers?: number | null;
 }
 
 export interface TelemetryHistorySnapshot {

@@ -1,9 +1,9 @@
 package com.statustimer.dto.response;
 
-import com.statustimer.config.TrackedGameCatalog;
 import com.statustimer.entity.Game;
 import com.statustimer.entity.GameTelemetry;
 import com.statustimer.entity.TelemetryStatus;
+import com.statustimer.service.GameCatalogService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -20,28 +20,31 @@ public record GameTelemetryResponse(
         String logoUrl,
         String coverUrl,
         Boolean isUpcoming,
-        LocalDate releaseDate
+        LocalDate releaseDate,
+        Integer twitchRank,
+        LocalDate steamReleaseDate,
+        Boolean steamAdultContent,
+        Long livePlayers,
+        Long twitchViewers
 ) {
 
     public static GameTelemetryResponse fromEntity(
             GameTelemetry entity,
-            Optional<Game> game
+            Optional<Game> game,
+            GameCatalogService catalogService
     ) {
         String slug = entity.getGameSlug();
-        TrackedGameCatalog.GameAssetMetadata catalog = TrackedGameCatalog.findBySlug(slug).orElse(null);
 
         String gameName = game.map(Game::getGameName)
-                .orElseGet(() -> TrackedGameCatalog.resolveGameName(slug));
+                .orElseGet(() -> catalogService.resolveGameName(slug));
 
-        Integer appId = catalog != null ? catalog.appId() : null;
-        String logoUrl = TrackedGameCatalog.resolveLogoUrl(
+        Integer appId = catalogService.resolveAppId(slug);
+        String logoUrl = catalogService.resolveLogoUrl(
                 slug,
-                appId,
                 game.map(Game::getLogoUrl).orElse(null)
         );
-        String coverUrl = TrackedGameCatalog.resolveCoverUrl(
+        String coverUrl = catalogService.resolveCoverUrl(
                 slug,
-                appId,
                 game.map(Game::getImageUrl).orElse(null)
         );
 
@@ -51,6 +54,11 @@ public record GameTelemetryResponse(
                 .orElse(null);
         boolean isUpcoming = entity.getStatus() == TelemetryStatus.UPCOMING
                 || (releaseDate != null && releaseDate.isAfter(LocalDate.now()));
+        Integer twitchRank = catalogService.resolveTwitchRank(slug);
+        LocalDate steamReleaseDate = catalogService.resolveSteamReleaseDate(slug);
+        boolean steamAdultContent = catalogService.isSteamAdultContent(slug);
+        Long livePlayers = catalogService.resolveLivePlayers(slug);
+        Long twitchViewers = catalogService.resolveTwitchViewers(slug);
 
         return new GameTelemetryResponse(
                 entity.getId(),
@@ -64,7 +72,12 @@ public record GameTelemetryResponse(
                 logoUrl,
                 coverUrl,
                 isUpcoming,
-                releaseDate
+                releaseDate,
+                twitchRank,
+                steamReleaseDate,
+                steamAdultContent,
+                livePlayers,
+                twitchViewers
         );
     }
 

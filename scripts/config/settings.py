@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     igdb_client_secret: str = ""
     steam_api_key: str = ""
     riot_api_key: str = ""
+    steam_charts_top_n: int = 50
+
+    twitch_client_id: str = ""
+    twitch_client_secret: str = ""
+    twitch_top_n: int = 100
 
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "deepseek-coder-v2:16b"

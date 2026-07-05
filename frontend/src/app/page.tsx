@@ -1,9 +1,10 @@
 import Dashboard from "@/components/dashboard/Dashboard";
 import DashboardError from "@/components/dashboard/DashboardError";
-import { FEATURED_GAME_SLUGS } from "@/config/routes";
+import type { ApiRequestOptions } from "@/services/api";
 import { getGamingNews } from "@/services/newsService";
 import { getUpcomingReleases } from "@/services/releasesService";
 import {
+  getDashboardTelemetry,
   getGameTelemetry,
   getTelemetryHistory,
   getTelemetryIncidents,
@@ -11,6 +12,32 @@ import {
 import type { GameTelemetry, TelemetryHistorySnapshot } from "@/types/telemetry";
 
 export const revalidate = 60;
+
+const DASHBOARD_TELEMETRY_LIMIT = 6;
+const LIVE_FETCH_OPTIONS: ApiRequestOptions = { revalidate: 0 };
+
+async function loadDashboardTelemetry(
+  limit: number,
+): Promise<GameTelemetry[]> {
+  try {
+    const twitchRanked = await getDashboardTelemetry(limit, LIVE_FETCH_OPTIONS);
+    if (twitchRanked.length > 0) {
+      return twitchRanked;
+    }
+  } catch {
+    // Fall through to featured telemetry when the dashboard endpoint is unavailable.
+  }
+
+  try {
+    const featured = await getGameTelemetry({
+      featured: true,
+      ...LIVE_FETCH_OPTIONS,
+    });
+    return featured.slice(0, limit);
+  } catch {
+    return [];
+  }
+}
 
 async function loadTelemetryHistoryBySlug(
   gameSlugs: readonly string[],
@@ -25,24 +52,22 @@ async function loadTelemetryHistoryBySlug(
   return Object.fromEntries(entries);
 }
 
-function buildTelemetryBySlug(entries: GameTelemetry[]): Record<string, GameTelemetry> {
-  return Object.fromEntries(entries.map((entry) => [entry.gameSlug, entry]));
-}
-
 export default async function HomePage() {
   try {
     const [gameTelemetry, news, releases, incidents] = await Promise.all([
-      getGameTelemetry({ featured: true }).catch(() => []),
+      loadDashboardTelemetry(DASHBOARD_TELEMETRY_LIMIT),
       getGamingNews(),
       getUpcomingReleases(),
       getTelemetryIncidents().catch(() => []),
     ]);
 
-    const historyBySlug = await loadTelemetryHistoryBySlug(FEATURED_GAME_SLUGS);
+    const historyBySlug = await loadTelemetryHistoryBySlug(
+      gameTelemetry.map((entry) => entry.gameSlug),
+    );
 
     return (
       <Dashboard
-        telemetryBySlug={buildTelemetryBySlug(gameTelemetry)}
+        gameTelemetry={gameTelemetry}
         historyBySlug={historyBySlug}
         news={news.slice(0, 12)}
         releases={releases.slice(0, 4)}

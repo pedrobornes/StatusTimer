@@ -8,6 +8,9 @@ STEAM_HEADER_CDN_TEMPLATE = (
 STEAM_LOGO_CDN_TEMPLATE = (
     "https://cdn.cloudflare.steamstatic.com/steam/apps/{app_id}/logo.png"
 )
+STEAM_LIBRARY_HERO_CDN_TEMPLATE = (
+    "https://cdn.cloudflare.steamstatic.com/steam/apps/{app_id}/library_hero.jpg"
+)
 EPIC_FORTNITE_KEY_ART = (
     "https://cdn2.unrealengine.com/14fortnite-1920x1080-fortnite-key-art-1920x1080-432356386.jpg"
 )
@@ -28,6 +31,16 @@ def steam_header_url(app_id: int) -> str:
 def steam_logo_url(app_id: int) -> str:
     """Build a Steam Store logo/icon URL from a public app ID."""
     return STEAM_LOGO_CDN_TEMPLATE.format(app_id=app_id)
+
+
+def steam_library_hero_url(app_id: int) -> str:
+    """Build a Steam library hero cover URL from a public app ID."""
+    return STEAM_LIBRARY_HERO_CDN_TEMPLATE.format(app_id=app_id)
+
+
+def twitch_box_art_url(box_art_url: str, width: int, height: int) -> str:
+    """Resolve Twitch box art template URLs to a concrete CDN size."""
+    return box_art_url.replace("{width}", str(width)).replace("{height}", str(height))
 
 
 def resolve_release_image_url(

@@ -6,9 +6,9 @@ import {
   Activity,
   Home,
   Newspaper,
-  Radar,
   Rocket,
 } from "lucide-react";
+import StatusTimerSonarLogo from "@/components/ui/StatusTimerSonarLogo";
 
 interface NavItem {
   href: string;
@@ -54,10 +54,10 @@ export default function Navigation() {
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 rounded-full border border-violet-400/25 bg-violet-500/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.3em] text-slate-200 transition-colors hover:border-violet-400/40 hover:text-white"
+          className="inline-flex items-center gap-3 rounded-full border border-violet-400/25 bg-violet-500/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.3em] text-slate-200 transition-colors hover:border-violet-400/40 hover:text-white"
         >
-          <Radar className="h-3.5 w-3.5 text-violet-300" />
-          Blackwatch
+          <StatusTimerSonarLogo className="h-8 w-8 shrink-0" />
+          StatusTimer
         </Link>
 
         <div className="flex items-center gap-1 rounded-2xl border border-white/10 bg-white/[0.05] p-1">

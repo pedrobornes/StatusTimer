@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { getGameInitials } from "@/lib/gameAssets";
+import { isRenderableLogoUrl } from "@/lib/gameAssets";
 
 interface GameAssetImageProps {
   name: string;
@@ -17,21 +17,25 @@ export default function GameAssetImage({
   imageClassName = "",
 }: GameAssetImageProps) {
   const [hasError, setHasError] = useState(false);
-  const initials = getGameInitials(name);
-  const showFallback = !src || hasError;
+  const resolvedSrc = isRenderableLogoUrl(src) ? src!.trim() : null;
+  const showFallback = !resolvedSrc || hasError;
 
   return (
     <div
-      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-zinc-800 to-zinc-950 ring-1 ring-white/10 ${className}`}
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/10 ${
+        showFallback
+          ? "bg-gradient-to-br from-purple-950 via-slate-900 to-black"
+          : "bg-gradient-to-br from-zinc-800 to-zinc-950 ring-1 ring-white/10"
+      } ${className}`}
       aria-hidden={showFallback ? undefined : true}
     >
       {showFallback ? (
-        <span className="select-none text-xs font-bold uppercase tracking-wider text-zinc-300">
-          {initials}
+        <span className="line-clamp-3 px-2 text-center text-xs font-bold tracking-wide text-white">
+          {name}
         </span>
       ) : (
         <img
-          src={src}
+          src={resolvedSrc}
           alt=""
           className={`h-full w-full object-contain ${imageClassName}`}
           loading="lazy"

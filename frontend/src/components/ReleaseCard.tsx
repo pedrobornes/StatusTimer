@@ -1,6 +1,7 @@
 import Link from "next/link";
 import HypeCounterButton from "@/components/HypeCounterButton";
 import GameAssetImage from "@/components/ui/GameAssetImage";
+import GameCoverFrame from "@/components/ui/GameCoverFrame";
 import PlatformReleaseSchedule from "@/components/PlatformReleaseSchedule";
 import {
   resolveGameCoverUrl,
@@ -31,17 +32,13 @@ export default function ReleaseCard({
       {coverUrl ? (
         <Link
           href={`/release/${release.slug}`}
-          className="group relative block aspect-[16/7] w-full overflow-hidden"
+          className="group block w-full overflow-hidden"
         >
-          <img
+          <GameCoverFrame
             src={coverUrl}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover object-[center_28%] transition duration-300 group-hover:scale-[1.02]"
-            loading="lazy"
-            decoding="async"
+            alt={release.gameName}
+            className="aspect-[16/7] min-h-[200px] max-h-[280px] sm:max-h-[320px] transition duration-300 group-hover:brightness-110"
           />
-          <div className="pointer-events-none absolute inset-0 bg-zinc-950/15" />
-          <div className="pointer-events-none absolute bottom-0 h-16 w-full bg-gradient-to-b from-transparent to-zinc-950/90" />
         </Link>
       ) : null}
 

@@ -1,6 +1,9 @@
 import Link from "next/link";
-import { BrainCircuit, CalendarDays, Sparkles } from "lucide-react";
+import { ArrowRight, BrainCircuit, CalendarDays, Sparkles } from "lucide-react";
 import IntelFeedContent from "@/components/dashboard/IntelFeedContent";
+import SidebarPanelHeader, {
+  SidebarEmptyState,
+} from "@/components/dashboard/SidebarPanelHeader";
 import {
   classifyIntelArticle,
   getIntelArticleAccent,
@@ -12,6 +15,7 @@ interface NewsFeedPanelProps {
   news: GamingNews[];
   fillHeight?: boolean;
   compact?: boolean;
+  sidebar?: boolean;
   sectionTitle?: string;
   eyebrow?: string;
   description?: string;
@@ -27,60 +31,117 @@ export default function NewsFeedPanel({
   news,
   fillHeight = false,
   compact = false,
-  sectionTitle = "Game News & Updates",
-  eyebrow = "Latest Alerts",
+  sidebar = false,
+  sectionTitle = sidebar ? "Live Alerts" : "Game News & Updates",
+  eyebrow = sidebar ? "Status Feed" : "Latest Alerts",
   description = "Quick summaries of recent game crashes, server maintenance, and developer updates.",
   emptyMessage = "No new alerts right now. Everything looks good!",
 }: NewsFeedPanelProps) {
   const panelClass = fillHeight
     ? "glass-panel flex h-full min-h-0 flex-col rounded-3xl p-6 md:p-8 xl:sticky xl:top-24 xl:max-h-[calc(100vh-7rem)]"
-    : "glass-panel rounded-3xl p-6 md:p-8";
+    : sidebar
+      ? "glass-panel glow-ring rounded-3xl p-5 md:p-6"
+      : "glass-panel rounded-3xl p-6 md:p-8";
 
   const contentClass = fillHeight
     ? "scrollbar-subtle min-h-0 flex-1 overflow-y-auto pr-1"
     : "";
 
+  const showDescription = !sidebar && !compact;
+  const visibleNews = sidebar ? news.slice(0, 3) : news;
+
   return (
     <section className={panelClass}>
-      <div className="mb-6 flex shrink-0 items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="rounded-2xl border border-fuchsia-400/25 bg-fuchsia-500/10 p-3">
-            <BrainCircuit className="h-5 w-5 text-fuchsia-300" />
+      {sidebar ? (
+        <SidebarPanelHeader
+          icon={<BrainCircuit className="h-4 w-4 text-fuchsia-300" />}
+          iconClassName="border-fuchsia-400/25 bg-fuchsia-500/10"
+          eyebrow={eyebrow}
+          title={sectionTitle}
+          action={
+            <Link
+              href="/intel"
+              className="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.12em] text-fuchsia-200/75 transition hover:text-fuchsia-100"
+            >
+              View more
+              <ArrowRight className="h-3 w-3" aria-hidden />
+            </Link>
+          }
+        />
+      ) : (
+        <div className="mb-6 flex shrink-0 items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl border border-fuchsia-400/25 bg-fuchsia-500/10 p-3">
+              <BrainCircuit className="h-5 w-5 text-fuchsia-300" />
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.35em] text-fuchsia-200/80">
+                {eyebrow}
+              </p>
+              <h2 className="heading-section text-2xl uppercase text-white">
+                {sectionTitle}
+              </h2>
+            </div>
           </div>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.35em] text-fuchsia-200/80">
-              {eyebrow}
-            </p>
-            <h2 className="heading-section text-2xl uppercase text-white">
-              {sectionTitle}
-            </h2>
-          </div>
+          {!compact ? (
+            <Link
+              href="/intel"
+              className="text-[10px] font-medium uppercase tracking-[0.16em] text-fuchsia-200/80 transition hover:text-fuchsia-100"
+            >
+              Full feed →
+            </Link>
+          ) : null}
         </div>
-        {!compact ? (
-          <Link
-            href="/intel"
-            className="text-[10px] font-medium uppercase tracking-[0.16em] text-fuchsia-200/80 transition hover:text-fuchsia-100"
-          >
-            Full feed →
-          </Link>
-        ) : null}
-      </div>
+      )}
 
-      <p className="mb-5 shrink-0 text-sm text-zinc-400">
-        {description}
-      </p>
+      {showDescription ? (
+        <p className="mb-5 shrink-0 text-sm text-zinc-400">{description}</p>
+      ) : null}
 
       <div className={contentClass}>
-        {news.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-fuchsia-400/20 px-4 py-10 text-center text-sm text-slate-400">
-            {emptyMessage}
-          </p>
+        {visibleNews.length === 0 ? (
+          sidebar ? (
+            <SidebarEmptyState message={emptyMessage} />
+          ) : (
+            <p className="rounded-2xl border border-dashed border-fuchsia-400/20 px-4 py-10 text-center text-sm text-slate-400">
+              {emptyMessage}
+            </p>
+          )
         ) : (
-          <div className="space-y-4">
-            {news.map((article) => {
+          <div className={sidebar ? "space-y-3" : "space-y-4"}>
+            {visibleNews.map((article) => {
               const publishedIso = resolveNewsDateIso(article);
               const kind = classifyIntelArticle(article.title);
               const accent = getIntelArticleAccent(kind);
+
+              if (sidebar) {
+                return (
+                  <article
+                    key={article.id}
+                    className={`rounded-2xl border border-white/8 bg-white/[0.04] p-4 transition hover:bg-white/[0.06] ${accent.borderClass}`}
+                  >
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <span
+                        className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${accent.badgeClass}`}
+                      >
+                        {accent.label}
+                      </span>
+                      <time
+                        dateTime={publishedIso ?? undefined}
+                        className="text-[10px] text-slate-500"
+                      >
+                        {formatRelativeTime(
+                          article.publishedAt ?? article.createdAt,
+                        )}
+                      </time>
+                    </div>
+
+                    <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-white">
+                      {article.title}
+                    </h3>
+                  </article>
+                );
+              }
 
               return (
                 <article

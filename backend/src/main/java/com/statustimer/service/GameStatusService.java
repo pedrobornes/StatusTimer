@@ -27,8 +27,9 @@ public class GameStatusService {
     private final GameTelemetryService gameTelemetryService;
     private final GamingNewsService gamingNewsService;
 
-    @Transactional(readOnly = true)
+    @Transactional
     public GameStatusDetailResponse findByGameSlug(String slug) {
+        gameTelemetryService.ensureTelemetryStub(slug);
         GameTelemetryResponse telemetry = gameTelemetryService.findByGameSlug(slug);
         List<TelemetryHistorySnapshotResponse> history =
                 gameTelemetryService.findHistoryByGameSlug(slug);

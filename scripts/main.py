@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from clients.backend_client import BackendClient
 from clients.http_result import PushResult
 from config.settings import settings
+from models.catalog_schemas import SyncGameCatalogRequest
 from models.schemas import SyncGamesRequest
 from models.telemetry import SyncTelemetryRequest
 from pipeline.context_pipeline import ingest_events_into_context_store
@@ -16,8 +17,14 @@ from pipeline.deduplication import DedupStore, filter_new_events, filter_recent_
 from pipeline.skill_router import SkillRouter
 from pipeline.sync_router import dispatch_skill_result
 from scrapers.platform_feeds import fetch_all_platform_feed_events
+from scrapers.live_metrics import (
+    fetch_monitored_steam_live_metrics,
+    fetch_monitored_twitch_live_metrics,
+)
 from scrapers.releases import fetch_upcoming_releases
+from scrapers.steam_charts import fetch_steam_charts_catalog
 from scrapers.status import fetch_game_telemetry
+from scrapers.twitch_top_games import fetch_twitch_top_games_catalog
 
 logging.basicConfig(
     level=logging.INFO,
@@ -32,6 +39,10 @@ _shutdown_requested = False
 class HarvestCycleReport:
     releases_prepared: int
     release_sync: PushResult
+    catalog_prepared: int
+    catalog_sync: PushResult
+    twitch_catalog_prepared: int
+    twitch_catalog_sync: PushResult
     telemetry_prepared: int
     telemetry_sync: PushResult
     platform_events_scraped: int
@@ -69,6 +80,62 @@ def _log_push_result(label: str, result: PushResult) -> None:
         result.status_code,
         result.attempts,
     )
+
+
+def run_monitored_steam_metrics_sync(client: BackendClient) -> tuple[int, PushResult]:
+    entries = fetch_monitored_steam_live_metrics()
+
+    if not entries:
+        logger.warning("No monitored Steam live-player patches collected this cycle.")
+        return 0, PushResult(success=True, status_code=204)
+
+    payload = SyncGameCatalogRequest(entries=entries)
+    logger.info("Prepared %s monitored Steam live-player payloads", len(entries))
+    result = client.sync_game_catalog(payload)
+    _log_push_result("Monitored Steam metrics sync", result)
+    return len(entries), result
+
+
+def run_monitored_twitch_metrics_sync(client: BackendClient) -> tuple[int, PushResult]:
+    entries = fetch_monitored_twitch_live_metrics()
+
+    if not entries:
+        logger.warning("No monitored Twitch viewer patches collected this cycle.")
+        return 0, PushResult(success=True, status_code=204)
+
+    payload = SyncGameCatalogRequest(entries=entries)
+    logger.info("Prepared %s monitored Twitch viewer payloads", len(entries))
+    result = client.sync_game_catalog(payload)
+    _log_push_result("Monitored Twitch metrics sync", result)
+    return len(entries), result
+
+
+def run_catalog_sync(client: BackendClient) -> tuple[int, PushResult]:
+    entries = fetch_steam_charts_catalog()
+
+    if not entries:
+        logger.warning("No Steam Charts catalog entries collected this cycle.")
+        return 0, PushResult(success=True, status_code=204)
+
+    payload = SyncGameCatalogRequest(entries=entries)
+    logger.info("Prepared %s Steam catalog payloads", len(entries))
+    result = client.sync_game_catalog(payload)
+    _log_push_result("Catalog sync", result)
+    return len(entries), result
+
+
+def run_twitch_catalog_sync(client: BackendClient) -> tuple[int, PushResult]:
+    entries = fetch_twitch_top_games_catalog()
+
+    if not entries:
+        logger.warning("No Twitch catalog entries collected this cycle.")
+        return 0, PushResult(success=True, status_code=204)
+
+    payload = SyncGameCatalogRequest(entries=entries)
+    logger.info("Prepared %s Twitch catalog payloads", len(entries))
+    result = client.sync_game_catalog(payload)
+    _log_push_result("Twitch catalog sync", result)
+    return len(entries), result
 
 
 def run_release_sync(client: BackendClient) -> tuple[int, PushResult]:
@@ -187,6 +254,10 @@ def run_harvest_cycle(client: BackendClient) -> HarvestCycleReport:
 
     try:
         releases_prepared, release_sync = run_release_sync(client)
+        catalog_prepared, catalog_sync = run_catalog_sync(client)
+        twitch_catalog_prepared, twitch_catalog_sync = run_twitch_catalog_sync(client)
+        run_monitored_steam_metrics_sync(client)
+        run_monitored_twitch_metrics_sync(client)
         telemetry_prepared, telemetry_sync = run_status_sync(client)
         platform_events_scraped, platform_events_pushed, context_chunks_indexed, platform_intel_sync = (
             run_platform_intel_pipeline(client)
@@ -198,6 +269,10 @@ def run_harvest_cycle(client: BackendClient) -> HarvestCycleReport:
         return HarvestCycleReport(
             releases_prepared=0,
             release_sync=PushResult(success=False, error_message="cycle exception"),
+            catalog_prepared=0,
+            catalog_sync=PushResult(success=False, error_message="cycle exception"),
+            twitch_catalog_prepared=0,
+            twitch_catalog_sync=PushResult(success=False, error_message="cycle exception"),
             telemetry_prepared=0,
             telemetry_sync=PushResult(success=False, error_message="cycle exception"),
             platform_events_scraped=0,
@@ -211,6 +286,10 @@ def run_harvest_cycle(client: BackendClient) -> HarvestCycleReport:
     return HarvestCycleReport(
         releases_prepared=releases_prepared,
         release_sync=release_sync,
+        catalog_prepared=catalog_prepared,
+        catalog_sync=catalog_sync,
+        twitch_catalog_prepared=twitch_catalog_prepared,
+        twitch_catalog_sync=twitch_catalog_sync,
         telemetry_prepared=telemetry_prepared,
         telemetry_sync=telemetry_sync,
         platform_events_scraped=platform_events_scraped,

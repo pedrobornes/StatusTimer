@@ -1,9 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import ServerStatusPanel from "@/components/dashboard/ServerStatusPanel";
-import { resolveGameDisplayName } from "@/lib/gameAssets";
+import GameTelemetrySortSelect from "@/components/ui/GameTelemetrySortSelect";
+import { TRACKED_GAME_SLUGS } from "@/config/routes";
+import { getUserFacingErrorMessage } from "@/services/api";
+import { searchGameTelemetry } from "@/services/telemetryService";
+import {
+  sortTelemetryEntries,
+  type TelemetrySortMode,
+} from "@/lib/telemetrySort";
 import type { PlatformDetail, ServerStatus } from "@/types/api";
 import type {
   GameTelemetry,
@@ -27,62 +34,109 @@ export default function TelemetryStatusHub({
   incidents,
 }: TelemetryStatusHubProps) {
   const [query, setQuery] = useState("");
-  const normalizedQuery = query.trim().toLowerCase();
+  const [searchResults, setSearchResults] = useState<GameTelemetry[] | null>(
+    null,
+  );
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [sortMode, setSortMode] = useState<TelemetrySortMode>("trending");
 
-  const filteredTelemetry = useMemo(() => {
+  const normalizedQuery = query.trim();
+
+  useEffect(() => {
     if (!normalizedQuery) {
-      return gameTelemetry;
+      setSearchResults(null);
+      setSearchError(null);
+      setIsSearching(false);
+      return;
     }
 
-    return gameTelemetry.filter((entry) => {
-      const displayName = resolveGameDisplayName(
-        entry.gameSlug,
-        entry,
-      ).toLowerCase();
+    let cancelled = false;
+    const timeoutId = window.setTimeout(async () => {
+      setIsSearching(true);
+      setSearchError(null);
 
-      return (
-        displayName.includes(normalizedQuery) ||
-        entry.gameSlug.toLowerCase().includes(normalizedQuery)
-      );
-    });
-  }, [gameTelemetry, normalizedQuery]);
+      try {
+        const results = await searchGameTelemetry(normalizedQuery);
+        if (!cancelled) {
+          setSearchResults(results);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setSearchResults([]);
+          setSearchError(getUserFacingErrorMessage(error));
+        }
+      } finally {
+        if (!cancelled) {
+          setIsSearching(false);
+        }
+      }
+    }, 300);
 
-  const gamingEmptyMessage =
-    gameTelemetry.length > 0 && filteredTelemetry.length === 0
-      ? `No games found matching "${query.trim()}".`
-      : undefined;
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [normalizedQuery]);
+
+  const displayedTelemetry = normalizedQuery
+    ? (searchResults ?? [])
+    : gameTelemetry;
+
+  const sortedTelemetry = useMemo(
+    () => sortTelemetryEntries(displayedTelemetry, sortMode, TRACKED_GAME_SLUGS),
+    [displayedTelemetry, sortMode],
+  );
+
+  const gamingEmptyMessage = normalizedQuery
+    ? isSearching
+      ? "Searching tracked games..."
+      : searchError
+        ? searchError
+        : `No games found matching "${normalizedQuery}".`
+    : undefined;
 
   return (
     <div className="space-y-6">
       <div className="glass-panel rounded-3xl p-4 md:p-5">
         <label htmlFor="telemetry-game-search" className="sr-only">
-          Filter tracked games
+          Search tracked games
         </label>
-        <div className="relative">
-          <Search
-            className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-violet-300/70"
-            aria-hidden
-          />
-          <input
-            id="telemetry-game-search"
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Filter games by name..."
-            className="w-full rounded-2xl border border-violet-400/20 bg-white/[0.04] py-3 pl-11 pr-4 text-sm text-white placeholder:text-slate-500 outline-none transition focus:border-violet-400/45 focus:bg-white/[0.06] focus:ring-2 focus:ring-violet-500/20"
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="relative flex-1">
+            <Search
+              className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-violet-300/70"
+              aria-hidden
+            />
+            <input
+              id="telemetry-game-search"
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search games by name..."
+              className="w-full rounded-2xl border border-violet-400/20 bg-white/[0.04] py-3 pl-11 pr-4 text-sm text-white placeholder:text-slate-500 outline-none transition focus:border-violet-400/45 focus:bg-white/[0.06] focus:ring-2 focus:ring-violet-500/20"
+            />
+          </div>
+
+          <GameTelemetrySortSelect
+            id="telemetry-hub-sort"
+            value={sortMode}
+            onChange={setSortMode}
+            className="shrink-0"
           />
         </div>
         {normalizedQuery ? (
           <p className="mt-3 text-xs text-slate-400">
-            Showing {filteredTelemetry.length} of {gameTelemetry.length} tracked
-            games
+            {isSearching
+              ? "Searching the live catalog and Steam..."
+              : `Showing ${sortedTelemetry.length} result${sortedTelemetry.length === 1 ? "" : "s"} for "${normalizedQuery}"`}
           </p>
         ) : null}
       </div>
 
       <ServerStatusPanel
         statuses={statuses}
-        gameTelemetry={filteredTelemetry}
+        gameTelemetry={sortedTelemetry}
         telemetryHistoryBySlug={telemetryHistoryBySlug}
         platformsBySlug={platformsBySlug}
         incidents={incidents}
