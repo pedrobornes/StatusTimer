@@ -28,7 +28,8 @@ const NAV_ITEMS: NavItem[] = [
     href: "/telemetry",
     label: "Servers",
     icon: Activity,
-    isActive: (pathname) => pathname.startsWith("/telemetry"),
+    isActive: (pathname) =>
+      pathname.startsWith("/telemetry") || pathname.startsWith("/status/"),
   },
   {
     href: "/releases",

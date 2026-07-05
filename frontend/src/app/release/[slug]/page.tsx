@@ -6,11 +6,11 @@ import {
   FileText,
   Radio,
 } from "lucide-react";
-import GameTelemetryCard from "@/components/GameTelemetryCard";
+import GameTelemetryCard from "@/components/dashboard/GameTelemetryCard";
 import HypeCounterButton from "@/components/HypeCounterButton";
-import PlatformBadge from "@/components/PlatformBadge";
+import PlatformBadge from "@/components/ui/PlatformBadge";
 import PlatformReleaseSchedule from "@/components/PlatformReleaseSchedule";
-import DashboardError from "@/components/DashboardError";
+import DashboardError from "@/components/dashboard/DashboardError";
 import { toSlug } from "@/lib/slug";
 import { getGamingNews } from "@/services/newsService";
 import { getUpcomingReleases } from "@/services/releasesService";

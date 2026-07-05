@@ -1,7 +1,5 @@
+import { API_BASE_URL } from "@/services/api";
 import type { UpcomingRelease } from "@/types/api";
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
 
 export class ClientApiError extends Error {
   constructor(

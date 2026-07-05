@@ -6,8 +6,9 @@ import {
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import GameTelemetryCard from "@/components/GameTelemetryCard";
-import IncidentLog from "@/components/telemetry/IncidentLog";
+import GameTelemetryCard from "@/components/dashboard/GameTelemetryCard";
+import IncidentLog from "@/components/dashboard/telemetry/IncidentLog";
+import { formatLocalizedTimestamp } from "@/utils/dateFormatter";
 import type { ServerStatus, ServiceCategory } from "@/types/api";
 import type {
   GameTelemetry,
@@ -44,13 +45,6 @@ const CATEGORY_CONFIG: Record<ServiceCategory, CategoryConfig> = {
 };
 
 const CATEGORY_ORDER: ServiceCategory[] = ["GAMING", "SOCIAL", "STREAMING"];
-
-function formatTimestamp(value: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
 
 interface ServerStatusPanelProps {
   statuses: ServerStatus[];
@@ -185,7 +179,7 @@ function StatusCard({ status, config }: StatusCardProps) {
       <div className="flex items-center gap-2 text-xs text-slate-400">
         <Radio className="h-3.5 w-3.5" />
         <time dateTime={status.lastChecked}>
-          Last checked {formatTimestamp(status.lastChecked)}
+          Last checked {formatLocalizedTimestamp(status.lastChecked)}
         </time>
       </div>
     </article>

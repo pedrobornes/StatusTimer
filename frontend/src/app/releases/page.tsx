@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import PageShell from "@/components/PageShell";
 import ReleasesHub from "@/components/ReleasesHub";
-import DashboardError from "@/components/DashboardError";
+import DashboardError from "@/components/dashboard/DashboardError";
 import { getUpcomingReleases } from "@/services/releasesService";
 
 export const metadata: Metadata = {

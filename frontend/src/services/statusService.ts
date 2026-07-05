@@ -1,4 +1,4 @@
-import { fetchJson } from "@/services/apiClient";
+import { fetchJson } from "@/services/api";
 import type { ServerStatus } from "@/types/api";
 
 export function getServerStatuses(): Promise<ServerStatus[]> {

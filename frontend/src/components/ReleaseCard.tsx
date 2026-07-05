@@ -1,6 +1,6 @@
 import Link from "next/link";
 import HypeCounterButton from "@/components/HypeCounterButton";
-import PlatformBadge from "@/components/PlatformBadge";
+import PlatformBadge from "@/components/ui/PlatformBadge";
 import PlatformReleaseSchedule from "@/components/PlatformReleaseSchedule";
 import { formatReleaseDate } from "@/lib/countdown";
 import type { UpcomingRelease } from "@/types/api";

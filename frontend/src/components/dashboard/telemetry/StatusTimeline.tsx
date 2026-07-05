@@ -1,13 +1,12 @@
 import {
-  formatDataSource,
-  formatTelemetryTimestamp,
-  getTelemetryStatusVisual,
+  formatTimelineCheckTooltip,
   getTimelineBlockClass,
+  resolveHistoryDateIso,
   TIMELINE_EMPTY_BLOCK_CLASS,
 } from "@/lib/telemetry";
 import type { TelemetryHistorySnapshot } from "@/types/telemetry";
 
-const DEFAULT_BLOCK_COUNT = 48;
+const DEFAULT_BLOCK_COUNT = 12;
 
 interface StatusTimelineProps {
   snapshots: TelemetryHistorySnapshot[];
@@ -20,14 +19,14 @@ function buildTimelineSlots(
   snapshots: TelemetryHistorySnapshot[],
   blockCount: number,
 ): TimelineSlot[] {
-  const recentSnapshots = snapshots.slice(-blockCount);
+  const recentSnapshots = snapshots.slice(-blockCount).reverse();
   const placeholderCount = blockCount - recentSnapshots.length;
   const placeholders: TimelineSlot[] = Array.from(
     { length: placeholderCount },
     () => null,
   );
 
-  return [...placeholders, ...recentSnapshots];
+  return [...recentSnapshots, ...placeholders];
 }
 
 export default function StatusTimeline({
@@ -45,14 +44,15 @@ export default function StatusTimeline({
         </p>
         <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">
           {hasData
-            ? `${snapshots.length} checks · oldest left`
+            ? `${Math.min(snapshots.length, blockCount)} checks · newest left, oldest right`
             : "Awaiting harvester logs"}
         </p>
       </div>
 
       <div
-        className="flex gap-1 overflow-x-auto pb-1 scrollbar-subtle"
-        role="img"
+        className="grid gap-1"
+        style={{ gridTemplateColumns: `repeat(${blockCount}, minmax(0, 1fr))` }}
+        role="list"
         aria-label={
           hasData
             ? `Status timeline with ${snapshots.length} recorded checks`
@@ -63,33 +63,42 @@ export default function StatusTimeline({
           const blockClass = snapshot
             ? getTimelineBlockClass(snapshot.status)
             : TIMELINE_EMPTY_BLOCK_CLASS;
+          const snapshotIso = snapshot ? resolveHistoryDateIso(snapshot) : null;
+          const tooltipText = snapshot
+            ? formatTimelineCheckTooltip(snapshot)
+            : "No check recorded";
 
           return (
             <div
-              key={snapshot ? `${snapshot.timestamp}-${index}` : `empty-${index}`}
-              className="group relative shrink-0"
+              key={snapshot ? `${snapshotIso ?? "snapshot"}-${index}` : `empty-${index}`}
+              className="group relative flex justify-center py-1"
+              role="listitem"
             >
-              <div
-                className={`aspect-square h-3 w-3 rounded-[3px] transition-transform duration-200 group-hover:scale-110 ${blockClass}`}
-              />
+              <button
+                type="button"
+                title={tooltipText}
+                aria-label={tooltipText}
+                className="relative flex h-5 w-full max-w-5 items-center justify-center rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+              >
+                <span
+                  aria-hidden="true"
+                  className={`block aspect-square h-3 w-full max-w-3 rounded-[3px] transition-transform duration-200 group-hover:scale-125 group-focus-visible:scale-125 ${blockClass}`}
+                />
 
-              {snapshot ? (
-                <div className="pointer-events-none absolute bottom-[calc(100%+0.5rem)] left-1/2 z-20 w-max max-w-[14rem] -translate-x-1/2 rounded-lg border border-white/10 bg-[#0f0b1f]/95 px-2.5 py-2 text-left opacity-0 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-sm transition-opacity duration-200 group-hover:opacity-100">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white">
-                    {getTelemetryStatusVisual(snapshot.status).label}
-                  </p>
-                  <p className="mt-1 text-[10px] text-slate-300">
-                    {formatTelemetryTimestamp(snapshot.timestamp)}
-                  </p>
-                  <p className="mt-1 text-[10px] uppercase tracking-[0.12em] text-violet-200/80">
-                    via {formatDataSource(snapshot.dataSource)}
-                  </p>
-                </div>
-              ) : null}
+                {snapshot ? (
+                  <span className="pointer-events-none absolute bottom-[calc(100%+0.35rem)] left-1/2 z-30 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-white/10 bg-[#0f0b1f]/95 px-2 py-1 text-[10px] font-medium text-white shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-sm group-hover:block group-focus-visible:block">
+                    {tooltipText}
+                  </span>
+                ) : null}
+              </button>
             </div>
           );
         })}
       </div>
+
+      <p className="mt-2 text-[10px] text-slate-500">
+        Hover a block for check details (e.g. ONLINE - Jul 5, 11:02 AM).
+      </p>
 
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] uppercase tracking-[0.14em] text-slate-500">
         <span className="inline-flex items-center gap-1.5">

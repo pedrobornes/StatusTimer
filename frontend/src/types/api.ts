@@ -14,6 +14,7 @@ export interface GamingNews {
   content: string;
   gameTag: string;
   createdAt: string;
+  publishedAt?: string;
 }
 
 export type GamePlatform = "PC" | "PS5" | "XBOX" | "SWITCH" | "SWITCH_2";

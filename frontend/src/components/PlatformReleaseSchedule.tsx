@@ -1,5 +1,5 @@
 import ReleaseCountdown from "@/components/ReleaseCountdown";
-import PlatformBadge from "@/components/PlatformBadge";
+import PlatformBadge from "@/components/ui/PlatformBadge";
 import { formatReleaseDate } from "@/lib/countdown";
 import type { PlatformDetail } from "@/types/api";
 

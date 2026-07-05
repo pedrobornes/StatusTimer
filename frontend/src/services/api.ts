@@ -1,0 +1,44 @@
+/**
+ * Centralized HTTP client for the StatusTimer Spring Boot API.
+ */
+
+export const API_BASE_URL =
+  process.env.API_BASE_URL ??
+  process.env.NEXT_PUBLIC_API_BASE_URL ??
+  "http://localhost:8080";
+
+export interface ApiRequestOptions {
+  revalidate?: number | false;
+  cache?: RequestCache;
+}
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+export async function fetchJson<T>(
+  path: string,
+  options: ApiRequestOptions = {},
+): Promise<T> {
+  const { revalidate = 60, cache } = options;
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    cache,
+    next: cache ? undefined : { revalidate },
+  });
+
+  if (!response.ok) {
+    throw new ApiError(
+      `Request to ${path} failed with status ${response.status}`,
+      response.status,
+    );
+  }
+
+  return response.json() as Promise<T>;
+}

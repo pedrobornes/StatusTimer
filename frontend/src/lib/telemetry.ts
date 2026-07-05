@@ -1,4 +1,11 @@
-import type { TelemetryIncident, TelemetryStatus } from "@/types/telemetry";
+import type { TelemetryHistorySnapshot, TelemetryIncident, TelemetryStatus } from "@/types/telemetry";
+import {
+  formatLocalizedTimestamp,
+  formatRelativeTime,
+  parseBackendDate,
+  resolveRecordDate,
+  toIsoString,
+} from "@/utils/dateFormatter";
 
 interface StatusVisual {
   label: string;
@@ -45,11 +52,57 @@ export function getTimelineBlockClass(status: TelemetryStatus): string {
   return TIMELINE_BLOCK_CLASSES[status];
 }
 
-export function formatTelemetryTimestamp(value: string): string {
+export function resolveIncidentDateIso(incident: TelemetryIncident): string | null {
+  return toIsoString(
+    incident.publishedAt ?? incident.timestamp ?? null,
+  );
+}
+
+export function resolveHistoryDateIso(snapshot: {
+  publishedAt?: string;
+  timestamp?: string;
+}): string | null {
+  return toIsoString(snapshot.publishedAt ?? snapshot.timestamp ?? null);
+}
+
+export function formatTelemetryTimestamp(
+  value: string | TelemetryIncident | { publishedAt?: string; timestamp?: string },
+): string {
+  if (typeof value === "string") {
+    return formatLocalizedTimestamp(value);
+  }
+
+  const resolved = resolveRecordDate(value as Record<string, unknown>);
+  return resolved
+    ? formatLocalizedTimestamp(resolved.toISOString())
+    : "Unknown time";
+}
+
+export function formatTimelineBlockTimestamp(
+  value: string | { publishedAt?: string; timestamp?: string },
+): string {
+  const raw =
+    typeof value === "string"
+      ? value
+      : (value.publishedAt ?? value.timestamp ?? "");
+
+  const date = parseBackendDate(raw);
+  if (!date) {
+    return "Unknown time";
+  }
+
   return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+export function formatTimelineCheckTooltip(
+  snapshot: TelemetryHistorySnapshot,
+): string {
+  return `${snapshot.status} - ${formatTimelineBlockTimestamp(snapshot)}`;
 }
 
 export function formatSlugLabel(slug: string): string {
@@ -74,26 +127,16 @@ const INCIDENT_STATUS_LABELS: Record<Exclude<TelemetryStatus, "ONLINE">, string>
     MAINTENANCE: "Maintenance Detected",
   };
 
-export function formatTimeAgo(isoTimestamp: string, nowMs = Date.now()): string {
-  const elapsedMs = Math.max(0, nowMs - new Date(isoTimestamp).getTime());
-  const elapsedSec = Math.floor(elapsedMs / 1000);
-
-  if (elapsedSec < 60) {
-    return `${elapsedSec}s ago`;
+export function formatTimeAgo(
+  value: string | TelemetryIncident,
+  nowMs = Date.now(),
+): string {
+  if (typeof value !== "string") {
+    const iso = resolveIncidentDateIso(value);
+    return iso ? formatRelativeTime(iso, nowMs) : "Unknown time";
   }
 
-  const elapsedMin = Math.floor(elapsedSec / 60);
-  if (elapsedMin < 60) {
-    return `${elapsedMin}m ago`;
-  }
-
-  const elapsedHours = Math.floor(elapsedMin / 60);
-  if (elapsedHours < 24) {
-    return `${elapsedHours}h ago`;
-  }
-
-  const elapsedDays = Math.floor(elapsedHours / 24);
-  return `${elapsedDays}d ago`;
+  return formatRelativeTime(value, nowMs);
 }
 
 export function formatIncidentMessage(incident: TelemetryIncident): string {
@@ -103,7 +146,7 @@ export function formatIncidentMessage(incident: TelemetryIncident): string {
       ? "Status Change Detected"
       : INCIDENT_STATUS_LABELS[incident.status];
 
-  return `${game} - ${statusLabel} via ${incident.dataSource} - ${formatTimeAgo(incident.timestamp)}`;
+  return `${game} - ${statusLabel} via ${incident.dataSource} - ${formatTimeAgo(incident)}`;
 }
 
 export function getIncidentAccentClass(status: TelemetryStatus): string {

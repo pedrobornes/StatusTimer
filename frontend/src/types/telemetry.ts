@@ -12,7 +12,8 @@ export interface GameTelemetry {
 }
 
 export interface TelemetryHistorySnapshot {
-  timestamp: string;
+  timestamp?: string;
+  publishedAt?: string;
   status: TelemetryStatus;
   dataSource: TelemetrySource;
 }
@@ -21,5 +22,6 @@ export interface TelemetryIncident {
   gameSlug: string;
   status: TelemetryStatus;
   dataSource: TelemetrySource;
-  timestamp: string;
+  publishedAt?: string;
+  timestamp?: string;
 }

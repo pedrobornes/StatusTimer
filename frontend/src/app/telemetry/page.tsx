@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import PageShell from "@/components/PageShell";
-import ServerStatusPanel from "@/components/ServerStatusPanel";
-import DashboardError from "@/components/DashboardError";
+import ServerStatusPanel from "@/components/dashboard/ServerStatusPanel";
+import DashboardError from "@/components/dashboard/DashboardError";
 import { getServerStatuses } from "@/services/statusService";
 import {
   getGameTelemetry,

@@ -1,4 +1,4 @@
-import { fetchJson } from "@/services/apiClient";
+import { fetchJson } from "@/services/api";
 import type {
   GameTelemetry,
   TelemetryHistorySnapshot,

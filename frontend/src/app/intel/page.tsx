@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import PageShell from "@/components/PageShell";
-import NewsFeedPanel from "@/components/NewsFeedPanel";
-import DashboardError from "@/components/DashboardError";
+import NewsFeedPanel from "@/components/dashboard/NewsFeedPanel";
+import DashboardError from "@/components/dashboard/DashboardError";
 import { getGamingNews } from "@/services/newsService";
 
 export const metadata: Metadata = {
-  title: "News & Patch Notes",
+  title: "AI Intelligence Feed",
   description:
-    "Full gaming news feed with patch notes, updates, and industry headlines.",
+    "Full RAG-powered gaming intelligence feed with patch summaries, incident briefs, and release intel.",
 };
 
 export const revalidate = 60;
@@ -18,9 +18,9 @@ export default async function IntelPage() {
 
     return (
       <PageShell
-        title="NEWS & PATCH NOTES"
-        subtitle="Latest headlines, balance changes, and patch logs from every tracked game."
-        badge="News"
+        title="AI INTELLIGENCE FEED"
+        subtitle="Ollama-processed patch notes, incident briefs, and release intel from the harvester pipeline."
+        badge="RAG Engine"
       >
         <NewsFeedPanel news={news} />
       </PageShell>
