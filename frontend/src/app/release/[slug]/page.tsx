@@ -15,7 +15,7 @@ import { toSlug } from "@/lib/slug";
 import { getGamingNews } from "@/services/newsService";
 import { getUpcomingReleases } from "@/services/releasesService";
 import { getServerStatuses } from "@/services/statusService";
-import { getGameTelemetry } from "@/services/telemetryService";
+import { getGameTelemetry, getTelemetryHistory } from "@/services/telemetryService";
 import type { GamingNews, ServerStatus, UpcomingRelease } from "@/types/api";
 
 export const revalidate = 60;
@@ -83,11 +83,13 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
   const { slug } = await params;
 
   try {
-    const [releases, statuses, news, gameTelemetry] = await Promise.all([
+    const [releases, statuses, news, gameTelemetry, telemetryHistory] =
+      await Promise.all([
       getUpcomingReleases(),
       getServerStatuses(),
       getGamingNews(),
       getGameTelemetry().catch(() => []),
+      getTelemetryHistory(slug).catch(() => []),
     ]);
 
     const release = findReleaseBySlug(releases, slug);
@@ -153,6 +155,7 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
               <GameTelemetryCard
                 telemetry={gameTelemetryEntry}
                 linkToProfile={false}
+                history={telemetryHistory}
               />
             ) : gameStatuses.length === 0 ? (
               <p className="rounded-2xl border border-dashed border-violet-400/20 px-4 py-6 text-sm text-slate-400">

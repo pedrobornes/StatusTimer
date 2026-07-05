@@ -3,6 +3,8 @@ package com.statustimer.controller;
 import com.statustimer.dto.response.GameTelemetryResponse;
 import com.statustimer.dto.response.GamingNewsResponse;
 import com.statustimer.dto.response.ServerStatusResponse;
+import com.statustimer.dto.response.TelemetryHistorySnapshotResponse;
+import com.statustimer.dto.response.TelemetryIncidentResponse;
 import com.statustimer.dto.response.UpcomingReleaseResponse;
 import com.statustimer.service.GameTelemetryService;
 import com.statustimer.service.GamingNewsService;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -34,6 +37,16 @@ public class PublicApiController {
     @GetMapping("/telemetry")
     public List<GameTelemetryResponse> getGameTelemetry() {
         return gameTelemetryService.findAll();
+    }
+
+    @GetMapping("/telemetry/history")
+    public List<TelemetryHistorySnapshotResponse> getTelemetryHistory(@RequestParam("game") String game) {
+        return gameTelemetryService.findHistoryByGameSlug(game);
+    }
+
+    @GetMapping("/telemetry/incidents")
+    public List<TelemetryIncidentResponse> getTelemetryIncidents() {
+        return gameTelemetryService.findRecentIncidents();
     }
 
     @GetMapping("/telemetry/{slug}")

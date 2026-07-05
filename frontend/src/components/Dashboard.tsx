@@ -1,15 +1,17 @@
 import { Sparkles } from "lucide-react";
 import NewsFeedPanel from "@/components/NewsFeedPanel";
+import IncidentLog from "@/components/telemetry/IncidentLog";
 import ServerStatusPanel from "@/components/ServerStatusPanel";
 import UpcomingReleasesPanel from "@/components/UpcomingReleasesPanel";
 import type { GamingNews, ServerStatus, UpcomingRelease } from "@/types/api";
-import type { GameTelemetry } from "@/types/telemetry";
+import type { GameTelemetry, TelemetryIncident } from "@/types/telemetry";
 
 interface DashboardProps {
   statuses: ServerStatus[];
   gameTelemetry: GameTelemetry[];
   news: GamingNews[];
   releases: UpcomingRelease[];
+  incidents: TelemetryIncident[];
 }
 
 export default function Dashboard({
@@ -17,6 +19,7 @@ export default function Dashboard({
   gameTelemetry,
   news,
   releases,
+  incidents,
 }: DashboardProps) {
   return (
     <div className="mystery-grid min-h-screen">
@@ -43,7 +46,10 @@ export default function Dashboard({
             />
             <UpcomingReleasesPanel releases={releases} />
           </div>
-          <NewsFeedPanel news={news} fillHeight />
+          <div className="space-y-8">
+            <IncidentLog incidents={incidents} />
+            <NewsFeedPanel news={news} fillHeight />
+          </div>
         </div>
       </div>
     </div>

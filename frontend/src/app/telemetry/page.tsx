@@ -3,7 +3,12 @@ import PageShell from "@/components/PageShell";
 import ServerStatusPanel from "@/components/ServerStatusPanel";
 import DashboardError from "@/components/DashboardError";
 import { getServerStatuses } from "@/services/statusService";
-import { getGameTelemetry } from "@/services/telemetryService";
+import {
+  getGameTelemetry,
+  getTelemetryHistory,
+  getTelemetryIncidents,
+} from "@/services/telemetryService";
+import type { TelemetryHistorySnapshot } from "@/types/telemetry";
 
 export const metadata: Metadata = {
   title: "Server Live Status",
@@ -13,12 +18,30 @@ export const metadata: Metadata = {
 
 export const revalidate = 60;
 
+async function loadTelemetryHistoryBySlug(
+  gameSlugs: string[],
+): Promise<Record<string, TelemetryHistorySnapshot[]>> {
+  const entries = await Promise.all(
+    gameSlugs.map(async (slug) => {
+      const history = await getTelemetryHistory(slug).catch(() => []);
+      return [slug, history] as const;
+    }),
+  );
+
+  return Object.fromEntries(entries);
+}
+
 export default async function TelemetryPage() {
   try {
-    const [statuses, gameTelemetry] = await Promise.all([
+    const [statuses, gameTelemetry, incidents] = await Promise.all([
       getServerStatuses(),
       getGameTelemetry().catch(() => []),
+      getTelemetryIncidents().catch(() => []),
     ]);
+
+    const telemetryHistoryBySlug = await loadTelemetryHistoryBySlug(
+      gameTelemetry.map((entry) => entry.gameSlug),
+    );
 
     return (
       <PageShell
@@ -26,7 +49,12 @@ export default async function TelemetryPage() {
         subtitle="Every tracked platform in one view. Status signals refresh on each sync cycle."
         badge="Servers"
       >
-        <ServerStatusPanel statuses={statuses} gameTelemetry={gameTelemetry} />
+        <ServerStatusPanel
+          statuses={statuses}
+          gameTelemetry={gameTelemetry}
+          telemetryHistoryBySlug={telemetryHistoryBySlug}
+          incidents={incidents}
+        />
       </PageShell>
     );
   } catch (error) {

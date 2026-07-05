@@ -1,28 +1,29 @@
 import Link from "next/link";
 import { Gauge, Radio } from "lucide-react";
+import StatusTimeline from "@/components/telemetry/StatusTimeline";
 import {
   formatDataSource,
   formatLatency,
   formatSlugLabel,
+  formatTelemetryTimestamp,
   getTelemetryStatusVisual,
 } from "@/lib/telemetry";
-import type { GameTelemetry } from "@/types/telemetry";
+import type { GameTelemetry, TelemetryHistorySnapshot } from "@/types/telemetry";
 
 interface GameTelemetryCardProps {
   telemetry: GameTelemetry;
   linkToProfile?: boolean;
+  history?: TelemetryHistorySnapshot[];
 }
 
 function formatTimestamp(value: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+  return formatTelemetryTimestamp(value);
 }
 
 export default function GameTelemetryCard({
   telemetry,
   linkToProfile = true,
+  history = [],
 }: GameTelemetryCardProps) {
   const visual = getTelemetryStatusVisual(telemetry.status);
   const title = formatSlugLabel(telemetry.gameSlug);
@@ -72,6 +73,8 @@ export default function GameTelemetryCard({
           </time>
         </span>
       </div>
+
+      <StatusTimeline snapshots={history} />
     </article>
   );
 }

@@ -10,3 +10,16 @@ export interface GameTelemetry {
   dataSource: TelemetrySource;
   lastChecked: string;
 }
+
+export interface TelemetryHistorySnapshot {
+  timestamp: string;
+  status: TelemetryStatus;
+  dataSource: TelemetrySource;
+}
+
+export interface TelemetryIncident {
+  gameSlug: string;
+  status: TelemetryStatus;
+  dataSource: TelemetrySource;
+  timestamp: string;
+}

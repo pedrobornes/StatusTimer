@@ -7,8 +7,13 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import GameTelemetryCard from "@/components/GameTelemetryCard";
+import IncidentLog from "@/components/telemetry/IncidentLog";
 import type { ServerStatus, ServiceCategory } from "@/types/api";
-import type { GameTelemetry } from "@/types/telemetry";
+import type {
+  GameTelemetry,
+  TelemetryHistorySnapshot,
+  TelemetryIncident,
+} from "@/types/telemetry";
 
 interface CategoryConfig {
   label: string;
@@ -50,11 +55,15 @@ function formatTimestamp(value: string): string {
 interface ServerStatusPanelProps {
   statuses: ServerStatus[];
   gameTelemetry?: GameTelemetry[];
+  telemetryHistoryBySlug?: Record<string, TelemetryHistorySnapshot[]>;
+  incidents?: TelemetryIncident[];
 }
 
 export default function ServerStatusPanel({
   statuses,
   gameTelemetry = [],
+  telemetryHistoryBySlug = {},
+  incidents = [],
 }: ServerStatusPanelProps) {
   const grouped = CATEGORY_ORDER.map((category) => ({
     category,
@@ -98,7 +107,11 @@ export default function ServerStatusPanel({
                 hasGamingTelemetry ? (
                   <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     {gameTelemetry.map((entry) => (
-                      <GameTelemetryCard key={entry.id} telemetry={entry} />
+                      <GameTelemetryCard
+                        key={entry.id}
+                        telemetry={entry}
+                        history={telemetryHistoryBySlug[entry.gameSlug] ?? []}
+                      />
                     ))}
                   </div>
                 ) : (
@@ -120,6 +133,10 @@ export default function ServerStatusPanel({
             </div>
           );
         })}
+      </div>
+
+      <div className="mt-8 border-t border-white/8 pt-8">
+        <IncidentLog incidents={incidents} embedded />
       </div>
     </section>
   );
