@@ -7,9 +7,10 @@ import PlatformBadge from "@/components/ui/PlatformBadge";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { APP_ROUTES } from "@/config/routes";
 import {
+  formatIgdbRating,
   isGameUpcoming,
+  resolveGameBoxArtUrl,
   resolveGameDisplayName,
-  resolveGameLogoUrl,
   resolveGameReleaseDate,
 } from "@/lib/gameAssets";
 import { formatProbeSource } from "@/lib/telemetry";
@@ -37,13 +38,15 @@ export default function GameTelemetryCard({
   const title = resolveGameDisplayName(telemetry.gameSlug, telemetry);
   const statusHref = APP_ROUTES.status(telemetry.gameSlug);
   const profileHref = APP_ROUTES.release(telemetry.gameSlug);
-  const logoUrl = resolveGameLogoUrl(telemetry.gameSlug, telemetry);
+  const logoUrl = resolveGameBoxArtUrl(telemetry.gameSlug, telemetry);
   const upcoming = isGameUpcoming(telemetry);
   const confirmedPlatforms = getConfirmedPlatforms(platforms);
   const resolvedReleaseDate = resolveGameReleaseDate(telemetry.gameSlug, telemetry);
   const releaseLabel = resolvedReleaseDate
     ? formatReleaseDate(resolvedReleaseDate)
     : "TBA";
+  const userRating = formatIgdbRating(telemetry.userRating ?? null);
+  const criticRating = formatIgdbRating(telemetry.criticRating ?? null);
 
   const headerHref = linkToStatusPage
     ? statusHref
@@ -54,7 +57,7 @@ export default function GameTelemetryCard({
   const headerContent = (
     <>
       <div className="flex w-full items-stretch gap-3">
-        <GameBoxArtImage title={title} src={logoUrl} />
+        <GameBoxArtImage title={title} src={logoUrl} size="card" />
 
         <div className="flex min-w-0 flex-1 flex-col justify-center">
           <GameLiveMetricsRow
@@ -74,6 +77,25 @@ export default function GameTelemetryCard({
         <h3 className="line-clamp-2 break-words whitespace-normal text-2xl font-bold tracking-tight text-white transition-colors duration-200 group-hover:text-emerald-400">
           {title}
         </h3>
+        {(userRating || criticRating || telemetry.genreName) && (
+          <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-300">
+            {telemetry.genreName ? (
+              <span className="rounded-full border border-white/10 px-2 py-0.5 uppercase tracking-[0.12em]">
+                {telemetry.genreName}
+              </span>
+            ) : null}
+            {userRating ? (
+              <span className="rounded-full border border-cyan-400/20 px-2 py-0.5 text-cyan-100">
+                Players {userRating}
+              </span>
+            ) : null}
+            {criticRating ? (
+              <span className="rounded-full border border-violet-400/20 px-2 py-0.5 text-violet-100">
+                Critics {criticRating}
+              </span>
+            ) : null}
+          </div>
+        )}
       </div>
     </>
   );

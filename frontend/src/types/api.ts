@@ -42,6 +42,12 @@ export interface UpcomingRelease {
   hypeCount: number;
   imageUrl?: string | null;
   logoUrl?: string | null;
+  igdbGameId?: number | null;
+  userRating?: number | null;
+  criticRating?: number | null;
+  themes?: string[];
+  screenshotUrls?: string[];
+  trailerVideoIds?: string[];
   platforms: PlatformDetail[];
 }
 

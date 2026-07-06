@@ -11,9 +11,12 @@ from email.utils import parsedate_to_datetime
 import requests
 
 from config.settings import settings
+from config.twitch_game_registry import MONITORED_TWITCH_GAME_NAMES
 from models.feed_events import FeedEventKind, FeedSource, ScrapedFeedEvent
+from models.normalization import to_slug
 from scrapers.http_client import build_http_session, fetch_text
 from scrapers.text_utils import plain_text_from_html
+from scrapers.twitch_top_games import fetch_twitch_top_games
 
 logger = logging.getLogger(__name__)
 
@@ -27,22 +30,90 @@ class SteamNewsTarget:
     game_name: str
 
 
-STEAM_NEWS_TARGETS: tuple[SteamNewsTarget, ...] = (
-    SteamNewsTarget(730, "counter-strike-2", "Counter-Strike 2"),
-    SteamNewsTarget(570, "dota-2", "Dota 2"),
-    SteamNewsTarget(578080, "pubg", "PUBG"),
-    SteamNewsTarget(1030300, "hollow-knight-silksong", "Hollow Knight: Silksong"),
-)
+def build_steam_news_targets(limit: int | None = None) -> tuple[SteamNewsTarget, ...]:
+    """Prioritize Steam RSS targets by current Twitch viewership rank."""
+    from scrapers.status import MONITORED_GAME_TARGETS
+
+    cap = limit or settings.steam_news_top_n
+    monitored_by_slug = {
+        target.slug: target
+        for target in MONITORED_GAME_TARGETS
+        if target.steam_app_id is not None
+    }
+
+    slug_aliases: dict[str, str] = {}
+    for target in MONITORED_GAME_TARGETS:
+        if target.steam_app_id is None:
+            continue
+
+        slug_aliases[to_slug(target.display_name)] = target.slug
+        twitch_name = MONITORED_TWITCH_GAME_NAMES.get(target.slug)
+        if twitch_name:
+            slug_aliases[to_slug(twitch_name)] = target.slug
+
+    targets: list[SteamNewsTarget] = []
+    seen_app_ids: set[int] = set()
+
+    twitch_entries = fetch_twitch_top_games(limit=max(cap * 3, 30))
+    for entry in twitch_entries:
+        monitored_slug = slug_aliases.get(entry.slug)
+        if monitored_slug is None and entry.slug in monitored_by_slug:
+            monitored_slug = entry.slug
+
+        if monitored_slug is None:
+            continue
+
+        monitored = monitored_by_slug[monitored_slug]
+        app_id = monitored.steam_app_id
+        if app_id is None or app_id in seen_app_ids:
+            continue
+
+        targets.append(
+            SteamNewsTarget(
+                app_id=app_id,
+                game_tag=monitored.slug,
+                game_name=monitored.display_name,
+            )
+        )
+        seen_app_ids.add(app_id)
+
+        if len(targets) >= cap:
+            break
+
+    if len(targets) < cap:
+        for monitored in MONITORED_GAME_TARGETS:
+            app_id = monitored.steam_app_id
+            if app_id is None or app_id in seen_app_ids:
+                continue
+
+            targets.append(
+                SteamNewsTarget(
+                    app_id=app_id,
+                    game_tag=monitored.slug,
+                    game_name=monitored.display_name,
+                )
+            )
+            seen_app_ids.add(app_id)
+
+            if len(targets) >= cap:
+                break
+
+    logger.info(
+        "Resolved %s Steam news target(s) from Twitch top + monitored catalog",
+        len(targets),
+    )
+    return tuple(targets)
 
 
 class SteamNewsScraper:
     def __init__(self, session: requests.Session | None = None) -> None:
         self._session = session or build_http_session()
 
-    def fetch_all(self) -> list[ScrapedFeedEvent]:
+    def fetch_all(self, targets: tuple[SteamNewsTarget, ...] | None = None) -> list[ScrapedFeedEvent]:
         events: list[ScrapedFeedEvent] = []
+        resolved_targets = targets if targets is not None else build_steam_news_targets()
 
-        for target in STEAM_NEWS_TARGETS:
+        for target in resolved_targets:
             target_events = self.fetch_for_app(target)
             logger.info(
                 "Steam RSS scraped %s events for %s (appId=%s)",
@@ -117,7 +188,8 @@ class SteamNewsScraper:
 
 
 def fetch_steam_news_events(session: requests.Session | None = None) -> list[ScrapedFeedEvent]:
-    return SteamNewsScraper(session=session).fetch_all()
+    scraper = SteamNewsScraper(session=session)
+    return scraper.fetch_all()
 
 
 def _parse_pub_date(raw_value: str | None) -> datetime:

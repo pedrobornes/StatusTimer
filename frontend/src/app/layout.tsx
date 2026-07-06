@@ -32,8 +32,6 @@ export const metadata: Metadata = {
     "Valorant network status",
     "multiplayer server monitor",
     "upcoming game release dates",
-    "GTA 6 release date countdown",
-    "Silksong launcher",
     "Fortnite server status",
     "Valorant server status",
     "League of Legends server status",

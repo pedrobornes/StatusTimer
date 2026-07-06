@@ -1,11 +1,23 @@
 """Environment-driven configuration for the StatusTimer harvester script."""
 
+from functools import cached_property
+
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     backend_base_url: str = "http://localhost:8080"
     backend_api_key: str = "your-local-secret-key"
+    mysql_host: str = "localhost"
+    mysql_port: int = 3307
+    mysql_database: str = "statustimer"
+    mysql_user: str = "root"
+    mysql_password: str = "root"
+    database_url: str | None = Field(
+        default=None,
+        description="Optional SQLAlchemy URL override (mysql+pymysql://...)",
+    )
     request_timeout_seconds: int = 15
     request_retry_max_attempts: int = 3
     request_retry_delay_seconds: int = 5
@@ -18,6 +30,7 @@ class Settings(BaseSettings):
     dedup_state_file: str = ".harvest_state/processed_hashes.json"
     feed_lookback_days: int = 7
     steam_news_max_items: int = 10
+    steam_news_top_n: int = 15
     context_store_dir: str = ".harvest_state/context"
     context_chunk_max_chars: int = 480
     context_chunk_overlap_chars: int = 80
@@ -26,6 +39,10 @@ class Settings(BaseSettings):
 
     igdb_client_id: str = ""
     igdb_client_secret: str = ""
+    igdb_releases_limit: int = 25
+    igdb_min_hype: int = 10
+    igdb_catalog_enrich_limit: int = 25
+    igdb_search_limit: int = 8
     steam_api_key: str = ""
     riot_api_key: str = ""
     steam_charts_top_n: int = 50
@@ -45,6 +62,17 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
     )
+
+    @cached_property
+    def sqlalchemy_database_url(self) -> str:
+        if self.database_url:
+            return self.database_url
+
+        return (
+            f"mysql+pymysql://{self.mysql_user}:{self.mysql_password}"
+            f"@{self.mysql_host}:{self.mysql_port}/{self.mysql_database}"
+            "?charset=utf8mb4"
+        )
 
 
 settings = Settings()

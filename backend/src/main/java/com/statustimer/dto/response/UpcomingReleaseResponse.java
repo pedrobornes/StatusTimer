@@ -13,6 +13,12 @@ public record UpcomingReleaseResponse(
         Long hypeCount,
         String imageUrl,
         String logoUrl,
+        Long igdbGameId,
+        Integer userRating,
+        Integer criticRating,
+        List<String> themes,
+        List<String> screenshotUrls,
+        List<String> trailerVideoIds,
         List<PlatformReleaseResponse> platforms
 ) {
 
@@ -26,6 +32,12 @@ public record UpcomingReleaseResponse(
                 entity.getHypeCount(),
                 entity.getImageUrl(),
                 entity.getLogoUrl(),
+                entity.getIgdbGameId(),
+                entity.getUserRating(),
+                entity.getCriticRating(),
+                List.copyOf(entity.getThemes()),
+                List.copyOf(entity.getScreenshotUrls()),
+                List.copyOf(entity.getTrailerVideoIds()),
                 entity.getPlatforms().stream()
                         .map(PlatformReleaseResponse::fromEntity)
                         .toList()

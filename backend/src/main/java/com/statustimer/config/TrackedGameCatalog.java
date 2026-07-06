@@ -16,7 +16,6 @@ public final class TrackedGameCatalog {
             Map.entry("valorant", new GameAssetMetadata("Valorant", null, true)),
             Map.entry("dota-2", new GameAssetMetadata("Dota 2", 570, true)),
             Map.entry("pubg", new GameAssetMetadata("PUBG: Battlegrounds", 578080, true)),
-            Map.entry("gta-vi", new GameAssetMetadata("Grand Theft Auto VI", null, true)),
             Map.entry("fortnite", new GameAssetMetadata("Fortnite", null, true)),
             Map.entry("league-of-legends", new GameAssetMetadata("League of Legends", null, false)),
             Map.entry("minecraft", new GameAssetMetadata("Minecraft", null, false)),

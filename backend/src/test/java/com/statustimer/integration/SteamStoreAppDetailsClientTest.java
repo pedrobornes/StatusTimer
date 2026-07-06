@@ -12,7 +12,7 @@ class SteamStoreAppDetailsClientTest {
             new SteamStoreAppDetailsClient(new ObjectMapper());
 
     @Test
-    void parsesCapsuleAndHeaderAssets() throws Exception {
+    void parseMetadataDoesNotExposeSteamImageAssets() throws Exception {
         String body = """
                 {
                   "359550": {
@@ -34,8 +34,8 @@ class SteamStoreAppDetailsClientTest {
         var metadata = invokeParse(body, 359550);
 
         assertTrue(metadata.isPresent());
-        assertEquals("https://cdn.example/capsule_231x87.jpg", metadata.get().logoUrl());
-        assertEquals("https://cdn.example/header.jpg", metadata.get().coverUrl());
+        org.junit.jupiter.api.Assertions.assertNull(metadata.get().logoUrl());
+        org.junit.jupiter.api.Assertions.assertNull(metadata.get().coverUrl());
     }
 
     private java.util.Optional<SteamStoreAppDetailsClient.SteamAppMetadata> invokeParse(

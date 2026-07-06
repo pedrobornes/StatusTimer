@@ -4,7 +4,12 @@ export interface GameCatalogSearchResult {
   slug: string;
   gameName: string;
   logoUrl: string | null;
+  coverUrl?: string | null;
   steamAppId: number | null;
+  userRating?: number | null;
+  criticRating?: number | null;
+  genreName?: string | null;
+  themes?: string[];
 }
 
 export interface GameIndexableSlug {

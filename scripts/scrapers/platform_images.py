@@ -1,80 +1,36 @@
-"""External cover art URL helpers sourced from platform CDNs and status pages."""
+"""Image URL helpers for catalog and release payloads (IGDB-sourced)."""
 
 from __future__ import annotations
 
-STEAM_HEADER_CDN_TEMPLATE = (
-    "https://cdn.cloudflare.steamstatic.com/steam/apps/{app_id}/header.jpg"
-)
-STEAM_LOGO_CDN_TEMPLATE = (
-    "https://cdn.cloudflare.steamstatic.com/steam/apps/{app_id}/logo.png"
-)
-STEAM_LIBRARY_HERO_CDN_TEMPLATE = (
-    "https://cdn.cloudflare.steamstatic.com/steam/apps/{app_id}/library_hero.jpg"
-)
-EPIC_FORTNITE_KEY_ART = (
-    "https://cdn2.unrealengine.com/14fortnite-1920x1080-fortnite-key-art-1920x1080-432356386.jpg"
-)
-RIOT_VALORANT_LOGO = (
-    "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/"
-    "7b76209193f1bfe190d3ae6ef8728328870be9c3-736x138.png?accountingTag=VAL"
-)
-RIOT_VALORANT_KEY_ART = "/images/games/valorant-cover.jpg"
-ROCKSTAR_GTA_VI_LOGO = "/images/games/gta-vi-logo.png"
-ROCKSTAR_GTA_VI_KEY_ART = "/images/games/gta-vi-cover.jpg"
+IGDB_IMAGE_HOST = "images.igdb.com"
 
 
-def steam_header_url(app_id: int) -> str:
-    """Build a Steam Store header image URL from a public app ID."""
-    return STEAM_HEADER_CDN_TEMPLATE.format(app_id=app_id)
+def is_igdb_image_url(url: str | None) -> bool:
+    if url is None:
+        return False
+
+    trimmed = url.strip()
+    return bool(trimmed) and IGDB_IMAGE_HOST in trimmed.casefold()
 
 
-def steam_logo_url(app_id: int) -> str:
-    """Build a Steam Store logo/icon URL from a public app ID."""
-    return STEAM_LOGO_CDN_TEMPLATE.format(app_id=app_id)
+def sanitize_igdb_image_url(url: str | None) -> str | None:
+    if not is_igdb_image_url(url):
+        return None
 
-
-def steam_library_hero_url(app_id: int) -> str:
-    """Build a Steam library hero cover URL from a public app ID."""
-    return STEAM_LIBRARY_HERO_CDN_TEMPLATE.format(app_id=app_id)
-
-
-def twitch_box_art_url(box_art_url: str, width: int, height: int) -> str:
-    """Resolve Twitch box art template URLs to a concrete CDN size."""
-    return box_art_url.replace("{width}", str(width)).replace("{height}", str(height))
+    return url.strip()  # type: ignore[union-attr]
 
 
 def resolve_release_image_url(
     *,
-    steam_app_id: int | None = None,
     direct_url: str | None = None,
 ) -> str | None:
-    """
-    Resolve a direct external image URL from platform metadata.
-
-    Prefer an explicit CDN URL from the upstream API. Fall back to known
-    Steam header URL patterns when only an app ID is available.
-    """
-    if direct_url is not None:
-        trimmed = direct_url.strip()
-        return trimmed or None
-
-    if steam_app_id is not None:
-        return steam_header_url(steam_app_id)
-
-    return None
+    """Resolve a release cover URL from IGDB artwork."""
+    return sanitize_igdb_image_url(direct_url)
 
 
 def resolve_release_logo_url(
     *,
-    steam_app_id: int | None = None,
     direct_url: str | None = None,
 ) -> str | None:
-    """Resolve a card-sized logo URL from platform metadata."""
-    if direct_url is not None:
-        trimmed = direct_url.strip()
-        return trimmed or None
-
-    if steam_app_id is not None:
-        return steam_logo_url(steam_app_id)
-
-    return None
+    """Resolve a card-sized logo URL from IGDB artwork."""
+    return sanitize_igdb_image_url(direct_url)

@@ -14,7 +14,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
         TelemetryHistoryProperties.class,
         TelemetryRollupProperties.class,
         HarvestScheduleProperties.class,
-        IndexabilityProperties.class
+        IndexabilityProperties.class,
+        IgdbProperties.class
 })
 @RequiredArgsConstructor
 public class WebConfig implements WebMvcConfigurer {

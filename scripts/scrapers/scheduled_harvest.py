@@ -7,7 +7,9 @@ import logging
 from clients.backend_client import BackendClient
 from clients.http_result import PushResult
 from models.catalog_schemas import SyncGameCatalogRequest
+from models.feed_events import ScrapedFeedEvent
 from models.telemetry import SyncTelemetryRequest
+from pipeline.news_push import NewsPushStore, push_news_events
 from scrapers.live_metrics import (
     fetch_scheduled_steam_metrics,
     fetch_scheduled_twitch_metrics,
@@ -112,6 +114,8 @@ def _run_news_due(
 
     scraper = SteamNewsScraper()
     completions: list[dict[str, object]] = []
+    collected_events: list[ScrapedFeedEvent] = []
+    news_store = NewsPushStore.from_settings()
 
     for target in targets:
         slug = str(target.get("slug") or "")
@@ -131,11 +135,15 @@ def _run_news_due(
                     game_name=str(target.get("gameName") or slug),
                 )
             )
+            collected_events.extend(events)
             completions.append(_work_result(slug, "NEWS", True))
             logger.info("Scheduled news fetch for %s returned %s events", slug, len(events))
         except Exception:
             logger.exception("Scheduled news fetch failed for slug=%s", slug)
             completions.append(_work_result(slug, "NEWS", False))
+
+    if collected_events:
+        push_news_events(client, collected_events, news_store)
 
     client.complete_harvest_work(completions)
     return len(targets), PushResult(success=True, status_code=200)

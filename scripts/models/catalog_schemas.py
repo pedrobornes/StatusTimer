@@ -14,6 +14,13 @@ class GameCatalogEntryPayload(BaseModel):
     live_players: int | None = Field(default=None, alias="livePlayers", ge=0)
     twitch_viewers: int | None = Field(default=None, alias="twitchViewers", ge=0)
     featured: bool = False
+    igdb_game_id: int | None = Field(default=None, alias="igdbGameId", ge=1)
+    genre_name: str | None = Field(default=None, alias="genreName", max_length=64)
+    user_rating: int | None = Field(default=None, alias="userRating", ge=0, le=100)
+    critic_rating: int | None = Field(default=None, alias="criticRating", ge=0, le=100)
+    themes: list[str] = Field(default_factory=list)
+    screenshot_urls: list[str] = Field(default_factory=list, alias="screenshotUrls")
+    trailer_video_ids: list[str] = Field(default_factory=list, alias="trailerVideoIds")
 
     model_config = ConfigDict(populate_by_name=True)
 

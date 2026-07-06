@@ -10,15 +10,17 @@ import { TRACKED_GAME_SLUGS } from "@/config/routes";
 import { getUserFacingErrorMessage } from "@/services/api";
 import { searchGameTelemetry } from "@/services/telemetryService";
 import {
+  collectTelemetryGenres,
+  collectTelemetryThemes,
+  filterTelemetryByGenre,
+  filterTelemetryByMinRating,
+  filterTelemetryByTheme,
+} from "@/lib/telemetryFilters";
+import type { PlatformDetail, ServerStatus } from "@/types/api";
+import {
   sortTelemetryEntries,
   type TelemetrySortMode,
 } from "@/lib/telemetrySort";
-import type { PlatformDetail, ServerStatus } from "@/types/api";
-import type {
-  GameTelemetry,
-  TelemetryHistorySnapshot,
-  TelemetryIncident,
-} from "@/types/telemetry";
 
 const GAMES_PER_PAGE = 9;
 
@@ -45,6 +47,9 @@ export default function TelemetryStatusHub({
   const [searchError, setSearchError] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<TelemetrySortMode>("trending");
   const [currentPage, setCurrentPage] = useState(1);
+  const [genreFilter, setGenreFilter] = useState<string | "All">("All");
+  const [themeFilter, setThemeFilter] = useState<string | "All">("All");
+  const [minRating, setMinRating] = useState<number | null>(null);
 
   const normalizedQuery = query.trim();
 
@@ -86,15 +91,30 @@ export default function TelemetryStatusHub({
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [normalizedQuery, sortMode]);
+  }, [normalizedQuery, sortMode, genreFilter, themeFilter, minRating]);
+
+  const availableGenres = useMemo(
+    () => collectTelemetryGenres(gameTelemetry),
+    [gameTelemetry],
+  );
+  const availableThemes = useMemo(
+    () => collectTelemetryThemes(gameTelemetry),
+    [gameTelemetry],
+  );
 
   const displayedTelemetry = normalizedQuery
     ? (searchResults ?? [])
     : gameTelemetry;
 
+  const filteredTelemetry = useMemo(() => {
+    const byGenre = filterTelemetryByGenre(displayedTelemetry, genreFilter);
+    const byTheme = filterTelemetryByTheme(byGenre, themeFilter);
+    return filterTelemetryByMinRating(byTheme, minRating);
+  }, [displayedTelemetry, genreFilter, themeFilter, minRating]);
+
   const sortedTelemetry = useMemo(
-    () => sortTelemetryEntries(displayedTelemetry, sortMode, TRACKED_GAME_SLUGS),
-    [displayedTelemetry, sortMode],
+    () => sortTelemetryEntries(filteredTelemetry, sortMode, TRACKED_GAME_SLUGS),
+    [filteredTelemetry, sortMode],
   );
 
   const gamingEmptyMessage = normalizedQuery
@@ -134,10 +154,92 @@ export default function TelemetryStatusHub({
             className="shrink-0"
           />
         </div>
+
+        {!normalizedQuery && (availableGenres.length > 0 || availableThemes.length > 0) ? (
+          <div className="mt-4 space-y-3">
+            {availableGenres.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setGenreFilter("All")}
+                  className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition ${
+                    genreFilter === "All"
+                      ? "border-cyan-400/35 bg-cyan-500/20 text-cyan-50"
+                      : "border-white/12 bg-white/[0.04] text-slate-300 hover:border-cyan-400/25 hover:text-white"
+                  }`}
+                >
+                  All genres
+                </button>
+                {availableGenres.map((genre) => (
+                  <button
+                    key={genre}
+                    type="button"
+                    onClick={() => setGenreFilter(genre)}
+                    className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition ${
+                      genreFilter === genre
+                        ? "border-cyan-400/35 bg-cyan-500/20 text-cyan-50"
+                        : "border-white/12 bg-white/[0.04] text-slate-300 hover:border-cyan-400/25 hover:text-white"
+                    }`}
+                  >
+                    {genre}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            {availableThemes.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setThemeFilter("All")}
+                  className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition ${
+                    themeFilter === "All"
+                      ? "border-violet-400/35 bg-violet-500/20 text-violet-50"
+                      : "border-white/12 bg-white/[0.04] text-slate-300 hover:border-violet-400/25 hover:text-white"
+                  }`}
+                >
+                  All themes
+                </button>
+                {availableThemes.map((theme) => (
+                  <button
+                    key={theme}
+                    type="button"
+                    onClick={() => setThemeFilter(theme)}
+                    className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition ${
+                      themeFilter === theme
+                        ? "border-violet-400/35 bg-violet-500/20 text-violet-50"
+                        : "border-white/12 bg-white/[0.04] text-slate-300 hover:border-violet-400/25 hover:text-white"
+                    }`}
+                  >
+                    {theme}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            <label className="flex items-center gap-2 text-xs text-slate-400">
+              Min rating
+              <select
+                value={minRating ?? ""}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setMinRating(value ? Number(value) : null);
+                }}
+                className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition focus:border-violet-400/35"
+              >
+                <option value="">Any</option>
+                <option value="70">7.0+</option>
+                <option value="80">8.0+</option>
+                <option value="90">9.0+</option>
+              </select>
+            </label>
+          </div>
+        ) : null}
+
         {normalizedQuery ? (
           <p className="mt-3 text-xs text-slate-400">
             {isSearching
-              ? "Searching the live catalog and Steam..."
+              ? "Searching the catalog via IGDB..."
               : `Showing ${sortedTelemetry.length} result${sortedTelemetry.length === 1 ? "" : "s"} for "${normalizedQuery}"`}
           </p>
         ) : null}

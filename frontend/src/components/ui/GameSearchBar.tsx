@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import GameAssetImage from "@/components/ui/GameAssetImage";
 import { APP_ROUTES } from "@/config/routes";
+import { resolveCatalogImageUrl } from "@/lib/gameAssets";
 import { getUserFacingErrorMessage } from "@/services/api";
 import { activateGame, searchGames } from "@/services/catalogService";
 import type { GameCatalogSearchResult } from "@/services/catalogService";
@@ -200,7 +201,7 @@ export default function GameSearchBar() {
         >
           {isSearching ? (
             <p className="px-4 py-6 text-center text-sm text-slate-400">
-              Searching games...
+              Searching via IGDB...
             </p>
           ) : searchError ? (
             <p className="px-4 py-6 text-center text-sm text-rose-300/90">
@@ -235,11 +236,18 @@ export default function GameSearchBar() {
                     >
                       <GameAssetImage
                         name={game.gameName}
-                        src={game.logoUrl}
-                        className="h-9 w-20"
-                        imageClassName="object-contain p-0.5"
+                        src={resolveCatalogImageUrl(game.coverUrl, game.logoUrl)}
+                        className="h-12 w-9"
+                        imageClassName="object-cover"
                       />
-                      <span className="text-sm font-medium">{game.gameName}</span>
+                      <div className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium">{game.gameName}</span>
+                        {game.genreName ? (
+                          <span className="mt-0.5 block text-[11px] uppercase tracking-[0.12em] text-slate-400">
+                            {game.genreName}
+                          </span>
+                        ) : null}
+                      </div>
                     </button>
                   </li>
                 );

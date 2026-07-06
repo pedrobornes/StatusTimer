@@ -10,6 +10,12 @@ public record GameReleasePayload(
         List<PlatformReleasePayload> platforms,
         Long hypeCount,
         String imageUrl,
-        String logoUrl
+        String logoUrl,
+        Long igdbGameId,
+        Integer userRating,
+        Integer criticRating,
+        List<String> themes,
+        List<String> screenshotUrls,
+        List<String> trailerVideoIds
 ) {
 }

@@ -3,9 +3,11 @@ package com.statustimer.dto.response;
 import com.statustimer.entity.Game;
 import com.statustimer.entity.GameTelemetry;
 import com.statustimer.entity.TelemetryStatus;
+import com.statustimer.entity.TrackedGame;
 import com.statustimer.service.GameCatalogService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public record GameTelemetryResponse(
@@ -22,12 +24,17 @@ public record GameTelemetryResponse(
         Boolean isUpcoming,
         LocalDate releaseDate,
         Integer twitchRank,
+        String twitchGameId,
         LocalDate steamReleaseDate,
         Boolean steamAdultContent,
         Long livePlayers,
         Long twitchViewers,
         Boolean isIndexable,
-        String lifecycleState
+        String lifecycleState,
+        Integer userRating,
+        Integer criticRating,
+        String genreName,
+        List<String> themes
 ) {
 
     public static GameTelemetryResponse fromEntity(
@@ -57,6 +64,7 @@ public record GameTelemetryResponse(
         boolean isUpcoming = entity.getStatus() == TelemetryStatus.UPCOMING
                 || (releaseDate != null && releaseDate.isAfter(LocalDate.now()));
         Integer twitchRank = catalogService.resolveTwitchRank(slug);
+        String twitchGameId = catalogService.resolveTwitchGameId(slug);
         LocalDate steamReleaseDate = catalogService.resolveSteamReleaseDate(slug);
         boolean steamAdultContent = catalogService.isSteamAdultContent(slug);
         Long livePlayers = catalogService.resolveLivePlayers(slug);
@@ -67,6 +75,13 @@ public record GameTelemetryResponse(
         String lifecycleState = catalogService.findBySlug(slug)
                 .map(trackedGame -> trackedGame.getLifecycleState().name())
                 .orElse("CATALOG");
+        Optional<TrackedGame> trackedGame = catalogService.findBySlug(slug);
+        Integer userRating = trackedGame.map(TrackedGame::getUserRating).orElse(null);
+        Integer criticRating = trackedGame.map(TrackedGame::getCriticRating).orElse(null);
+        String genreName = trackedGame.map(TrackedGame::getGenreName).orElse(null);
+        List<String> themes = trackedGame
+                .map(gameEntry -> List.copyOf(gameEntry.getThemes()))
+                .orElse(List.of());
 
         return new GameTelemetryResponse(
                 entity.getId(),
@@ -82,12 +97,17 @@ public record GameTelemetryResponse(
                 isUpcoming,
                 releaseDate,
                 twitchRank,
+                twitchGameId,
                 steamReleaseDate,
                 steamAdultContent,
                 livePlayers,
                 twitchViewers,
                 isIndexable,
-                lifecycleState
+                lifecycleState,
+                userRating,
+                criticRating,
+                genreName,
+                themes
         );
     }
 
@@ -103,9 +123,6 @@ public record GameTelemetryResponse(
         }
 
         private static Optional<LocalDate> resolveCatalogReleaseDate(String slug) {
-            if ("gta-vi".equals(slug)) {
-                return Optional.of(LocalDate.of(2026, 11, 19));
-            }
             return Optional.empty();
         }
     }

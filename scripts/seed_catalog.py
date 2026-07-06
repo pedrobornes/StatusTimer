@@ -16,7 +16,6 @@ from clients.backend_client import BackendClient
 from config.settings import settings
 from models.catalog_schemas import GameCatalogEntryPayload, SyncGameCatalogRequest
 from models.normalization import to_slug
-from scrapers.platform_images import steam_library_hero_url, steam_logo_url
 from scrapers.steam_charts import (
     MANUAL_PROTECTED_SLUGS,
     build_catalog_entry,
@@ -107,8 +106,8 @@ def load_csv_entries(csv_path: Path) -> list[GameCatalogEntryPayload]:
                     slug=slug,
                     game_name=game_name,
                     steam_app_id=steam_app_id,
-                    logo_url=steam_logo_url(steam_app_id) if steam_app_id else None,
-                    cover_url=steam_library_hero_url(steam_app_id) if steam_app_id else None,
+                    logo_url=None,
+                    cover_url=None,
                     featured=featured,
                 )
             )

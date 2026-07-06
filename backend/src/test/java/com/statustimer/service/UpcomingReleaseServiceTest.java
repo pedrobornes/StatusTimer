@@ -17,7 +17,7 @@ class UpcomingReleaseServiceTest {
     void keepsUpcomingAndRecentlyReleasedGames() {
         LocalDateTime cutoff = LocalDate.of(2026, 7, 5).minusDays(7).atStartOfDay();
 
-        Game upcoming = gameWithReleaseDate("gta-vi", LocalDate.of(2026, 11, 19));
+        Game upcoming = gameWithReleaseDate("upcoming-aaa-title", LocalDate.of(2026, 11, 19));
         Game recent = gameWithReleaseDate("fresh-launch", LocalDate.of(2026, 7, 3));
         Game stale = gameWithReleaseDate("old-launch", LocalDate.of(2026, 6, 20));
 

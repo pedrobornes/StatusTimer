@@ -10,9 +10,9 @@ import requests
 from config.settings import settings
 from models.catalog_schemas import GameCatalogEntryPayload
 from models.normalization import to_slug
+from scrapers.igdb_catalog_enrichment import enrich_catalog_entries_with_igdb
 from scrapers.live_metrics import fetch_steam_live_players
 from scrapers.parallel_utils import run_parallel
-from scrapers.platform_images import steam_library_hero_url, steam_logo_url
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ STEAM_CHARTS_URL = (
     "https://api.steampowered.com/ISteamChartsService/GetMostPlayedGames/v1/"
 )
 STEAM_APP_DETAILS_URL = "https://store.steampowered.com/api/appdetails"
-MANUAL_PROTECTED_SLUGS = frozenset({"valorant", "fortnite", "gta-vi"})
+MANUAL_PROTECTED_SLUGS = frozenset({"valorant", "fortnite"})
 
 
 @dataclass(frozen=True)
@@ -96,8 +96,8 @@ def build_catalog_entry(
         slug=slug,
         game_name=game_name,
         steam_app_id=app_id,
-        logo_url=steam_logo_url(app_id),
-        cover_url=steam_library_hero_url(app_id),
+        logo_url=None,
+        cover_url=None,
         featured=featured,
     )
 
@@ -188,4 +188,4 @@ def fetch_steam_charts_catalog(
         entries.append(result.entry)
 
     logger.info("Prepared %s Steam Charts catalog entries", len(entries))
-    return entries
+    return enrich_catalog_entries_with_igdb(entries)

@@ -18,12 +18,17 @@ export interface GameTelemetry {
   isUpcoming?: boolean;
   releaseDate?: string | null;
   twitchRank?: number | null;
+  twitchGameId?: string | null;
   steamReleaseDate?: string | null;
   steamAdultContent?: boolean;
   livePlayers?: number | null;
   twitchViewers?: number | null;
   isIndexable?: boolean;
   lifecycleState?: "CATALOG" | "MONITORED" | "INDEXABLE";
+  userRating?: number | null;
+  criticRating?: number | null;
+  genreName?: string | null;
+  themes?: string[];
 }
 
 export interface TelemetryHistorySnapshot {

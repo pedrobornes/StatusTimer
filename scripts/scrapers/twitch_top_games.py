@@ -9,17 +9,15 @@ import requests
 
 from config.settings import settings
 from models.catalog_schemas import GameCatalogEntryPayload
+from scrapers.igdb_catalog_enrichment import enrich_catalog_entries_with_igdb
 from models.normalization import to_slug
 from scrapers.live_metrics import fetch_twitch_viewers
 from scrapers.parallel_utils import run_parallel
-from scrapers.platform_images import twitch_box_art_url
 from scrapers.twitch_auth import get_twitch_access_token
 
 logger = logging.getLogger(__name__)
 
 TWITCH_HELIX_GAMES_TOP_URL = "https://api.twitch.tv/helix/games/top"
-TWITCH_LOGO_BOX_ART_SIZE = (300, 400)
-TWITCH_COVER_BOX_ART_SIZE = (600, 800)
 TWITCH_PAGE_SIZE_MAX = 100
 
 NON_GAME_CATEGORIES = frozenset(
@@ -46,34 +44,19 @@ class TwitchTopGameEntry:
     slug: str
     twitch_rank: int
     twitch_viewers: int | None
-    logo_url: str
-    cover_url: str
 
 
 def is_non_game_category(game_name: str) -> bool:
     return game_name.strip().casefold() in NON_GAME_CATEGORIES
 
 
-def resolve_twitch_logo_url(box_art_url: str) -> str:
-    width, height = TWITCH_LOGO_BOX_ART_SIZE
-    return twitch_box_art_url(box_art_url, width, height)
-
-
-def resolve_twitch_cover_url(box_art_url: str) -> str:
-    width, height = TWITCH_COVER_BOX_ART_SIZE
-    return twitch_box_art_url(box_art_url, width, height)
-
-
 def parse_twitch_top_game(game: dict, rank: int) -> TwitchTopGameEntry | None:
     twitch_game_id = game.get("id")
     game_name = game.get("name")
-    box_art_url = game.get("box_art_url")
 
     if not isinstance(twitch_game_id, str) or not twitch_game_id:
         return None
     if not isinstance(game_name, str) or not game_name.strip():
-        return None
-    if not isinstance(box_art_url, str) or not box_art_url:
         return None
 
     normalized_name = game_name.strip()
@@ -90,8 +73,6 @@ def parse_twitch_top_game(game: dict, rank: int) -> TwitchTopGameEntry | None:
         slug=slug,
         twitch_rank=rank,
         twitch_viewers=None,
-        logo_url=resolve_twitch_logo_url(box_art_url),
-        cover_url=resolve_twitch_cover_url(box_art_url),
     )
 
 
@@ -103,7 +84,7 @@ def build_catalog_entry(
     return GameCatalogEntryPayload(
         slug=entry.slug,
         game_name=entry.game_name,
-        logo_url=entry.logo_url,
+        logo_url=None,
         cover_url=None,
         twitch_game_id=entry.twitch_game_id,
         twitch_rank=entry.twitch_rank,
@@ -144,8 +125,6 @@ def _enrich_twitch_viewers(
             slug=entry.slug,
             twitch_rank=entry.twitch_rank,
             twitch_viewers=twitch_viewers,
-            logo_url=entry.logo_url,
-            cover_url=entry.cover_url,
         )
 
     return run_parallel(entries, fetch_viewers)
@@ -259,7 +238,8 @@ def fetch_twitch_top_games_catalog(
 ) -> list[GameCatalogEntryPayload]:
     """Build catalog payloads from the filtered Twitch top games list."""
     entries = fetch_twitch_top_games(limit=limit)
-    return [
+    payloads = [
         build_catalog_entry(entry, featured=entry.twitch_rank <= 6)
         for entry in entries
     ]
+    return enrich_catalog_entries_with_igdb(payloads)

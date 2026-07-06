@@ -9,7 +9,6 @@ export const TRACKED_GAME_SLUGS = [
   "valorant",
   "dota-2",
   "pubg",
-  "gta-vi",
   "fortnite",
   "league-of-legends",
   "minecraft",

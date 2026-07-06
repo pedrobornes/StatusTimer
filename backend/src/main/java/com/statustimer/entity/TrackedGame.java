@@ -1,5 +1,6 @@
 package com.statustimer.entity;
 
+import jakarta.persistence.Convert;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -9,7 +10,10 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import com.statustimer.util.StringListJsonConverter;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -114,4 +118,31 @@ public class TrackedGame {
 
     @Column(name = "stale_reason", length = 64)
     private String staleReason;
+
+    @Column(name = "igdb_game_id")
+    private Long igdbGameId;
+
+    @Column(name = "genre_name", length = 64)
+    private String genreName;
+
+    @Column(name = "user_rating")
+    private Integer userRating;
+
+    @Column(name = "critic_rating")
+    private Integer criticRating;
+
+    @Convert(converter = StringListJsonConverter.class)
+    @Column(name = "themes_json", columnDefinition = "TEXT")
+    @Builder.Default
+    private List<String> themes = new ArrayList<>();
+
+    @Convert(converter = StringListJsonConverter.class)
+    @Column(name = "screenshot_urls_json", columnDefinition = "TEXT")
+    @Builder.Default
+    private List<String> screenshotUrls = new ArrayList<>();
+
+    @Convert(converter = StringListJsonConverter.class)
+    @Column(name = "trailer_video_ids_json", columnDefinition = "TEXT")
+    @Builder.Default
+    private List<String> trailerVideoIds = new ArrayList<>();
 }

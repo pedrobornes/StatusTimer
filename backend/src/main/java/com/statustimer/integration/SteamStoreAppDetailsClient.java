@@ -84,14 +84,12 @@ public class SteamStoreAppDetailsClient {
             JsonNode data = appNode.path("data");
             LocalDate releaseDate = parseReleaseDate(data.path("release_date"));
             boolean adultContent = detectAdultContent(data);
-            String logoUrl = resolveLogoUrl(data);
-            String coverUrl = resolveCoverUrl(data);
 
             return Optional.of(new SteamAppMetadata(
                     releaseDate,
                     adultContent,
-                    logoUrl,
-                    coverUrl
+                    null,
+                    null
             ));
         } catch (Exception exception) {
             log.warn("Unable to parse Steam appdetails for app {}", appId, exception);

@@ -4,6 +4,7 @@ import GameAssetImage from "@/components/ui/GameAssetImage";
 import GameCoverFrame from "@/components/ui/GameCoverFrame";
 import PlatformReleaseSchedule from "@/components/PlatformReleaseSchedule";
 import {
+  formatIgdbRating,
   resolveGameCoverUrl,
   resolveGameLogoUrl,
 } from "@/lib/gameAssets";
@@ -26,6 +27,8 @@ export default function ReleaseCard({
         coverUrl: release.imageUrl ?? undefined,
       })
     : null;
+  const userRating = formatIgdbRating(release.userRating ?? null);
+  const criticRating = formatIgdbRating(release.criticRating ?? null);
 
   return (
     <article className="overflow-hidden rounded-2xl border border-white/8 bg-white/[0.04] transition hover:border-cyan-400/25 hover:bg-white/[0.06]">
@@ -64,6 +67,21 @@ export default function ReleaseCard({
             <p className="mt-1 text-xs uppercase tracking-[0.16em] text-cyan-200/70">
               {release.genre}
             </p>
+
+            {(userRating || criticRating) && (
+              <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-300">
+                {userRating ? (
+                  <span className="rounded-full border border-white/10 px-2 py-0.5">
+                    Players {userRating}
+                  </span>
+                ) : null}
+                {criticRating ? (
+                  <span className="rounded-full border border-white/10 px-2 py-0.5">
+                    Critics {criticRating}
+                  </span>
+                ) : null}
+              </div>
+            )}
           </div>
         </div>
 

@@ -133,7 +133,6 @@ const PROBE_SOURCE_BY_SLUG: Record<string, string> = {
   pubg: "Official Steam servers",
   valorant: "Official Riot status page",
   fortnite: "Official Epic status page",
-  "gta-vi": "Official Rockstar updates",
   "league-of-legends": "Official Riot status page",
   "apex-legends": "Official EA / Steam servers",
   "call-of-duty": "Official Activision networks",

@@ -75,22 +75,22 @@ export default function PendingTelemetryGate({
         />
         <div className="space-y-2">
           <p className="text-base font-medium text-white">
-            Calibrando telemetría en vivo…
+            Calibrating live telemetry…
           </p>
           <p className="text-sm leading-6 text-slate-400">
-            Suele tardar menos de un minuto. No mostramos datos inventados
-            mientras el harvester completa la primera comprobación.
+            This usually takes less than a minute. We do not show placeholder
+            data while the harvester completes the first live check.
           </p>
           {showSlowMessage ? (
             <p className="text-sm leading-6 text-amber-200/80">
-              Sigue en cola de prioridad. La página se actualizará sola en
-              cuanto lleguen datos reales.
+              Still in the priority queue. This page will refresh automatically
+              as soon as real data arrives.
             </p>
           ) : null}
           {timedOut ? (
             <p className="text-sm leading-6 text-rose-200/90">
-              La calibración está tardando más de lo habitual. Puedes recargar
-              la página en unos segundos o volver más tarde.
+              Calibration is taking longer than usual. You can reload in a few
+              seconds or check back shortly.
             </p>
           ) : null}
         </div>

@@ -1,5 +1,7 @@
 package com.statustimer.dto.request;
 
+import java.util.List;
+
 public record GameCatalogEntryPayload(
         String slug,
         String gameName,
@@ -10,6 +12,13 @@ public record GameCatalogEntryPayload(
         Integer twitchRank,
         Long livePlayers,
         Long twitchViewers,
-        Boolean featured
+        Boolean featured,
+        Long igdbGameId,
+        String genreName,
+        Integer userRating,
+        Integer criticRating,
+        List<String> themes,
+        List<String> screenshotUrls,
+        List<String> trailerVideoIds
 ) {
 }

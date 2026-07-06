@@ -1,5 +1,6 @@
 package com.statustimer.service;
 
+import com.statustimer.config.GameAssetPolicy;
 import com.statustimer.dto.request.GameReleasePayload;
 import com.statustimer.dto.request.PlatformReleasePayload;
 import com.statustimer.dto.request.SyncGamesRequest;
@@ -8,6 +9,7 @@ import com.statustimer.entity.Game;
 import com.statustimer.entity.GamePlatform;
 import com.statustimer.entity.GamePlatformDetail;
 import com.statustimer.repository.GameRepository;
+import com.statustimer.util.IgdbMetadataSupport;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -63,12 +65,24 @@ public class GameSyncService {
 
         game.setGameName(payload.gameName());
         game.setGenre(payload.genre());
-        game.setImageUrl(resolveOptionalUrl(payload.imageUrl(), "imageUrl"));
-        game.setLogoUrl(resolveOptionalUrl(payload.logoUrl(), "logoUrl"));
+        game.setImageUrl(sanitizeIgdbUrl(payload.imageUrl(), "imageUrl"));
+        game.setLogoUrl(sanitizeIgdbUrl(payload.logoUrl(), "logoUrl"));
 
-        if (isNew) {
-            game.setHypeCount(resolveInitialHypeCount(payload.hypeCount()));
+        if (payload.hypeCount() != null && payload.hypeCount() >= 0) {
+            game.setHypeCount(payload.hypeCount());
+        } else if (isNew) {
+            game.setHypeCount(0L);
         }
+
+        IgdbMetadataSupport.applyToGame(
+                game,
+                payload.igdbGameId(),
+                payload.userRating(),
+                payload.criticRating(),
+                payload.themes(),
+                payload.screenshotUrls(),
+                payload.trailerVideoIds()
+        );
 
         syncPlatforms(game, payload.platforms());
         gameRepository.save(game);
@@ -117,6 +131,11 @@ public class GameSyncService {
         }
 
         return hypeCount;
+    }
+
+    private String sanitizeIgdbUrl(String url, String fieldName) {
+        String resolved = resolveOptionalUrl(url, fieldName);
+        return GameAssetPolicy.sanitizeImageUrl(resolved);
     }
 
     private String resolveOptionalUrl(String url, String fieldName) {

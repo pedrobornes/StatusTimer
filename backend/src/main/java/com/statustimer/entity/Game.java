@@ -1,6 +1,8 @@
 package com.statustimer.entity;
 
+import com.statustimer.util.StringListJsonConverter;
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -54,6 +56,30 @@ public class Game {
 
     @Column(name = "logo_url", length = 2048)
     private String logoUrl;
+
+    @Column(name = "igdb_game_id")
+    private Long igdbGameId;
+
+    @Column(name = "user_rating")
+    private Integer userRating;
+
+    @Column(name = "critic_rating")
+    private Integer criticRating;
+
+    @Convert(converter = StringListJsonConverter.class)
+    @Column(name = "themes_json", columnDefinition = "TEXT")
+    @Builder.Default
+    private List<String> themes = new ArrayList<>();
+
+    @Convert(converter = StringListJsonConverter.class)
+    @Column(name = "screenshot_urls_json", columnDefinition = "TEXT")
+    @Builder.Default
+    private List<String> screenshotUrls = new ArrayList<>();
+
+    @Convert(converter = StringListJsonConverter.class)
+    @Column(name = "trailer_video_ids_json", columnDefinition = "TEXT")
+    @Builder.Default
+    private List<String> trailerVideoIds = new ArrayList<>();
 
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

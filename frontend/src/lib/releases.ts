@@ -13,6 +13,10 @@ export const RELEASE_GENRES = ["All", ...OFFICIAL_GAME_GENRES] as const;
 
 export type ReleaseGenreFilter = (typeof RELEASE_GENRES)[number];
 
+export const RELEASE_SORT_MODES = ["date", "hype", "rating"] as const;
+
+export type ReleaseSortMode = (typeof RELEASE_SORT_MODES)[number];
+
 export function getPrimaryReleaseTimestamp(release: UpcomingRelease): number {
   const platformDates = release.platforms
     .map((platform) => platform.releaseDate)
@@ -37,6 +41,37 @@ export function sortReleasesByDate(
   );
 }
 
+export function sortReleasesByHype(
+  releases: UpcomingRelease[],
+): UpcomingRelease[] {
+  return [...releases].sort((left, right) => right.hypeCount - left.hypeCount);
+}
+
+export function sortReleasesByRating(
+  releases: UpcomingRelease[],
+): UpcomingRelease[] {
+  return [...releases].sort((left, right) => {
+    const leftScore = Math.max(left.criticRating ?? 0, left.userRating ?? 0);
+    const rightScore = Math.max(right.criticRating ?? 0, right.userRating ?? 0);
+    return rightScore - leftScore;
+  });
+}
+
+export function sortReleases(
+  releases: UpcomingRelease[],
+  mode: ReleaseSortMode,
+): UpcomingRelease[] {
+  if (mode === "hype") {
+    return sortReleasesByHype(releases);
+  }
+
+  if (mode === "rating") {
+    return sortReleasesByRating(releases);
+  }
+
+  return sortReleasesByDate(releases);
+}
+
 export function filterReleasesByGenre(
   releases: UpcomingRelease[],
   genre: ReleaseGenreFilter,
@@ -46,6 +81,43 @@ export function filterReleasesByGenre(
   }
 
   return releases.filter((release) => release.genre === genre);
+}
+
+export function filterReleasesByTheme(
+  releases: UpcomingRelease[],
+  theme: string | "All",
+): UpcomingRelease[] {
+  if (theme === "All") {
+    return releases;
+  }
+
+  return releases.filter((release) => release.themes?.includes(theme));
+}
+
+export function filterReleasesByMinRating(
+  releases: UpcomingRelease[],
+  minRating: number | null,
+): UpcomingRelease[] {
+  if (minRating == null || minRating <= 0) {
+    return releases;
+  }
+
+  return releases.filter((release) => {
+    const best = Math.max(release.criticRating ?? 0, release.userRating ?? 0);
+    return best >= minRating;
+  });
+}
+
+export function collectReleaseThemes(releases: UpcomingRelease[]): string[] {
+  const themes = new Set<string>();
+
+  for (const release of releases) {
+    for (const theme of release.themes ?? []) {
+      themes.add(theme);
+    }
+  }
+
+  return [...themes].sort((left, right) => left.localeCompare(right));
 }
 
 export function buildPlatformsBySlug(

@@ -1,0 +1,3 @@
+org.springframework.boot.env.EnvironmentPostProcessor=\
+com.statustimer.config.CloudDatabaseEnvironmentPostProcessor,\
+com.statustimer.config.DotenvEnvironmentPostProcessor

@@ -14,6 +14,7 @@ from models.schemas import SyncGamesRequest
 from models.telemetry import SyncTelemetryRequest
 from pipeline.context_pipeline import ingest_events_into_context_store
 from pipeline.deduplication import DedupStore, filter_new_events, filter_recent_events
+from pipeline.news_push import NewsPushStore, push_news_events
 from pipeline.skill_router import SkillRouter
 from pipeline.sync_router import dispatch_skill_result
 from scrapers.on_demand_jobs import run_on_demand_scrape_jobs
@@ -144,6 +145,10 @@ def run_twitch_catalog_sync(client: BackendClient) -> tuple[int, PushResult]:
 
 def run_release_sync(client: BackendClient) -> tuple[int, PushResult]:
     releases = fetch_upcoming_releases()
+    if not releases:
+        logger.info("No upcoming releases to sync this cycle.")
+        return 0, PushResult(success=True, status_code=204)
+
     payload = SyncGamesRequest(releases=releases)
 
     logger.info("Prepared %s normalized release payloads", len(releases))
@@ -227,7 +232,12 @@ def run_platform_intel_pipeline(client: BackendClient) -> tuple[int, int, int, P
     )
 
     indexed_chunks, context_store = ingest_events_into_context_store(recent_events)
+    news_push_store = NewsPushStore.from_settings()
+    news_pushed = push_news_events(client, recent_events, news_push_store)
     skill_router = SkillRouter(context_store=context_store)
+
+    if news_pushed > 0:
+        logger.info("Stored %s raw news item(s) from platform feeds", news_pushed)
 
     if not new_events:
         logger.info("No new platform intel events after deduplication")

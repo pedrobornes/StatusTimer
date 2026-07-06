@@ -30,14 +30,20 @@ class GameReleasePayload(BaseModel):
         default=None,
         alias="imageUrl",
         max_length=2048,
-        description="Direct CDN cover art URL from the source platform.",
+        description="IGDB cover art URL in high quality.",
     )
     logo_url: str | None = Field(
         default=None,
         alias="logoUrl",
         max_length=2048,
-        description="Direct CDN logo/icon URL for monitoring cards.",
+        description="IGDB artwork/logo URL for cards.",
     )
+    igdb_game_id: int | None = Field(default=None, alias="igdbGameId", ge=1)
+    user_rating: int | None = Field(default=None, alias="userRating", ge=0, le=100)
+    critic_rating: int | None = Field(default=None, alias="criticRating", ge=0, le=100)
+    themes: list[str] = Field(default_factory=list)
+    screenshot_urls: list[str] = Field(default_factory=list, alias="screenshotUrls")
+    trailer_video_ids: list[str] = Field(default_factory=list, alias="trailerVideoIds")
 
     model_config = {"populate_by_name": True}
 

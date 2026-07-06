@@ -7,8 +7,6 @@ from scrapers.twitch_top_games import (
     fetch_twitch_top_games,
     is_non_game_category,
     parse_twitch_top_game,
-    resolve_twitch_cover_url,
-    resolve_twitch_logo_url,
 )
 
 
@@ -18,26 +16,11 @@ class TwitchTopGamesTests(unittest.TestCase):
         self.assertTrue(is_non_game_category("ASMR"))
         self.assertFalse(is_non_game_category("VALORANT"))
 
-    def test_resolve_twitch_box_art_urls(self) -> None:
-        template = "https://static-cdn.jtvnw.net/ttv-boxart/509658-{width}x{height}.jpg"
-
-        self.assertEqual(
-            resolve_twitch_logo_url(template),
-            "https://static-cdn.jtvnw.net/ttv-boxart/509658-300x400.jpg",
-        )
-        self.assertEqual(
-            resolve_twitch_cover_url(template),
-            "https://static-cdn.jtvnw.net/ttv-boxart/509658-600x800.jpg",
-        )
-
     def test_parse_twitch_top_game_builds_ranked_entry(self) -> None:
         entry = parse_twitch_top_game(
             {
                 "id": "516575",
                 "name": "Valorant",
-                "box_art_url": (
-                    "https://static-cdn.jtvnw.net/ttv-boxart/516575-{width}x{height}.jpg"
-                ),
             },
             rank=3,
         )
@@ -48,15 +31,12 @@ class TwitchTopGamesTests(unittest.TestCase):
         self.assertEqual(entry.game_name, "Valorant")
         self.assertEqual(entry.slug, "valorant")
         self.assertEqual(entry.twitch_rank, 3)
-        self.assertIn("300x400", entry.logo_url)
-        self.assertIn("600x800", entry.cover_url)
 
     def test_parse_twitch_top_game_rejects_non_game_category(self) -> None:
         entry = parse_twitch_top_game(
             {
                 "id": "509658",
                 "name": "Just Chatting",
-                "box_art_url": "https://cdn.example/1-{width}x{height}.jpg",
             },
             rank=1,
         )
@@ -90,12 +70,10 @@ class TwitchTopGamesTests(unittest.TestCase):
                 {
                     "id": "1",
                     "name": "Just Chatting",
-                    "box_art_url": "https://cdn.example/1-{width}x{height}.jpg",
                 },
                 {
                     "id": "2",
                     "name": "League of Legends",
-                    "box_art_url": "https://cdn.example/2-{width}x{height}.jpg",
                 },
             ],
             "pagination": {"cursor": "page-2"},
@@ -106,12 +84,10 @@ class TwitchTopGamesTests(unittest.TestCase):
                 {
                     "id": "3",
                     "name": "Valorant",
-                    "box_art_url": "https://cdn.example/3-{width}x{height}.jpg",
                 },
                 {
                     "id": "4",
                     "name": "Counter-Strike",
-                    "box_art_url": "https://cdn.example/4-{width}x{height}.jpg",
                 },
             ],
             "pagination": {},

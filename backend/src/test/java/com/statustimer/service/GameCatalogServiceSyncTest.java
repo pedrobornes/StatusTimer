@@ -28,19 +28,28 @@ class GameCatalogServiceSyncTest {
     @Test
     void syncCatalogUpdatesManualProtectedTwitchMetrics() {
         TrackedGame existing = trackedGameRepository.findBySlug("valorant").orElseThrow();
+        existing.setLogoUrl("none");
+        trackedGameRepository.save(existing);
 
         var response = gameCatalogService.syncCatalog(new SyncGameCatalogRequest(
                 List.of(new GameCatalogEntryPayload(
                         "valorant",
                         "Valorant",
                         null,
-                        null,
-                        null,
+                        "https://images.igdb.com/igdb/image/upload/t_thumb/co2mvt.jpg",
+                        "https://images.igdb.com/igdb/image/upload/t_cover_big/co2mvt.jpg",
                         "516575",
                         2,
                         null,
                         135_611L,
-                        false
+                        false,
+                        null,
+                        null,
+                        null,
+                        null,
+                        List.of(),
+                        List.of(),
+                        List.of()
                 ))
         ));
 
@@ -51,6 +60,10 @@ class GameCatalogServiceSyncTest {
         assertEquals(135_611L, updated.getTwitchViewers());
         assertEquals("516575", updated.getTwitchGameId());
         assertEquals(2, updated.getTwitchRank());
+        assertEquals(
+                "https://images.igdb.com/igdb/image/upload/t_thumb/co2mvt.jpg",
+                updated.getLogoUrl()
+        );
     }
 
     @Test
@@ -68,7 +81,14 @@ class GameCatalogServiceSyncTest {
                         6,
                         null,
                         62_172L,
-                        false
+                        false,
+                        null,
+                        null,
+                        null,
+                        null,
+                        List.of(),
+                        List.of(),
+                        List.of()
                 ))
         ));
 

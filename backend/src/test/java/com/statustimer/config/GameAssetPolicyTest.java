@@ -1,6 +1,7 @@
 package com.statustimer.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.statustimer.entity.TrackedGame;
 import org.junit.jupiter.api.Test;
@@ -8,90 +9,81 @@ import org.junit.jupiter.api.Test;
 class GameAssetPolicyTest {
 
     @Test
-    void appliesVerifiedSteamAssets() {
+    void applyIgdbAssetsPersistsLogoAndCoverUrls() {
         TrackedGame game = TrackedGame.builder()
-                .slug("meccha-chameleon")
-                .steamAppId(4704690)
+                .slug("grand-theft-auto-vi")
+                .gameName("Grand Theft Auto VI")
                 .build();
 
-        GameAssetPolicy.applySteamAssets(
+        GameAssetPolicy.applyIgdbAssets(
                 game,
-                "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4704690/capsule.jpg",
-                "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4704690/header.jpg",
-                "https://example.com/twitch-cover.jpg"
+                "https://images.igdb.com/igdb/image/upload/t_thumb/logo.jpg",
+                "https://images.igdb.com/igdb/image/upload/t_cover_big/cover.jpg"
         );
 
         assertEquals(
-                "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4704690/capsule.jpg",
+                "https://images.igdb.com/igdb/image/upload/t_thumb/logo.jpg",
                 game.getLogoUrl()
         );
         assertEquals(
-                "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4704690/header.jpg",
+                "https://images.igdb.com/igdb/image/upload/t_cover_big/cover.jpg",
                 game.getCoverUrl()
         );
     }
 
     @Test
-    void resolvesLocalAssetsForValorant() {
+    void applyIgdbAssetsRejectsSteamAndTwitchUrls() {
         TrackedGame game = TrackedGame.builder()
                 .slug("valorant")
+                .gameName("Valorant")
                 .build();
 
-        GameAssetPolicy.applyTo(game, "https://example.com/twitch-cover.jpg");
+        GameAssetPolicy.applyIgdbAssets(
+                game,
+                "https://static-cdn.jtvnw.net/ttv-boxart/516575-300x400.jpg",
+                "https://cdn.cloudflare.steamstatic.com/steam/apps/730/library_hero.jpg"
+        );
 
-        assertEquals("/images/logos/valorant.png", game.getLogoUrl());
-        assertEquals("/images/covers/valorant.jpg", game.getCoverUrl());
+        assertNull(game.getLogoUrl());
+        assertNull(game.getCoverUrl());
     }
 
     @Test
-    void resolvesLocalAssetsForOverwatch() {
+    void normalizeStoredAssetsClearsLegacyNonIgdbUrls() {
         TrackedGame game = TrackedGame.builder()
-                .slug("overwatch-2")
+                .slug("counter-strike-2")
+                .gameName("Counter-Strike 2")
+                .logoUrl("https://static-cdn.jtvnw.net/ttv-boxart/32399-300x400.jpg")
+                .coverUrl("https://cdn.cloudflare.steamstatic.com/steam/apps/730/library_hero.jpg")
                 .build();
 
-        GameAssetPolicy.applyTo(game, "https://example.com/twitch-cover.jpg");
+        GameAssetPolicy.normalizeStoredAssets(game);
 
-        assertEquals("/images/logos/overwatch-2.jpg", game.getLogoUrl());
-        assertEquals("/images/covers/overwatch-2.png", game.getCoverUrl());
+        assertNull(game.getLogoUrl());
+        assertNull(game.getCoverUrl());
     }
 
     @Test
-    void resolvesLocalAssetsForFortnite() {
-        TrackedGame game = TrackedGame.builder()
-                .slug("fortnite")
-                .build();
-
-        GameAssetPolicy.applyTo(game, "https://example.com/twitch-cover.jpg");
-
-        assertEquals("/images/logos/fortnite.png", game.getLogoUrl());
-        assertEquals("/images/covers/fortnite.png", game.getCoverUrl());
-    }
-
-    @Test
-    void resolvesFallbackLogoAsNone() {
-        TrackedGame game = TrackedGame.builder()
-                .slug("roblox")
-                .build();
-
-        GameAssetPolicy.applyTo(game, "https://example.com/twitch-cover.jpg");
-
-        assertEquals("none", game.getLogoUrl());
-        assertEquals("https://example.com/twitch-cover.jpg", game.getCoverUrl());
-    }
-
-    @Test
-    void resolvesSteamLogoFromAppIdWhenPersistedLogoMissing() {
+    void resolveLogoUrlPrefersPersistedIgdbUrl() {
         assertEquals(
-                "https://cdn.cloudflare.steamstatic.com/steam/apps/730/logo.png",
-                GameAssetPolicy.resolveLogoUrl("counter-strike-2", 730, null)
+                "https://images.igdb.com/igdb/image/upload/t_thumb/coabc123.jpg",
+                GameAssetPolicy.resolveLogoUrl(
+                        "counter-strike-2",
+                        "https://images.igdb.com/igdb/image/upload/t_thumb/coabc123.jpg"
+                )
         );
     }
 
     @Test
-    void resolvesLocalLogoWhenPersistedValueIsNone() {
+    void resolveLogoUrlReturnsNoneWhenNoAssetExists() {
         assertEquals(
-                "/images/logos/gta-vi.png",
-                GameAssetPolicy.resolveLogoUrl("gta-vi", null, "none")
+                GameAssetPolicy.LOGO_NONE,
+                GameAssetPolicy.resolveLogoUrl("unknown-game", null)
         );
+    }
+
+    @Test
+    void resolveCoverUrlReturnsNullWhenNoAssetExists() {
+        assertNull(GameAssetPolicy.resolveCoverUrl("unknown-game", null));
     }
 }

@@ -48,3 +48,8 @@ indexability:
   freshness-hours-tier-3: 72
   guardian-interval-ms: 900000
   api-outage-grace-hours: 1
+
+igdb:
+  client-id: ${IGDB_CLIENT_ID:}
+  client-secret: ${IGDB_CLIENT_SECRET:}
+  search-limit: ${IGDB_SEARCH_LIMIT:8}

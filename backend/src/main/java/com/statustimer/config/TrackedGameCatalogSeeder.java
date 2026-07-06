@@ -18,8 +18,7 @@ public class TrackedGameCatalogSeeder implements CommandLineRunner {
 
     private static final Set<String> MANUAL_LOCK_SLUGS = Set.of(
             "valorant",
-            "fortnite",
-            "gta-vi"
+            "fortnite"
     );
 
     private final TrackedGameRepository trackedGameRepository;
@@ -43,7 +42,7 @@ public class TrackedGameCatalogSeeder implements CommandLineRunner {
                     .scrapeTier(metadata.featured() ? 1 : 2)
                     .build();
 
-            GameAssetPolicy.applyTo(game, null);
+            GameAssetPolicy.applyIgdbAssets(game, null, null);
             trackedGameRepository.save(game);
         });
 

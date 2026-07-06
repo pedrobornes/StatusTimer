@@ -16,7 +16,7 @@ import {
 import { buildGameStatusFaq } from "@/lib/seo/gameFaq";
 import { buildStatusPageJsonLd } from "@/lib/seo/jsonLd";
 import { buildStatusPageMetadata } from "@/lib/seo/metadata";
-import { buildStatusContextParagraphs } from "@/lib/seo/statusContext";
+import { buildStatusContextInsight } from "@/lib/seo/statusContext";
 import { resolveCanonicalGameSlug } from "@/lib/gameSlugs";
 import { getConfirmedPlatforms } from "@/lib/releases";
 import { getGameStatusDetail } from "@/services/telemetryService";
@@ -97,7 +97,7 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
       );
     }
 
-    const contextParagraphs = buildStatusContextParagraphs({
+    const contextInsight = buildStatusContextInsight({
       gameName,
       status: telemetry.status,
       lastChecked: telemetry.lastChecked,
@@ -167,7 +167,7 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
                 </div>
               </section>
 
-              <StatusContextBlock paragraphs={contextParagraphs} />
+              <StatusContextBlock insight={contextInsight} />
 
               {showIndexableContent ? <GameStatusFaq items={faqItems} /> : null}
 

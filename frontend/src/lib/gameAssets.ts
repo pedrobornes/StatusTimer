@@ -1,264 +1,556 @@
 import type { GameTelemetry } from "@/types/telemetry";
 
+
+
 export interface SearchableGame {
+
   slug: string;
+
   name: string;
+
   logoUrl: string | null;
+
 }
+
+
+
+const IGDB_IMAGE_HOST = "images.igdb.com";
+
+
 
 export function buildSearchableGames(
+
   slugs: readonly string[],
+
   telemetryBySlug?: Record<string, GameTelemetry>,
+
 ): SearchableGame[] {
+
   return slugs.map((slug) => {
+
     const telemetry = telemetryBySlug?.[slug];
+
     const name = resolveGameDisplayName(slug, telemetry);
-    const logoUrl = resolveGameLogoUrl(slug, telemetry);
+
+    const logoUrl = resolveGameBoxArtUrl(slug, telemetry);
+
+
 
     return { slug, name, logoUrl };
+
   });
+
 }
+
+
 
 export interface GameAssetCatalogEntry {
+
   gameName: string;
+
   appId?: number;
+
   isUpcoming?: boolean;
+
   isFeatured?: boolean;
+
   releaseDate?: string;
+
 }
+
+
 
 const TRACKED_GAME_ASSETS: Record<string, GameAssetCatalogEntry> = {
+
   "counter-strike-2": {
+
     gameName: "Counter-Strike 2",
+
     appId: 730,
+
     isFeatured: true,
+
   },
+
   valorant: {
+
     gameName: "Valorant",
+
     isFeatured: true,
+
   },
+
   "dota-2": {
+
     gameName: "Dota 2",
+
     appId: 570,
+
     isFeatured: true,
+
   },
+
   pubg: {
+
     gameName: "PUBG: Battlegrounds",
+
     appId: 578080,
+
     isFeatured: true,
+
   },
-  "gta-vi": {
-    gameName: "Grand Theft Auto VI",
-    isFeatured: true,
-    isUpcoming: true,
-    releaseDate: "2026-11-19",
-  },
+
   fortnite: {
+
     gameName: "Fortnite",
+
     isFeatured: true,
+
   },
+
   "league-of-legends": {
+
     gameName: "League of Legends",
+
   },
+
   minecraft: {
+
     gameName: "Minecraft",
+
   },
+
   roblox: {
+
     gameName: "Roblox",
+
   },
+
   "apex-legends": {
+
     gameName: "Apex Legends",
+
     appId: 1172470,
+
   },
+
   "call-of-duty": {
+
     gameName: "Call of Duty",
+
     appId: 1938090,
+
   },
+
   "gta-v": {
+
     gameName: "Grand Theft Auto V",
+
     appId: 271590,
+
   },
+
   "overwatch-2": {
+
     gameName: "Overwatch 2",
+
   },
+
   "rainbow-six-siege": {
+
     gameName: "Rainbow Six Siege",
+
     appId: 359550,
+
   },
+
   "rocket-league": {
+
     gameName: "Rocket League",
+
     appId: 252950,
+
   },
+
   "destiny-2": {
+
     gameName: "Destiny 2",
+
     appId: 1085660,
+
   },
+
   rust: {
+
     gameName: "Rust",
+
     appId: 252490,
+
   },
+
   "elden-ring": {
+
     gameName: "Elden Ring",
+
     appId: 1245620,
+
   },
+
 };
 
-const LOCAL_LOGO_SLUGS = new Set([
-  "valorant",
-  "fortnite",
-  "gta-vi",
-  "league-of-legends",
-  "minecraft",
-  "overwatch-2",
-]);
 
-const LOCAL_LOGO_OVERRIDES: Record<string, string> = {
-  "overwatch-2": "/images/logos/overwatch-2.jpg",
-};
-
-function localLogoUrl(slug: string): string {
-  return LOCAL_LOGO_OVERRIDES[slug] ?? `/images/logos/${slug}.png`;
-}
-
-function steamLogoUrl(appId: number): string {
-  return `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/logo.png`;
-}
 
 export function getGameCatalogEntry(slug: string): GameAssetCatalogEntry | null {
+
   return TRACKED_GAME_ASSETS[slug] ?? null;
+
 }
+
+
 
 export function isFeaturedGameSlug(slug: string): boolean {
+
   return TRACKED_GAME_ASSETS[slug]?.isFeatured === true;
+
 }
+
+
 
 export function getFeaturedGameSlugs(slugs: readonly string[]): string[] {
+
   return slugs.filter((slug) => isFeaturedGameSlug(slug));
+
 }
+
+
 
 export function resolveGameDisplayName(
+
   slug: string,
+
   telemetry?: Pick<GameTelemetry, "gameName">,
+
 ): string {
+
   if (telemetry?.gameName) {
+
     return telemetry.gameName;
+
   }
+
+
 
   return TRACKED_GAME_ASSETS[slug]?.gameName ?? slug;
+
 }
+
+
+
+export function formatIgdbRating(score: number | null | undefined): string | null {
+
+  if (score == null || Number.isNaN(score)) {
+
+    return null;
+
+  }
+
+
+
+  return `${(score / 10).toFixed(1)}/10`;
+
+}
+
+
 
 export function isValidLogoUrl(url: string | null | undefined): boolean {
+
   if (!url?.trim()) {
+
     return false;
+
   }
+
+
 
   return url.trim().toLowerCase() !== "none";
+
 }
+
+
+
+export function isIgdbImageUrl(url: string | null | undefined): boolean {
+
+  if (!isValidLogoUrl(url)) {
+
+    return false;
+
+  }
+
+
+
+  return url!.trim().toLowerCase().includes(IGDB_IMAGE_HOST);
+
+}
+
+
 
 export function isRenderableLogoUrl(
-  url: string | null | undefined,
-): boolean {
-  if (!isValidLogoUrl(url)) {
-    return false;
-  }
 
-  const trimmed = url!.trim();
-  return (
-    trimmed.startsWith("http://") ||
-    trimmed.startsWith("https://") ||
-    trimmed.startsWith("/images/")
-  );
+  url: string | null | undefined,
+
+): boolean {
+
+  return isIgdbImageUrl(url);
+
 }
 
+
+
 export function resolveGameLogoUrl(
+
   slug: string,
-  telemetry?: Pick<GameTelemetry, "logoUrl" | "appId">,
+
+  telemetry?: Pick<GameTelemetry, "logoUrl" | "coverUrl">,
+
 ): string | null {
-  if (telemetry?.logoUrl && isRenderableLogoUrl(telemetry.logoUrl)) {
-    return telemetry.logoUrl.trim();
+
+  const logoUrl = telemetry?.logoUrl?.trim();
+
+  if (logoUrl && isRenderableLogoUrl(logoUrl)) {
+
+    return logoUrl;
+
   }
 
-  if (LOCAL_LOGO_SLUGS.has(slug)) {
-    return localLogoUrl(slug);
+
+
+  return resolveGameCoverUrl(slug, telemetry);
+
+}
+
+
+
+export function resolveGameCoverUrl(
+
+  _slug: string,
+
+  telemetry?: Pick<GameTelemetry, "coverUrl" | "logoUrl">,
+
+): string | null {
+
+  const coverUrl = telemetry?.coverUrl?.trim();
+
+  if (coverUrl && isRenderableLogoUrl(coverUrl)) {
+
+    return coverUrl;
+
   }
 
-  const appId = telemetry?.appId ?? TRACKED_GAME_ASSETS[slug]?.appId;
-  if (appId) {
-    return steamLogoUrl(appId);
+
+
+  const logoUrl = telemetry?.logoUrl?.trim();
+
+  if (logoUrl && isRenderableLogoUrl(logoUrl)) {
+
+    return logoUrl;
+
+  }
+
+
+
+  return null;
+
+}
+
+
+
+export function resolveCatalogImageUrl(
+  coverUrl?: string | null,
+  logoUrl?: string | null,
+): string | null {
+  if (isIgdbImageUrl(coverUrl)) {
+    return coverUrl!.trim();
+  }
+
+  if (isIgdbImageUrl(logoUrl)) {
+    return logoUrl!.trim();
   }
 
   return null;
 }
 
-export function resolveGameCoverUrl(
-  _slug: string,
-  telemetry?: Pick<GameTelemetry, "coverUrl">,
+export function resolveGameBoxArtUrl(
+
+  slug: string,
+
+  telemetry?: Pick<GameTelemetry, "logoUrl" | "coverUrl">,
+
 ): string | null {
-  if (!telemetry?.coverUrl?.trim()) {
-    return null;
+
+  const coverUrl = telemetry?.coverUrl?.trim();
+
+  if (coverUrl && isRenderableLogoUrl(coverUrl)) {
+
+    return coverUrl;
+
   }
 
-  return telemetry.coverUrl.trim();
+
+
+  const logoUrl = telemetry?.logoUrl?.trim();
+
+  if (logoUrl && isRenderableLogoUrl(logoUrl)) {
+
+    return logoUrl;
+
+  }
+
+
+
+  return null;
+
 }
+
+
+
+export function shouldUseCoverFit(url: string | null): boolean {
+
+  if (!url) {
+
+    return false;
+
+  }
+
+
+
+  const normalized = url.toLowerCase();
+
+  return normalized.includes("t_thumb") || normalized.includes("t_cover_small");
+
+}
+
+
 
 export function getGameInitials(name: string): string {
+
   const words = name
+
     .split(/[\s:-]+/)
+
     .map((word) => word.trim())
+
     .filter(Boolean);
 
+
+
   if (words.length === 0) {
+
     return "?";
+
   }
+
+
 
   if (words.length === 1) {
+
     return words[0].slice(0, 2).toUpperCase();
+
   }
+
+
 
   return `${words[0].charAt(0)}${words[1].charAt(0)}`.toUpperCase();
+
 }
+
+
 
 export function isGameUpcoming(
+
   telemetry: Pick<GameTelemetry, "isUpcoming" | "status" | "gameSlug">,
+
 ): boolean {
+
   if (telemetry.isUpcoming === true) {
+
     return true;
+
   }
+
+
 
   if (telemetry.status === "UPCOMING") {
+
     return true;
+
   }
+
+
 
   return TRACKED_GAME_ASSETS[telemetry.gameSlug]?.isUpcoming === true;
+
 }
+
+
 
 export function resolveGameReleaseDate(
+
   slug: string,
+
   telemetry?: Pick<GameTelemetry, "releaseDate">,
+
 ): string | null {
+
   if (telemetry?.releaseDate) {
+
     return telemetry.releaseDate;
+
   }
+
+
 
   return TRACKED_GAME_ASSETS[slug]?.releaseDate ?? null;
+
 }
+
+
 
 export function isSlugLiveTracked(
+
   slug: string,
+
   telemetry?: GameTelemetry,
+
 ): boolean {
+
   if (telemetry) {
+
     return !isGameUpcoming(telemetry);
+
   }
 
+
+
   return TRACKED_GAME_ASSETS[slug]?.isUpcoming !== true;
+
 }
 
+
+
 export function filterLiveTelemetrySlugs(
+
   slugs: readonly string[],
+
   telemetryBySlug: Record<string, GameTelemetry>,
+
 ): string[] {
+
   return slugs.filter((slug) =>
+
     isSlugLiveTracked(slug, telemetryBySlug[slug]),
+
   );
+
 }
+
+

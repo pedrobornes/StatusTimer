@@ -8,11 +8,12 @@ import {
 } from "lucide-react";
 import GameTelemetryCard from "@/components/dashboard/GameTelemetryCard";
 import HypeCounterButton from "@/components/HypeCounterButton";
+import ReleaseMediaGallery from "@/components/ReleaseMediaGallery";
 import PageShell from "@/components/PageShell";
 import PlatformBadge from "@/components/ui/PlatformBadge";
 import PlatformReleaseSchedule from "@/components/PlatformReleaseSchedule";
 import DashboardError from "@/components/dashboard/DashboardError";
-import { resolveGameCoverUrl } from "@/lib/gameAssets";
+import { formatIgdbRating, resolveGameCoverUrl } from "@/lib/gameAssets";
 import { getConfirmedPlatforms } from "@/lib/releases";
 import { toSlug } from "@/lib/slug";
 import { getGamingNews } from "@/services/newsService";
@@ -110,6 +111,8 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
       coverUrl: release.imageUrl ?? undefined,
     });
     const confirmedPlatforms = getConfirmedPlatforms(release.platforms);
+    const userRating = formatIgdbRating(release.userRating ?? null);
+    const criticRating = formatIgdbRating(release.criticRating ?? null);
 
     return (
       <PageShell
@@ -134,6 +137,29 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
             <PlatformReleaseSchedule platforms={release.platforms} />
           </div>
 
+          {(userRating || criticRating || (release.themes?.length ?? 0) > 0) && (
+            <div className="mt-6 flex flex-wrap gap-2">
+              {userRating ? (
+                <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-xs text-cyan-100">
+                  Player score {userRating}
+                </span>
+              ) : null}
+              {criticRating ? (
+                <span className="rounded-full border border-violet-400/20 bg-violet-500/10 px-3 py-1 text-xs text-violet-100">
+                  Critic score {criticRating}
+                </span>
+              ) : null}
+              {release.themes?.map((theme) => (
+                <span
+                  key={theme}
+                  className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300"
+                >
+                  {theme}
+                </span>
+              ))}
+            </div>
+          )}
+
           <div className="mt-6 max-w-sm">
             <HypeCounterButton
               releaseId={release.id}
@@ -141,6 +167,13 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
             />
           </div>
         </section>
+
+        {(release.trailerVideoIds?.length ?? 0) > 0 ||
+        (release.screenshotUrls?.length ?? 0) > 0 ? (
+          <section className="glass-panel mb-8 rounded-3xl p-6 md:p-8">
+            <ReleaseMediaGallery release={release} />
+          </section>
+        ) : null}
 
         <section className="glass-panel mb-8 rounded-3xl p-6 md:p-8">
           <div className="mb-6 flex items-center gap-3">

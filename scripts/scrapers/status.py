@@ -73,12 +73,6 @@ MONITORED_GAME_TARGETS: tuple[MonitoredGameTarget, ...] = (
         fallback_port=443,
     ),
     MonitoredGameTarget(
-        slug="gta-vi",
-        display_name="GTA VI",
-        strategy=ProbeStrategy.STEAM,
-        skip_live_probe=True,
-    ),
-    MonitoredGameTarget(
         slug="fortnite",
         display_name="Fortnite",
         strategy=ProbeStrategy.EPIC_LIGHTSWITCH,
