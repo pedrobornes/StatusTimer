@@ -1,5 +1,6 @@
 package com.statustimer.config;
 
+import com.statustimer.entity.LifecycleState;
 import com.statustimer.entity.TrackedGame;
 import com.statustimer.repository.TrackedGameRepository;
 import com.statustimer.service.GameCatalogService;
@@ -38,6 +39,8 @@ public class TrackedGameCatalogSeeder implements CommandLineRunner {
                     .steamAppId(metadata.appId())
                     .featured(metadata.featured())
                     .manualLock(MANUAL_LOCK_SLUGS.contains(slug))
+                    .lifecycleState(LifecycleState.MONITORED)
+                    .scrapeTier(metadata.featured() ? 1 : 2)
                     .build();
 
             GameAssetPolicy.applyTo(game, null);

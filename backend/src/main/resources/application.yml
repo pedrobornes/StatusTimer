@@ -12,3 +12,39 @@ spring:
 app:
   security:
     api-key: ${APP_API_KEY:your-local-secret-key}
+
+telemetry:
+  history:
+    heartbeat-minutes-tier-1: 30
+    heartbeat-minutes-tier-2: 60
+    heartbeat-minutes-tier-3: 120
+    retention-hours: 72
+    purge-batch-size: 500
+    purge-interval-ms: 3600000
+  rollup:
+    retention-days: 90
+    minimum-samples: 5
+
+harvest:
+  schedule:
+    max-telemetry-per-cycle: 50
+    max-metrics-per-cycle: 50
+    max-news-per-cycle: 20
+    telemetry-minutes-tier-1: 10
+    telemetry-minutes-tier-2: 90
+    telemetry-minutes-tier-3: 300
+    metrics-minutes-tier-1: 22
+    metrics-minutes-tier-2: 90
+    metrics-minutes-tier-3: 720
+    news-minutes-tier-1: 480
+    news-minutes-tier-2: 2160
+    news-minutes-tier-3: 10080
+    failed-retry-minutes: 5
+
+indexability:
+  monitoring-age-hours: 48
+  freshness-hours-tier-1: 24
+  freshness-hours-tier-2: 48
+  freshness-hours-tier-3: 72
+  guardian-interval-ms: 900000
+  api-outage-grace-hours: 1

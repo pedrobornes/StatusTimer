@@ -25,6 +25,9 @@ class BackendClient:
     INTERNAL_NEWS_PATH = "/api/v1/internal/news"
     INTERNAL_GAMES_SYNC_PATH = "/api/v1/internal/games/sync"
     INTERNAL_GAMES_CATALOG_SYNC_PATH = "/api/v1/internal/games/catalog/sync"
+    INTERNAL_SCRAPE_JOBS_PENDING_PATH = "/api/v1/internal/scrape-jobs/pending"
+    INTERNAL_HARVEST_WORKLOAD_PATH = "/api/v1/internal/harvest/workload"
+    INTERNAL_HARVEST_COMPLETE_PATH = "/api/v1/internal/harvest/complete"
 
     def __init__(self) -> None:
         self._base_url = settings.backend_base_url.rstrip("/")
@@ -50,6 +53,72 @@ class BackendClient:
             self.INTERNAL_GAMES_CATALOG_SYNC_PATH,
             request.model_dump(mode="json", by_alias=True),
             "game catalog sync",
+        )
+
+    def claim_pending_scrape_jobs(self, limit: int = 10) -> list[dict[str, object]]:
+        """Claim on-demand scrape jobs for priority processing."""
+        url = f"{self._base_url}{self.INTERNAL_SCRAPE_JOBS_PENDING_PATH}"
+        try:
+            response = requests.get(
+                url,
+                params={"limit": str(limit)},
+                headers=self._headers,
+                timeout=self._timeout,
+            )
+        except requests.RequestException as error:
+            logger.warning("Failed to claim scrape jobs: %s", error)
+            return []
+
+        if not response.ok:
+            logger.warning("Failed to claim scrape jobs (HTTP %s)", response.status_code)
+            return []
+
+        payload = response.json()
+        if not isinstance(payload, list):
+            return []
+        return [entry for entry in payload if isinstance(entry, dict)]
+
+    def complete_scrape_job(self, job_id: int, status: str) -> PushResult:
+        """Mark a claimed scrape job as DONE or FAILED."""
+        path = f"/api/v1/internal/scrape-jobs/{job_id}/complete"
+        return self._post(path, {"status": status}, f"scrape job {job_id} complete")
+
+    def fetch_harvest_workload(self) -> dict[str, object] | None:
+        """Fetch telemetry/metrics/news work queues based on backend timestamps."""
+        url = f"{self._base_url}{self.INTERNAL_HARVEST_WORKLOAD_PATH}"
+        try:
+            response = requests.get(
+                url,
+                headers=self._headers,
+                timeout=self._timeout,
+            )
+        except requests.RequestException as error:
+            logger.warning("Failed to fetch harvest workload: %s", error)
+            return None
+
+        if response.status_code == 404:
+            return None
+
+        if not response.ok:
+            logger.warning("Failed to fetch harvest workload (HTTP %s)", response.status_code)
+            return None
+
+        payload = response.json()
+        return payload if isinstance(payload, dict) else None
+
+    def complete_harvest_work(self, results: list[dict[str, object]]) -> PushResult:
+        """Advance backend harvest schedules after a work batch."""
+        return self._post(
+            self.INTERNAL_HARVEST_COMPLETE_PATH,
+            {"results": results},
+            "harvest schedule completion",
+        )
+
+    def report_api_outage(self, domain: str, active: bool) -> PushResult:
+        return self._post(
+            "/api/v1/internal/harvest/outage",
+            {"domain": domain, "active": active},
+            f"api outage report ({domain})",
         )
 
     def upsert_game_release(self, release: GameReleasePayload) -> PushResult:

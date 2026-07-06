@@ -1,13 +1,17 @@
 package com.statustimer.controller;
 
+import com.statustimer.dto.response.GameActivationResponse;
 import com.statustimer.dto.response.GameCatalogSearchResponse;
+import com.statustimer.dto.response.GameIndexableSlugResponse;
 import com.statustimer.dto.response.GameStatusDetailResponse;
 import com.statustimer.dto.response.GameTelemetryResponse;
 import com.statustimer.dto.response.GamingNewsResponse;
 import com.statustimer.dto.response.ServerStatusResponse;
 import com.statustimer.dto.response.TelemetryHistorySnapshotResponse;
 import com.statustimer.dto.response.TelemetryIncidentResponse;
+import com.statustimer.dto.response.TelemetryReadyResponse;
 import com.statustimer.dto.response.UpcomingReleaseResponse;
+import com.statustimer.service.CatalogActivationService;
 import com.statustimer.service.GameCatalogService;
 import com.statustimer.service.GameStatusService;
 import com.statustimer.service.GameTelemetryService;
@@ -30,6 +34,7 @@ public class PublicApiController {
 
     private final ServerStatusService serverStatusService;
     private final GameCatalogService gameCatalogService;
+    private final CatalogActivationService catalogActivationService;
     private final GameTelemetryService gameTelemetryService;
     private final GameStatusService gameStatusService;
     private final GamingNewsService gamingNewsService;
@@ -61,11 +66,17 @@ public class PublicApiController {
 
     @GetMapping("/games/search")
     public List<GameCatalogSearchResponse> searchGames(@RequestParam("q") String query) {
-        List<GameCatalogSearchResponse> results = gameCatalogService.search(query);
-        for (GameCatalogSearchResponse result : results) {
-            gameTelemetryService.ensureTelemetryStub(result.slug());
-        }
-        return results;
+        return gameCatalogService.search(query);
+    }
+
+    @PostMapping("/games/{slug}/activate")
+    public GameActivationResponse activateGame(@PathVariable String slug) {
+        return catalogActivationService.activateOnDemand(slug);
+    }
+
+    @GetMapping("/games/slugs")
+    public List<GameIndexableSlugResponse> getIndexableSlugs() {
+        return gameCatalogService.findIndexableSlugs();
     }
 
     @GetMapping("/telemetry/history")
@@ -76,6 +87,14 @@ public class PublicApiController {
     @GetMapping("/telemetry/incidents")
     public List<TelemetryIncidentResponse> getTelemetryIncidents() {
         return gameTelemetryService.findRecentIncidents();
+    }
+
+    @GetMapping("/telemetry/{slug}/ready")
+    public TelemetryReadyResponse getTelemetryReady(@PathVariable String slug) {
+        return new TelemetryReadyResponse(
+                slug,
+                catalogActivationService.isTelemetryReady(slug)
+        );
     }
 
     @GetMapping("/telemetry/{slug}")

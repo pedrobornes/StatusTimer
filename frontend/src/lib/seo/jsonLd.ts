@@ -4,6 +4,7 @@ import {
   buildGameStatusTitle,
 } from "@/config/routes";
 import { formatSlugLabel } from "@/lib/telemetry";
+import type { GameFaqItem } from "@/lib/seo/gameFaq";
 import type { TelemetryStatus } from "@/types/telemetry";
 
 interface StatusPageJsonLdInput {
@@ -13,6 +14,7 @@ interface StatusPageJsonLdInput {
   pageUrl: string;
   siteUrl: string;
   incidentCount: number;
+  faqItems?: GameFaqItem[];
 }
 
 function mapSchemaServiceStatus(status: TelemetryStatus): string {
@@ -142,6 +144,21 @@ export function buildStatusPageJsonLd(input: StatusPageJsonLdInput): Record<stri
         numberOfItems: input.incidentCount,
         itemListElement: [],
       },
+      ...(input.faqItems && input.faqItems.length > 0
+        ? [
+            {
+              "@type": "FAQPage",
+              mainEntity: input.faqItems.map((item) => ({
+                "@type": "Question",
+                name: item.question,
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text: item.answer,
+                },
+              })),
+            },
+          ]
+        : []),
     ],
   };
 }

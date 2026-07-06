@@ -65,3 +65,29 @@ export async function fetchJson<T>(
 
   return response.json() as Promise<T>;
 }
+
+export async function postJson<T>(
+  path: string,
+  options: ApiRequestOptions = {},
+): Promise<T> {
+  const { revalidate = 0, cache } = options;
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    cache,
+    next: cache ? undefined : { revalidate },
+  });
+
+  if (!response.ok) {
+    throw new ApiError(
+      `Request to ${path} failed with status ${response.status}`,
+      response.status,
+    );
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return response.json() as Promise<T>;
+}

@@ -6,7 +6,7 @@ import { Search } from "lucide-react";
 import GameAssetImage from "@/components/ui/GameAssetImage";
 import { APP_ROUTES } from "@/config/routes";
 import { getUserFacingErrorMessage } from "@/services/api";
-import { searchGames } from "@/services/catalogService";
+import { activateGame, searchGames } from "@/services/catalogService";
 import type { GameCatalogSearchResult } from "@/services/catalogService";
 
 export default function GameSearchBar() {
@@ -26,13 +26,20 @@ export default function GameSearchBar() {
   const normalizedQuery = query.trim();
 
   const navigateToGame = useCallback(
-    (slug: string) => {
+    async (slug: string) => {
       setQuery("");
       setMatches([]);
       setIsOpen(false);
       setIsFocused(false);
       setActiveIndex(0);
       inputRef.current?.blur();
+
+      try {
+        await activateGame(slug);
+      } catch {
+        // Navigation still proceeds; the status page triggers activation again.
+      }
+
       router.push(APP_ROUTES.status(slug));
     },
     [router],

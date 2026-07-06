@@ -25,7 +25,9 @@ public record GameTelemetryResponse(
         LocalDate steamReleaseDate,
         Boolean steamAdultContent,
         Long livePlayers,
-        Long twitchViewers
+        Long twitchViewers,
+        Boolean isIndexable,
+        String lifecycleState
 ) {
 
     public static GameTelemetryResponse fromEntity(
@@ -59,6 +61,12 @@ public record GameTelemetryResponse(
         boolean steamAdultContent = catalogService.isSteamAdultContent(slug);
         Long livePlayers = catalogService.resolveLivePlayers(slug);
         Long twitchViewers = catalogService.resolveTwitchViewers(slug);
+        boolean isIndexable = catalogService.findBySlug(slug)
+                .map(trackedGame -> Boolean.TRUE.equals(trackedGame.getIsIndexable()))
+                .orElse(false);
+        String lifecycleState = catalogService.findBySlug(slug)
+                .map(trackedGame -> trackedGame.getLifecycleState().name())
+                .orElse("CATALOG");
 
         return new GameTelemetryResponse(
                 entity.getId(),
@@ -77,7 +85,9 @@ public record GameTelemetryResponse(
                 steamReleaseDate,
                 steamAdultContent,
                 livePlayers,
-                twitchViewers
+                twitchViewers,
+                isIndexable,
+                lifecycleState
         );
     }
 

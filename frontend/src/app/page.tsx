@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Dashboard from "@/components/dashboard/Dashboard";
 import DashboardError from "@/components/dashboard/DashboardError";
 import type { ApiRequestOptions } from "@/services/api";
@@ -10,6 +11,22 @@ import {
   getTelemetryIncidents,
 } from "@/services/telemetryService";
 import type { GameTelemetry, TelemetryHistorySnapshot } from "@/types/telemetry";
+
+export const metadata: Metadata = {
+  title: "StatusTimer | Live Gaming Server Status & Game News",
+  description:
+    "Track live multiplayer server status, outages, and release countdowns for top games. Real-time telemetry, incident logs, and gaming news in one dashboard.",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "StatusTimer | Live Gaming Server Status & Game News",
+    description:
+      "Track live multiplayer server status, outages, and release countdowns for top games.",
+    url: "/",
+    type: "website",
+  },
+};
 
 export const revalidate = 60;
 

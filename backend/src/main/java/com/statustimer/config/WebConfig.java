@@ -9,7 +9,13 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
-@EnableConfigurationProperties(AppSecurityProperties.class)
+@EnableConfigurationProperties({
+        AppSecurityProperties.class,
+        TelemetryHistoryProperties.class,
+        TelemetryRollupProperties.class,
+        HarvestScheduleProperties.class,
+        IndexabilityProperties.class
+})
 @RequiredArgsConstructor
 public class WebConfig implements WebMvcConfigurer {
 

@@ -299,3 +299,96 @@ def fetch_monitored_steam_live_metrics() -> list:
 
     logger.info("Prepared %s monitored Steam live-player patches", len(entries))
     return entries
+
+
+def fetch_scheduled_steam_metrics(targets: list[dict[str, object]]) -> list:
+    """Build Steam live-player patches for scheduler-selected targets."""
+    from scrapers.status import MONITORED_GAME_TARGETS, MonitoredGameTarget, ProbeStrategy
+
+    if not targets:
+        return []
+
+    monitored_by_slug = {target.slug: target for target in MONITORED_GAME_TARGETS}
+    resolved_targets: list[MonitoredGameTarget] = []
+
+    for entry in targets:
+        slug = str(entry.get("slug") or "")
+        if not slug:
+            continue
+
+        known = monitored_by_slug.get(slug)
+        if known is not None and known.steam_app_id is not None:
+            resolved_targets.append(known)
+            continue
+
+        steam_app_id = entry.get("steamAppId")
+        if isinstance(steam_app_id, int) and steam_app_id > 0:
+            resolved_targets.append(
+                MonitoredGameTarget(
+                    slug=slug,
+                    display_name=str(entry.get("gameName") or slug),
+                    strategy=ProbeStrategy.STEAM,
+                    steam_app_id=steam_app_id,
+                )
+            )
+
+    raw_entries = run_parallel(resolved_targets, _fetch_monitored_live_entry)
+    entries = [entry for entry in raw_entries if entry is not None]
+    logger.info("Prepared %s scheduled Steam live-player patches", len(entries))
+    return entries
+
+
+def fetch_scheduled_twitch_metrics(targets: list[dict[str, object]]) -> list:
+    """Build Twitch viewer patches for scheduler-selected targets."""
+    from config.twitch_game_registry import resolve_twitch_lookup_name
+    from scrapers.status import MONITORED_GAME_TARGETS, MonitoredGameTarget, ProbeStrategy
+    from scrapers.twitch_auth import get_twitch_access_token
+
+    if not targets:
+        return []
+
+    if not settings.twitch_client_id or not settings.twitch_client_secret:
+        logger.warning("Twitch credentials not configured; skipping scheduled Twitch metrics.")
+        return []
+
+    monitored_by_slug = {target.slug: target for target in MONITORED_GAME_TARGETS}
+    resolved_targets: list[MonitoredGameTarget] = []
+
+    for entry in targets:
+        slug = str(entry.get("slug") or "")
+        if not slug:
+            continue
+
+        known = monitored_by_slug.get(slug)
+        if known is not None and not known.skip_live_probe:
+            resolved_targets.append(known)
+            continue
+
+        game_name = str(entry.get("gameName") or slug)
+        resolved_targets.append(
+            MonitoredGameTarget(
+                slug=slug,
+                display_name=game_name,
+                strategy=ProbeStrategy.STEAM,
+            )
+        )
+
+    if not resolved_targets:
+        return []
+
+    access_token = get_twitch_access_token()
+    session = _build_twitch_session(access_token)
+    lookup_names = [resolve_twitch_lookup_name(target) for target in resolved_targets]
+    game_ids_by_name = fetch_twitch_game_ids_by_names(lookup_names, session)
+
+    def fetch_entry(target: "MonitoredGameTarget"):
+        return _fetch_monitored_twitch_entry(
+            target,
+            access_token=access_token,
+            game_ids_by_name=game_ids_by_name,
+        )
+
+    raw_entries = run_parallel(resolved_targets, fetch_entry)
+    entries = [entry for entry in raw_entries if entry is not None]
+    logger.info("Prepared %s scheduled Twitch viewer patches", len(entries))
+    return entries

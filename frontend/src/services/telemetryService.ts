@@ -50,6 +50,13 @@ export async function searchGameTelemetry(query: string): Promise<GameTelemetry[
   return telemetry.filter((entry): entry is GameTelemetry => entry !== null);
 }
 
+export function getTelemetryReady(slug: string): Promise<{ slug: string; ready: boolean }> {
+  return fetchJson<{ slug: string; ready: boolean }>(
+    `/api/v1/telemetry/${slug}/ready`,
+    { revalidate: 0, cache: "no-store" },
+  );
+}
+
 export function getGameTelemetryBySlug(slug: string): Promise<GameTelemetry> {
   return fetchJson<GameTelemetry>(`/api/v1/telemetry/${slug}`);
 }

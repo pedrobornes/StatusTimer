@@ -318,3 +318,35 @@ def probe_tcp_latency(host: str, port: int, timeout: float | None = None) -> int
 def fetch_game_telemetry() -> list[GameTelemetryPayload]:
     """Entry point used by the harvester loop."""
     return StatusHarvester().fetch_all()
+
+
+def find_monitored_target(slug: str) -> MonitoredGameTarget | None:
+    for target in MONITORED_GAME_TARGETS:
+        if target.slug == slug:
+            return target
+    return None
+
+
+def fetch_telemetry_for_slug(
+    slug: str,
+    *,
+    steam_app_id: int | None = None,
+    display_name: str | None = None,
+) -> GameTelemetryPayload | None:
+    """Collect telemetry for a single on-demand activation target."""
+    target = find_monitored_target(slug)
+    if target is None and steam_app_id is not None:
+        target = MonitoredGameTarget(
+            slug=slug,
+            display_name=display_name or slug.replace("-", " ").title(),
+            strategy=ProbeStrategy.STEAM,
+            steam_app_id=steam_app_id,
+            fallback_host="store.steampowered.com",
+            fallback_port=443,
+        )
+
+    if target is None:
+        logger.warning("No probe strategy available for on-demand slug=%s", slug)
+        return None
+
+    return StatusHarvester()._collect_target(target)

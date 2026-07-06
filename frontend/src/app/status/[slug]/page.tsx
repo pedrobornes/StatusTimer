@@ -1,16 +1,22 @@
 import { notFound, redirect } from "next/navigation";
+import AdSlot from "@/components/ads/AdSlot";
 import GameTelemetryCard from "@/components/dashboard/GameTelemetryCard";
 import IncidentLog from "@/components/dashboard/telemetry/IncidentLog";
+import PendingTelemetryGate from "@/components/dashboard/telemetry/PendingTelemetryGate";
 import NewsFeedPanel from "@/components/dashboard/NewsFeedPanel";
 import PageShell from "@/components/PageShell";
+import GameStatusFaq from "@/components/seo/GameStatusFaq";
+import StatusContextBlock from "@/components/seo/StatusContextBlock";
 import JsonLdScript from "@/components/seo/JsonLdScript";
 import { APP_ROUTES, TRACKED_GAME_SLUGS } from "@/config/routes";
 import {
   resolveGameCoverUrl,
   resolveGameDisplayName,
 } from "@/lib/gameAssets";
+import { buildGameStatusFaq } from "@/lib/seo/gameFaq";
 import { buildStatusPageJsonLd } from "@/lib/seo/jsonLd";
 import { buildStatusPageMetadata } from "@/lib/seo/metadata";
+import { buildStatusContextParagraphs } from "@/lib/seo/statusContext";
 import { resolveCanonicalGameSlug } from "@/lib/gameSlugs";
 import { getConfirmedPlatforms } from "@/lib/releases";
 import { getGameStatusDetail } from "@/services/telemetryService";
@@ -44,17 +50,76 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
   const pageUrl = `${siteUrl}${APP_ROUTES.status(slug)}`;
 
   try {
-    const [{ telemetry, history, incidents, news }, releases] = await Promise.all([
+    const [
+      { telemetry, history, incidents, news, telemetryReady, firstMonitoredAt, uptime },
+      releases,
+    ] = await Promise.all([
       getGameStatusDetail(slug),
       getUpcomingReleases().catch(() => []),
     ]);
 
+    const gameName = resolveGameDisplayName(slug, telemetry ?? undefined);
+    const coverUrl = resolveGameCoverUrl(slug, telemetry ?? undefined);
     const releasePlatforms = getConfirmedPlatforms(
       releases.find((release) => release.slug === slug)?.platforms ?? [],
     );
 
-    const gameName = resolveGameDisplayName(slug, telemetry);
-    const coverUrl = resolveGameCoverUrl(slug, telemetry);
+    if (!telemetryReady || telemetry === null) {
+      return (
+        <PageShell
+          badge="Live Server Status"
+          title={`Is ${gameName} Down?`}
+          subtitle={`Activating live monitoring for ${gameName}. First check in progress.`}
+          coverUrl={coverUrl}
+          coverAlt={gameName}
+        >
+          <div className="grid gap-8 xl:grid-cols-[1.4fr_1fr]">
+            <div className="space-y-8">
+              <section aria-labelledby="server-status-heading">
+                <h2
+                  id="server-status-heading"
+                  className="heading-section mb-2 text-2xl uppercase text-white"
+                >
+                  Live Server Report
+                </h2>
+                <PendingTelemetryGate gameSlug={slug} />
+              </section>
+            </div>
+
+            <NewsFeedPanel
+              news={news}
+              fillHeight
+              sectionTitle="Game News & Updates"
+              eyebrow="Latest Alerts"
+            />
+          </div>
+        </PageShell>
+      );
+    }
+
+    const contextParagraphs = buildStatusContextParagraphs({
+      gameName,
+      status: telemetry.status,
+      lastChecked: telemetry.lastChecked,
+      livePlayers: telemetry.livePlayers,
+      twitchViewers: telemetry.twitchViewers,
+      incidents,
+      firstMonitoredAt,
+      uptime7dPercent: uptime?.uptime7dPercent,
+      uptime30dPercent: uptime?.uptime30dPercent,
+    });
+
+    const faqItems = buildGameStatusFaq({
+      gameName,
+      status: telemetry.status,
+      lastChecked: telemetry.lastChecked,
+      livePlayers: telemetry.livePlayers,
+      twitchViewers: telemetry.twitchViewers,
+      incidentCount: incidents.length,
+      firstMonitoredAt,
+    });
+
+    const showIndexableContent = telemetry.isIndexable === true;
 
     const jsonLd = buildStatusPageJsonLd({
       gameSlug: slug,
@@ -63,6 +128,7 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
       pageUrl,
       siteUrl,
       incidentCount: incidents.length,
+      faqItems: showIndexableContent ? faqItems : undefined,
     });
 
     return (
@@ -96,21 +162,37 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
                   history={history}
                   platforms={releasePlatforms}
                 />
+                <div className="mt-8">
+                  <AdSlot format="leaderboard" slotId={`status-${slug}-leaderboard`} />
+                </div>
               </section>
 
-              <IncidentLog
-                incidents={incidents}
-                sectionTitle="Recent Problems"
-                eyebrow="Crash & Maintenance Log"
-              />
+              <StatusContextBlock paragraphs={contextParagraphs} />
+
+              {showIndexableContent ? <GameStatusFaq items={faqItems} /> : null}
+
+              {showIndexableContent ? (
+                <IncidentLog
+                  incidents={incidents}
+                  sectionTitle="Recent Problems"
+                  eyebrow="Crash & Maintenance Log"
+                />
+              ) : null}
             </div>
 
-            <NewsFeedPanel
-              news={news}
-              fillHeight
-              sectionTitle="Game News & Updates"
-              eyebrow="Latest Alerts"
-            />
+            <div className="space-y-8">
+              <NewsFeedPanel
+                news={news}
+                fillHeight
+                sectionTitle="Game News & Updates"
+                eyebrow="Latest Alerts"
+              />
+              <AdSlot
+                format="skyscraper"
+                slotId={`status-${slug}-skyscraper`}
+                className="sticky top-24"
+              />
+            </div>
           </div>
         </PageShell>
       </>

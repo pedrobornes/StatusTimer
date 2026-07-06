@@ -22,6 +22,8 @@ export interface GameTelemetry {
   steamAdultContent?: boolean;
   livePlayers?: number | null;
   twitchViewers?: number | null;
+  isIndexable?: boolean;
+  lifecycleState?: "CATALOG" | "MONITORED" | "INDEXABLE";
 }
 
 export interface TelemetryHistorySnapshot {
@@ -39,9 +41,17 @@ export interface TelemetryIncident {
   timestamp?: string;
 }
 
+export interface TelemetryUptimeSummary {
+  uptime7dPercent: number | null;
+  uptime30dPercent: number | null;
+}
+
 export interface GameStatusDetail {
-  telemetry: GameTelemetry;
+  telemetry: GameTelemetry | null;
   history: TelemetryHistorySnapshot[];
   incidents: TelemetryIncident[];
   news: GamingNews[];
+  telemetryReady: boolean;
+  firstMonitoredAt?: string | null;
+  uptime?: TelemetryUptimeSummary | null;
 }

@@ -6,6 +6,7 @@ import logging
 
 import requests
 
+from clients.resilient_http import resilient_http
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -23,24 +24,9 @@ def build_http_session() -> requests.Session:
 
 
 def fetch_text(session: requests.Session, url: str) -> str | None:
-    try:
-        response = session.get(url, timeout=settings.request_timeout_seconds)
-        response.raise_for_status()
-        return response.text
-    except requests.RequestException as error:
-        logger.warning("Feed request failed for %s: %s", url, error)
-        return None
+    return resilient_http.get_text(session, url)
 
 
 def fetch_json(session: requests.Session, url: str) -> dict | list | None:
-    try:
-        response = session.get(url, timeout=settings.request_timeout_seconds)
-        response.raise_for_status()
-        payload = response.json()
-        if isinstance(payload, (dict, list)):
-            return payload
-        logger.warning("Unexpected JSON payload type from %s", url)
-        return None
-    except (requests.RequestException, ValueError) as error:
-        logger.warning("Feed JSON request failed for %s: %s", url, error)
-        return None
+    payload = resilient_http.get_json(session, url)
+    return payload if isinstance(payload, (dict, list)) else None

@@ -1,0 +1,88 @@
+package com.statustimer.config;
+
+import com.statustimer.entity.LifecycleState;
+import com.statustimer.entity.TrackedGame;
+import com.statustimer.repository.GameTelemetryRepository;
+import com.statustimer.repository.TrackedGameRepository;
+import com.statustimer.service.HarvestScheduleService;
+import com.statustimer.service.IndexabilityService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
+
+@Component
+@Order(0)
+@RequiredArgsConstructor
+@Slf4j
+public class CatalogLifecycleMigrationRunner implements CommandLineRunner {
+
+    private final TrackedGameRepository trackedGameRepository;
+    private final GameTelemetryRepository gameTelemetryRepository;
+    private final IndexabilityService indexabilityService;
+    private final HarvestScheduleService harvestScheduleService;
+
+    @Override
+    public void run(String... args) {
+        int migrated = 0;
+
+        for (TrackedGame game : trackedGameRepository.findAll()) {
+            if (backfillLifecycleFields(game)) {
+                trackedGameRepository.save(game);
+                migrated++;
+            }
+            harvestScheduleService.ensureScheduleInitialized(game);
+        }
+
+        indexabilityService.recalculateAll();
+
+        if (migrated > 0) {
+            log.info("Backfilled lifecycle fields for {} tracked games", migrated);
+        }
+    }
+
+    private boolean backfillLifecycleFields(TrackedGame game) {
+        boolean changed = false;
+
+        var telemetry = gameTelemetryRepository.findByGameSlug(game.getSlug());
+
+        if (game.getLifecycleState() == null) {
+            game.setLifecycleState(LifecycleState.CATALOG);
+            changed = true;
+        }
+
+        if (telemetry.isPresent() && game.getLifecycleState() == LifecycleState.CATALOG) {
+            game.setLifecycleState(LifecycleState.MONITORED);
+            changed = true;
+        }
+
+        if (telemetry.isPresent() && game.getLastTelemetryAt() == null) {
+            game.setLastTelemetryAt(telemetry.get().getLastChecked());
+            changed = true;
+        }
+
+        if (telemetry.isPresent() && game.getFirstMonitoredAt() == null) {
+            LocalDateTime monitoredAt = telemetry.get().getLastChecked();
+            if (Boolean.TRUE.equals(game.getFeatured())) {
+                monitoredAt = monitoredAt.minusHours(49);
+            }
+            game.setFirstMonitoredAt(monitoredAt);
+            changed = true;
+        }
+
+        if (telemetry.isPresent() && !Boolean.TRUE.equals(game.getInitialTelemetryReady())) {
+            game.setInitialTelemetryReady(true);
+            changed = true;
+        }
+
+        if (game.getScrapeTier() == null) {
+            game.setScrapeTier(Boolean.TRUE.equals(game.getFeatured()) ? 1 : 2);
+            changed = true;
+        }
+
+        return changed;
+    }
+}

@@ -4,6 +4,7 @@ import {
   buildGameStatusKeywords,
   buildGameStatusTitle,
 } from "@/config/routes";
+import { buildRobotsDirective, isIndexableTelemetry } from "@/lib/seo/indexability";
 import { formatSlugLabel } from "@/lib/telemetry";
 import { getGameTelemetryBySlug } from "@/services/telemetryService";
 import type { TelemetryStatus } from "@/types/telemetry";
@@ -39,11 +40,15 @@ export async function buildStatusPageMetadata(gameSlug: string): Promise<Metadat
   const canonicalUrl = `${siteUrl}${canonicalPath}`;
 
   let liveStatus: TelemetryStatus | null = null;
+  let indexable = false;
+
   try {
     const telemetry = await getGameTelemetryBySlug(gameSlug);
     liveStatus = telemetry.status;
+    indexable = isIndexableTelemetry(telemetry);
   } catch {
     liveStatus = null;
+    indexable = false;
   }
 
   const description = buildStatusAwareDescription(gameName, liveStatus);
@@ -57,16 +62,7 @@ export async function buildStatusPageMetadata(gameSlug: string): Promise<Metadat
     alternates: {
       canonical: canonicalPath,
     },
-    robots: {
-      index: true,
-      follow: true,
-      googleBot: {
-        index: true,
-        follow: true,
-        "max-snippet": -1,
-        "max-image-preview": "large",
-      },
-    },
+    robots: buildRobotsDirective(indexable),
     openGraph: {
       title,
       description,

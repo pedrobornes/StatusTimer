@@ -10,16 +10,18 @@ import com.statustimer.dto.response.TelemetryHistorySnapshotResponse;
 import com.statustimer.dto.response.TelemetryIncidentResponse;
 import com.statustimer.entity.GameTelemetry;
 import com.statustimer.entity.GameTelemetryHistory;
+import com.statustimer.entity.LifecycleState;
+import com.statustimer.entity.ScrapeJobStatus;
 import com.statustimer.entity.TelemetrySource;
 import com.statustimer.entity.TelemetryStatus;
 import com.statustimer.entity.TrackedGame;
 import com.statustimer.repository.GameRepository;
-import com.statustimer.repository.GameTelemetryHistoryRepository;
 import com.statustimer.repository.GameTelemetryRepository;
 import com.statustimer.repository.TrackedGameRepository;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +38,6 @@ import org.springframework.web.server.ResponseStatusException;
 @Slf4j
 public class GameTelemetryService {
 
-    private static final int HISTORY_RETENTION_DAYS = 7;
     private static final int DASHBOARD_TELEMETRY_CANDIDATE_LIMIT = 24;
     private static final List<TelemetryStatus> INCIDENT_STATUSES = List.of(
             TelemetryStatus.DOWN,
@@ -44,11 +45,15 @@ public class GameTelemetryService {
     );
 
     private final GameTelemetryRepository gameTelemetryRepository;
-    private final GameTelemetryHistoryRepository gameTelemetryHistoryRepository;
     private final GameRepository gameRepository;
     private final GameCatalogService gameCatalogService;
     private final TrackedGameRepository trackedGameRepository;
     private final GameSlugMapper gameSlugMapper;
+    private final IndexabilityService indexabilityService;
+    private final CatalogActivationService catalogActivationService;
+    private final ScrapeJobService scrapeJobService;
+    private final TelemetryHistoryService telemetryHistoryService;
+    private final HarvestScheduleService harvestScheduleService;
 
     @Transactional(readOnly = true)
     public List<GameTelemetryResponse> findAll() {
@@ -119,10 +124,16 @@ public class GameTelemetryService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public Optional<GameTelemetryResponse> findOptionalByGameSlug(String gameSlug) {
+        String canonicalSlug = gameSlugMapper.resolveCanonicalSlug(gameSlug);
+        return gameTelemetryRepository.findByGameSlug(canonicalSlug)
+                .map(this::toResponse);
+    }
+
     @Transactional
     public GameTelemetryResponse findByGameSlug(String gameSlug) {
         String canonicalSlug = gameSlugMapper.resolveCanonicalSlug(gameSlug);
-        ensureTelemetryStub(canonicalSlug);
         return gameTelemetryRepository.findByGameSlug(canonicalSlug)
                 .map(this::toResponse)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -153,7 +164,7 @@ public class GameTelemetryService {
         validateGameSlug(gameSlug);
         String canonicalSlug = gameSlugMapper.resolveCanonicalSlug(gameSlug);
 
-        LocalDateTime since = LocalDateTime.now().minusDays(HISTORY_RETENTION_DAYS);
+        LocalDateTime since = telemetryHistoryService.historyReadWindowStart();
 
         return gameTelemetryRepository.findHistoryByGameSlugSince(canonicalSlug, since).stream()
                 .map(TelemetryHistorySnapshotResponse::fromEntity)
@@ -251,7 +262,7 @@ public class GameTelemetryService {
                 .dataSource(TelemetrySource.STATUS_PAGE)
                 .lastChecked(checkedAt)
                 .build());
-        appendHistorySnapshot(
+        appendHistorySnapshotIfNeeded(
                 canonicalSlug,
                 TelemetryStatus.ONLINE,
                 TelemetrySource.STATUS_PAGE,
@@ -285,22 +296,39 @@ public class GameTelemetryService {
         telemetry.setLastChecked(checkedAt);
 
         gameTelemetryRepository.save(telemetry);
-        appendHistorySnapshot(payload.gameSlug(), payload.status(), dataSource, checkedAt);
+        appendHistorySnapshotIfNeeded(payload.gameSlug(), payload.status(), dataSource, checkedAt);
+        touchTrackedGameAfterTelemetry(payload.gameSlug(), checkedAt);
         return isNew;
     }
 
-    private void appendHistorySnapshot(
+    private void touchTrackedGameAfterTelemetry(String gameSlug, LocalDateTime checkedAt) {
+        trackedGameRepository.findBySlug(gameSlug).ifPresent(game -> {
+            game.setLastTelemetryAt(checkedAt);
+            game.setInitialTelemetryReady(true);
+
+            if (game.getFirstMonitoredAt() == null) {
+                game.setFirstMonitoredAt(checkedAt);
+            }
+
+            if (game.getLifecycleState() == LifecycleState.CATALOG) {
+                game.setLifecycleState(LifecycleState.MONITORED);
+            }
+
+            trackedGameRepository.save(game);
+            catalogActivationService.markTelemetryReady(gameSlug);
+            scrapeJobService.completeRunningJobsForSlug(gameSlug, ScrapeJobStatus.DONE);
+            harvestScheduleService.recordTelemetrySuccess(gameSlug);
+            indexabilityService.recalculateForSlug(gameSlug);
+        });
+    }
+
+    private void appendHistorySnapshotIfNeeded(
             String gameSlug,
             TelemetryStatus status,
             TelemetrySource dataSource,
             LocalDateTime checkedAt
     ) {
-        gameTelemetryHistoryRepository.save(GameTelemetryHistory.builder()
-                .gameSlug(gameSlug)
-                .status(status)
-                .dataSource(dataSource)
-                .checkedAt(checkedAt)
-                .build());
+        telemetryHistoryService.appendSnapshotIfNeeded(gameSlug, status, dataSource, checkedAt);
     }
 
     private void validateGameSlug(String gameSlug) {

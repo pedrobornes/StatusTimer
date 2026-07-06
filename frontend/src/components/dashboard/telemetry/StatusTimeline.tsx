@@ -90,7 +90,8 @@ export default function StatusTimeline({
       </div>
 
       <p className="mt-2 text-xs text-zinc-400">
-        Hover a block for check details.
+        Each block is a recorded check or status change. Hover a block for
+        check details.
       </p>
 
       <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs uppercase tracking-wider text-zinc-400">

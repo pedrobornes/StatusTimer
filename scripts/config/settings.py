@@ -10,6 +10,11 @@ class Settings(BaseSettings):
     request_retry_max_attempts: int = 3
     request_retry_delay_seconds: int = 5
     harvest_interval_seconds: int = 300
+    http_rate_limit_per_minute: int = 20
+    http_jitter_min_seconds: float = 0.3
+    http_jitter_max_seconds: float = 1.5
+    http_circuit_failure_threshold: int = 3
+    http_circuit_open_seconds: int = 300
     dedup_state_file: str = ".harvest_state/processed_hashes.json"
     feed_lookback_days: int = 7
     steam_news_max_items: int = 10

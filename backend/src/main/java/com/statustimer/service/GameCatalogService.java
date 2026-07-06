@@ -1,19 +1,23 @@
 package com.statustimer.service;
 
 import com.statustimer.config.GameAssetPolicy;
+import com.statustimer.config.CacheConfig;
 import com.statustimer.config.GameSlugMapper;
 import com.statustimer.config.KnownSteamAppRegistry;
 import com.statustimer.config.TrackedGameCatalog;
 import com.statustimer.dto.request.GameCatalogEntryPayload;
 import com.statustimer.dto.request.SyncGameCatalogRequest;
 import com.statustimer.dto.response.GameCatalogSearchResponse;
+import com.statustimer.dto.response.GameIndexableSlugResponse;
 import com.statustimer.dto.response.SyncGameCatalogResponse;
+import com.statustimer.entity.LifecycleState;
 import com.statustimer.entity.TrackedGame;
 import com.statustimer.integration.SteamStoreAppDetailsClient;
 import com.statustimer.integration.SteamStoreSearchClient;
 import com.statustimer.integration.SteamStoreSearchClient.SteamStoreSearchResult;
 import com.statustimer.repository.TrackedGameRepository;
 import com.statustimer.util.SlugUtils;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -21,6 +25,7 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +48,21 @@ public class GameCatalogService {
     private final GameSlugMapper gameSlugMapper;
     private final KnownSteamAppRegistry knownSteamAppRegistry;
     private final SteamStoreAppDetailsClient steamStoreAppDetailsClient;
+    private final IndexabilityService indexabilityService;
+
+    @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheConfig.INDEXABLE_SLUGS_CACHE)
+    public List<GameIndexableSlugResponse> findIndexableSlugs() {
+        return trackedGameRepository.findByIsIndexableTrueOrderBySlugAsc().stream()
+                .map(game -> new GameIndexableSlugResponse(
+                        game.getSlug(),
+                        game.getLastTelemetryAt() != null
+                                ? game.getLastTelemetryAt()
+                                : LocalDateTime.now(),
+                        true
+                ))
+                .toList();
+    }
 
     @Transactional(readOnly = true)
     public Optional<TrackedGame> findBySlug(String slug) {
@@ -331,6 +351,7 @@ public class GameCatalogService {
             }
 
             trackedGameRepository.save(game);
+            indexabilityService.recalculateForSlug(targetSlug);
 
             if (isNew) {
                 created++;
@@ -492,6 +513,7 @@ public class GameCatalogService {
         }
 
         trackedGameRepository.save(game);
+        indexabilityService.recalculateForSlug(targetSlug);
         return true;
     }
 

@@ -16,6 +16,9 @@ from pipeline.context_pipeline import ingest_events_into_context_store
 from pipeline.deduplication import DedupStore, filter_new_events, filter_recent_events
 from pipeline.skill_router import SkillRouter
 from pipeline.sync_router import dispatch_skill_result
+from scrapers.on_demand_jobs import run_on_demand_scrape_jobs
+from scrapers.scheduled_harvest import run_scheduled_harvest_workload
+from clients.resilient_http import resilient_http
 from scrapers.platform_feeds import fetch_all_platform_feed_events
 from scrapers.live_metrics import (
     fetch_monitored_steam_live_metrics,
@@ -281,13 +284,20 @@ def run_harvest_cycle(client: BackendClient) -> HarvestCycleReport:
         )
 
     try:
+        on_demand_jobs, on_demand_sync = run_on_demand_scrape_jobs(client)
+        if on_demand_jobs > 0:
+            _log_push_result("On-demand scrape jobs", on_demand_sync)
+
+        scheduled_items, scheduled_sync = run_scheduled_harvest_workload(client)
+        if scheduled_items > 0:
+            _log_push_result("Scheduled harvest workload", scheduled_sync)
+
         releases_prepared, release_sync = run_release_sync(client)
         catalog_prepared, catalog_sync = run_catalog_sync(client)
         twitch_catalog_prepared, twitch_catalog_sync = run_twitch_catalog_sync(client)
-        run_monitored_steam_metrics_sync(client)
-        run_monitored_twitch_metrics_sync(client)
         social_prepared, social_sync = run_social_status_sync(client)
-        telemetry_prepared, telemetry_sync = run_status_sync(client)
+        telemetry_prepared = scheduled_items
+        telemetry_sync = scheduled_sync
         platform_events_scraped, platform_events_pushed, context_chunks_indexed, platform_intel_sync = (
             run_platform_intel_pipeline(client)
         )
@@ -395,6 +405,9 @@ def main() -> None:
 
     args = parse_args()
     client = BackendClient()
+    resilient_http.set_outage_callback(
+        lambda domain, active: client.report_api_outage(domain, active)
+    )
 
     if args.once:
         run_harvest_cycle(client)

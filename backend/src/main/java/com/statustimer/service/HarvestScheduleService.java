@@ -1,0 +1,191 @@
+package com.statustimer.service;
+
+import com.statustimer.config.HarvestScheduleProperties;
+import com.statustimer.dto.request.CompleteHarvestWorkRequest;
+import com.statustimer.dto.response.HarvestWorkTargetResponse;
+import com.statustimer.dto.response.HarvestWorkloadResponse;
+import com.statustimer.entity.HarvestWorkType;
+import com.statustimer.entity.LifecycleState;
+import com.statustimer.entity.TrackedGame;
+import com.statustimer.repository.TrackedGameRepository;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Set;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+public class HarvestScheduleService {
+
+    private static final Set<LifecycleState> ACTIVE_MONITORING = Set.of(
+            LifecycleState.MONITORED,
+            LifecycleState.INDEXABLE
+    );
+
+    private final TrackedGameRepository trackedGameRepository;
+    private final HarvestScheduleProperties harvestScheduleProperties;
+
+    @Transactional(readOnly = true)
+    public HarvestWorkloadResponse getDueWorkload() {
+        LocalDateTime now = LocalDateTime.now();
+
+        return new HarvestWorkloadResponse(
+                findTelemetryDue(now),
+                findMetricsDue(now),
+                findNewsDue(now)
+        );
+    }
+
+    @Transactional
+    public void recordTelemetrySuccess(String slug) {
+        completeWork(new CompleteHarvestWorkRequest(List.of(
+                new CompleteHarvestWorkRequest.HarvestWorkResultPayload(
+                        slug,
+                        HarvestWorkType.TELEMETRY,
+                        true
+                )
+        )));
+    }
+
+    @Transactional
+    public void completeWork(CompleteHarvestWorkRequest request) {
+        if (request.results() == null || request.results().isEmpty()) {
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        for (CompleteHarvestWorkRequest.HarvestWorkResultPayload result : request.results()) {
+            if (result.slug() == null || result.slug().isBlank() || result.workType() == null) {
+                continue;
+            }
+
+            trackedGameRepository.findBySlug(result.slug()).ifPresent(game -> {
+                applyWorkResult(game, result.workType(), result.success(), now);
+                trackedGameRepository.save(game);
+            });
+        }
+    }
+
+    @Transactional
+    public void ensureScheduleInitialized(TrackedGame game) {
+        LocalDateTime now = LocalDateTime.now();
+        boolean changed = false;
+
+        if (isActiveMonitoring(game)) {
+            if (game.getNextTelemetryAt() == null) {
+                game.setNextTelemetryAt(now);
+                changed = true;
+            }
+            if (game.getNextMetricsAt() == null) {
+                game.setNextMetricsAt(now);
+                changed = true;
+            }
+            if (game.getNextNewsAt() == null) {
+                game.setNextNewsAt(now.plusHours(1));
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            trackedGameRepository.save(game);
+        }
+    }
+
+    private List<HarvestWorkTargetResponse> findTelemetryDue(LocalDateTime now) {
+        return trackedGameRepository
+                .findByLifecycleStateInAndNextTelemetryAtLessThanEqualOrderByScrapeTierAsc(
+                        ACTIVE_MONITORING,
+                        now,
+                        PageRequest.of(0, harvestScheduleProperties.maxTelemetryPerCycle())
+                )
+                .stream()
+                .map(this::toTargetResponse)
+                .toList();
+    }
+
+    private List<HarvestWorkTargetResponse> findMetricsDue(LocalDateTime now) {
+        return trackedGameRepository
+                .findByLifecycleStateInAndNextMetricsAtLessThanEqualOrderByScrapeTierAsc(
+                        ACTIVE_MONITORING,
+                        now,
+                        PageRequest.of(0, harvestScheduleProperties.maxMetricsPerCycle())
+                )
+                .stream()
+                .map(this::toTargetResponse)
+                .toList();
+    }
+
+    private List<HarvestWorkTargetResponse> findNewsDue(LocalDateTime now) {
+        return trackedGameRepository
+                .findByLifecycleStateInAndNextNewsAtLessThanEqualOrderByScrapeTierAsc(
+                        ACTIVE_MONITORING,
+                        now,
+                        PageRequest.of(0, harvestScheduleProperties.maxNewsPerCycle())
+                )
+                .stream()
+                .map(this::toTargetResponse)
+                .toList();
+    }
+
+    private void applyWorkResult(
+            TrackedGame game,
+            HarvestWorkType workType,
+            boolean success,
+            LocalDateTime now
+    ) {
+        int tier = game.getScrapeTier() != null ? game.getScrapeTier() : 3;
+
+        if (workType == HarvestWorkType.TELEMETRY) {
+            if (success) {
+                game.setLastTelemetryAt(now);
+                game.setNextTelemetryAt(
+                        now.plusMinutes(harvestScheduleProperties.telemetryMinutesForTier(tier))
+                );
+            } else {
+                game.setNextTelemetryAt(
+                        now.plusMinutes(harvestScheduleProperties.failedRetryMinutes())
+                );
+            }
+            return;
+        }
+
+        if (workType == HarvestWorkType.METRICS) {
+            if (success) {
+                game.setNextMetricsAt(
+                        now.plusMinutes(harvestScheduleProperties.metricsMinutesForTier(tier))
+                );
+            } else {
+                game.setNextMetricsAt(
+                        now.plusMinutes(harvestScheduleProperties.failedRetryMinutes())
+                );
+            }
+            return;
+        }
+
+        if (success) {
+            game.setLastNewsAt(now);
+            game.setNextNewsAt(now.plusMinutes(harvestScheduleProperties.newsMinutesForTier(tier)));
+        } else {
+            game.setNextNewsAt(now.plusMinutes(harvestScheduleProperties.failedRetryMinutes()));
+        }
+    }
+
+    private HarvestWorkTargetResponse toTargetResponse(TrackedGame game) {
+        return new HarvestWorkTargetResponse(
+                game.getSlug(),
+                game.getGameName(),
+                game.getSteamAppId(),
+                game.getTwitchGameId(),
+                game.getScrapeTier()
+        );
+    }
+
+    private boolean isActiveMonitoring(TrackedGame game) {
+        return game.getLifecycleState() == LifecycleState.MONITORED
+                || game.getLifecycleState() == LifecycleState.INDEXABLE;
+    }
+}
