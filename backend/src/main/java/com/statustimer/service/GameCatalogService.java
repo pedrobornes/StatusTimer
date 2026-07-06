@@ -112,13 +112,26 @@ public class GameCatalogService {
 
     @Transactional(readOnly = true)
     public String resolveLogoUrl(String slug, String fallbackLogoUrl) {
-        return findBySlug(slug)
-                .map(TrackedGame::getLogoUrl)
-                .filter(url -> url != null && !url.isBlank())
-                .map(String::trim)
-                .orElseGet(() -> fallbackLogoUrl != null && !fallbackLogoUrl.isBlank()
-                        ? fallbackLogoUrl.trim()
-                        : GameAssetPolicy.LOGO_NONE);
+        String canonicalSlug = gameSlugMapper.resolveCanonicalSlug(slug);
+        Optional<TrackedGame> tracked = findBySlug(slug);
+
+        String persisted = tracked.map(TrackedGame::getLogoUrl).orElse(null);
+        Integer steamAppId = tracked.map(TrackedGame::getSteamAppId)
+                .or(() -> knownSteamAppRegistry.resolveAppId(canonicalSlug))
+                .orElseGet(() -> TrackedGameCatalog.resolveAppId(canonicalSlug));
+
+        String resolved = GameAssetPolicy.resolveLogoUrl(canonicalSlug, steamAppId, persisted);
+        if (GameAssetPolicy.isRenderableLogo(resolved)) {
+            return resolved;
+        }
+
+        if (fallbackLogoUrl != null
+                && !fallbackLogoUrl.isBlank()
+                && !GameAssetPolicy.LOGO_NONE.equalsIgnoreCase(fallbackLogoUrl.trim())) {
+            return fallbackLogoUrl.trim();
+        }
+
+        return GameAssetPolicy.LOGO_NONE;
     }
 
     @Transactional(readOnly = true)
@@ -370,10 +383,12 @@ public class GameCatalogService {
                             game.setSteamAdultContent(true);
                         }
                     },
-                    () -> {
-                        game.setLogoUrl(GameAssetPolicy.LOGO_NONE);
-                        game.setCoverUrl(resolveCoverFallback(twitchCoverUrl, game.getCoverUrl()));
-                    }
+                    () -> GameAssetPolicy.applySteamAssets(
+                            game,
+                            GameAssetPolicy.steamLogoUrl(game.getSteamAppId()),
+                            GameAssetPolicy.steamLibraryHeroUrl(game.getSteamAppId()),
+                            twitchCoverUrl
+                    )
             );
             return;
         }

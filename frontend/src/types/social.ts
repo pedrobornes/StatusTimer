@@ -3,7 +3,9 @@ export type SocialServiceSlug =
   | "instagram"
   | "facebook"
   | "tiktok"
-  | "twitch";
+  | "twitch"
+  | "youtube"
+  | "x";
 
 export const SOCIAL_SERVICE_SLUGS: SocialServiceSlug[] = [
   "whatsapp",
@@ -11,4 +13,6 @@ export const SOCIAL_SERVICE_SLUGS: SocialServiceSlug[] = [
   "facebook",
   "tiktok",
   "twitch",
+  "youtube",
+  "x",
 ];

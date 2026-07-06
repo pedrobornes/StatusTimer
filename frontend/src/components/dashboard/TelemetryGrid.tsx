@@ -43,12 +43,12 @@ export default function TelemetryGrid({
               <Activity className="h-5 w-5 text-emerald-300" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-medium uppercase tracking-[0.35em] text-emerald-200/85">
-                Live Game Status
-              </p>
-              <h2 className="heading-section text-2xl uppercase text-white">
-                TRACKED GAME STATUS
+              <h2 className="heading-section text-2xl text-white">
+                Tracked games
               </h2>
+              <p className="mt-1 text-sm text-slate-400">
+                Live status and audience metrics for monitored titles.
+              </p>
             </div>
           </div>
 

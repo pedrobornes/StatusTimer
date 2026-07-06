@@ -78,4 +78,20 @@ class GameAssetPolicyTest {
         assertEquals("none", game.getLogoUrl());
         assertEquals("https://example.com/twitch-cover.jpg", game.getCoverUrl());
     }
+
+    @Test
+    void resolvesSteamLogoFromAppIdWhenPersistedLogoMissing() {
+        assertEquals(
+                "https://cdn.cloudflare.steamstatic.com/steam/apps/730/logo.png",
+                GameAssetPolicy.resolveLogoUrl("counter-strike-2", 730, null)
+        );
+    }
+
+    @Test
+    void resolvesLocalLogoWhenPersistedValueIsNone() {
+        assertEquals(
+                "/images/logos/gta-vi.png",
+                GameAssetPolicy.resolveLogoUrl("gta-vi", null, "none")
+        );
+    }
 }

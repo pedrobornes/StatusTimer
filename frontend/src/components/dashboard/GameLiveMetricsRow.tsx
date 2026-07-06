@@ -3,6 +3,8 @@ import { formatCompactNumber } from "@/utils/formatCompactNumber";
 interface GameLiveMetricsRowProps {
   livePlayers?: number | null;
   twitchViewers?: number | null;
+  className?: string;
+  orientation?: "horizontal" | "vertical";
 }
 
 function MetricSlot({
@@ -37,20 +39,29 @@ function MetricSlot({
 export default function GameLiveMetricsRow({
   livePlayers,
   twitchViewers,
+  className,
+  orientation = "horizontal",
 }: GameLiveMetricsRowProps) {
+  const isVertical = orientation === "vertical";
+  const layoutClass = isVertical
+    ? "flex flex-col gap-2"
+    : "flex items-center gap-4";
+
   return (
     <div
-      className="mt-2 flex items-center gap-4 font-mono text-xs"
+      className={`mt-2 font-mono text-xs ${layoutClass} ${className ?? ""}`}
       aria-label="Live audience metrics"
     >
       <MetricSlot
-        activeDotClassName="bg-green-500 animate-pulse"
+        activeDotClassName="bg-green-500"
         inactiveDotClassName="bg-zinc-600"
         value={livePlayers}
         label={livePlayers != null ? "playing" : "players"}
       />
 
-      <span className="h-3 border-r border-zinc-700" aria-hidden />
+      {!isVertical ? (
+        <span className="h-3 border-r border-zinc-700" aria-hidden />
+      ) : null}
 
       <MetricSlot
         activeDotClassName="bg-purple-500"

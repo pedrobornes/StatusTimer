@@ -11,17 +11,14 @@ public final class SocialServiceCatalog {
             String probeHost
     ) {}
 
-    private static final Map<String, SocialServiceDefinition> BY_SLUG = Map.of(
-            "whatsapp",
-            new SocialServiceDefinition("whatsapp", "WhatsApp", "web.whatsapp.com"),
-            "instagram",
-            new SocialServiceDefinition("instagram", "Instagram", "www.instagram.com"),
-            "facebook",
-            new SocialServiceDefinition("facebook", "Facebook", "www.facebook.com"),
-            "tiktok",
-            new SocialServiceDefinition("tiktok", "TikTok", "www.tiktok.com"),
-            "twitch",
-            new SocialServiceDefinition("twitch", "Twitch", "www.twitch.tv")
+    private static final Map<String, SocialServiceDefinition> BY_SLUG = Map.ofEntries(
+            Map.entry("whatsapp", new SocialServiceDefinition("whatsapp", "WhatsApp", "web.whatsapp.com")),
+            Map.entry("instagram", new SocialServiceDefinition("instagram", "Instagram", "www.instagram.com")),
+            Map.entry("facebook", new SocialServiceDefinition("facebook", "Facebook", "www.facebook.com")),
+            Map.entry("tiktok", new SocialServiceDefinition("tiktok", "TikTok", "www.tiktok.com")),
+            Map.entry("twitch", new SocialServiceDefinition("twitch", "Twitch", "www.twitch.tv")),
+            Map.entry("youtube", new SocialServiceDefinition("youtube", "YouTube", "www.youtube.com")),
+            Map.entry("x", new SocialServiceDefinition("x", "X", "x.com"))
     );
 
     private SocialServiceCatalog() {

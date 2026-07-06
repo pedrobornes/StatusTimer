@@ -23,7 +23,7 @@ class TwitchTopGamesTests(unittest.TestCase):
 
         self.assertEqual(
             resolve_twitch_logo_url(template),
-            "https://static-cdn.jtvnw.net/ttv-boxart/509658-285x380.jpg",
+            "https://static-cdn.jtvnw.net/ttv-boxart/509658-300x400.jpg",
         )
         self.assertEqual(
             resolve_twitch_cover_url(template),
@@ -48,7 +48,7 @@ class TwitchTopGamesTests(unittest.TestCase):
         self.assertEqual(entry.game_name, "Valorant")
         self.assertEqual(entry.slug, "valorant")
         self.assertEqual(entry.twitch_rank, 3)
-        self.assertIn("285x380", entry.logo_url)
+        self.assertIn("300x400", entry.logo_url)
         self.assertIn("600x800", entry.cover_url)
 
     def test_parse_twitch_top_game_rejects_non_game_category(self) -> None:

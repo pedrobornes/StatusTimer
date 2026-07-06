@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
-import ServerStatusPanel from "@/components/dashboard/ServerStatusPanel";
+import GamingStatusSection from "@/components/dashboard/GamingStatusSection";
+import SocialPlatformsSection from "@/components/dashboard/SocialPlatformsSection";
+import IncidentLog from "@/components/dashboard/telemetry/IncidentLog";
 import GameTelemetrySortSelect from "@/components/ui/GameTelemetrySortSelect";
 import { TRACKED_GAME_SLUGS } from "@/config/routes";
 import { getUserFacingErrorMessage } from "@/services/api";
@@ -17,6 +19,8 @@ import type {
   TelemetryHistorySnapshot,
   TelemetryIncident,
 } from "@/types/telemetry";
+
+const GAMES_PER_PAGE = 9;
 
 interface TelemetryStatusHubProps {
   statuses: ServerStatus[];
@@ -40,6 +44,7 @@ export default function TelemetryStatusHub({
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<TelemetrySortMode>("trending");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const normalizedQuery = query.trim();
 
@@ -79,6 +84,10 @@ export default function TelemetryStatusHub({
     };
   }, [normalizedQuery]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [normalizedQuery, sortMode]);
+
   const displayedTelemetry = normalizedQuery
     ? (searchResults ?? [])
     : gameTelemetry;
@@ -97,7 +106,7 @@ export default function TelemetryStatusHub({
     : undefined;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="glass-panel rounded-3xl p-4 md:p-5">
         <label htmlFor="telemetry-game-search" className="sr-only">
           Search tracked games
@@ -134,13 +143,22 @@ export default function TelemetryStatusHub({
         ) : null}
       </div>
 
-      <ServerStatusPanel
-        statuses={statuses}
-        gameTelemetry={sortedTelemetry}
+      <GamingStatusSection
+        games={sortedTelemetry}
         telemetryHistoryBySlug={telemetryHistoryBySlug}
         platformsBySlug={platformsBySlug}
+        emptyMessage={gamingEmptyMessage}
+        currentPage={currentPage}
+        pageSize={GAMES_PER_PAGE}
+        onPageChange={setCurrentPage}
+      />
+
+      <SocialPlatformsSection statuses={statuses} />
+
+      <IncidentLog
         incidents={incidents}
-        gamingEmptyMessage={gamingEmptyMessage}
+        sectionTitle="Recent Problems"
+        eyebrow="Down & Maintenance"
       />
     </div>
   );

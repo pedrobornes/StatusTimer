@@ -18,7 +18,7 @@ from scrapers.twitch_auth import get_twitch_access_token
 logger = logging.getLogger(__name__)
 
 TWITCH_HELIX_GAMES_TOP_URL = "https://api.twitch.tv/helix/games/top"
-TWITCH_LOGO_BOX_ART_SIZE = (285, 380)
+TWITCH_LOGO_BOX_ART_SIZE = (300, 400)
 TWITCH_COVER_BOX_ART_SIZE = (600, 800)
 TWITCH_PAGE_SIZE_MAX = 100
 
@@ -103,8 +103,8 @@ def build_catalog_entry(
     return GameCatalogEntryPayload(
         slug=entry.slug,
         game_name=entry.game_name,
-        logo_url=None,
-        cover_url=entry.cover_url,
+        logo_url=entry.logo_url,
+        cover_url=None,
         twitch_game_id=entry.twitch_game_id,
         twitch_rank=entry.twitch_rank,
         twitch_viewers=entry.twitch_viewers,

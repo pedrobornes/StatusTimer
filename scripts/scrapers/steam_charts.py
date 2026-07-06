@@ -12,7 +12,7 @@ from models.catalog_schemas import GameCatalogEntryPayload
 from models.normalization import to_slug
 from scrapers.live_metrics import fetch_steam_live_players
 from scrapers.parallel_utils import run_parallel
-from scrapers.platform_images import steam_header_url, steam_library_hero_url
+from scrapers.platform_images import steam_library_hero_url, steam_logo_url
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +96,7 @@ def build_catalog_entry(
         slug=slug,
         game_name=game_name,
         steam_app_id=app_id,
-        logo_url=steam_header_url(app_id),
+        logo_url=steam_logo_url(app_id),
         cover_url=steam_library_hero_url(app_id),
         featured=featured,
     )

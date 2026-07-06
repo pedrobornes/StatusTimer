@@ -23,6 +23,7 @@ from scrapers.live_metrics import (
 )
 from scrapers.releases import fetch_upcoming_releases
 from scrapers.steam_charts import fetch_steam_charts_catalog
+from scrapers.social_status import fetch_social_status_payloads
 from scrapers.status import fetch_game_telemetry
 from scrapers.twitch_top_games import fetch_twitch_top_games_catalog
 
@@ -164,6 +165,33 @@ def run_release_sync(client: BackendClient) -> tuple[int, PushResult]:
     return len(releases), result
 
 
+def run_social_status_sync(client: BackendClient) -> tuple[int, PushResult]:
+    entries = fetch_social_status_payloads()
+
+    if not entries:
+        logger.warning("No social status entries collected this cycle.")
+        return 0, PushResult(success=True, status_code=204)
+
+    pushed = 0
+    last_result = PushResult(success=False, error_message="No social status pushes attempted")
+
+    for entry in entries:
+        result = client.push_service_status(entry)
+        _log_push_result(f"Social status ({entry.service_slug})", result)
+        if result.success:
+            pushed += 1
+        last_result = result
+
+    aggregate_result = PushResult(
+        success=pushed > 0,
+        status_code=last_result.status_code,
+        attempts=last_result.attempts,
+        error_message=last_result.error_message,
+    )
+    logger.info("Prepared %s social status payloads (%s pushed)", len(entries), pushed)
+    return len(entries), aggregate_result
+
+
 def run_status_sync(client: BackendClient) -> tuple[int, PushResult]:
     telemetry_entries = fetch_game_telemetry()
 
@@ -258,6 +286,7 @@ def run_harvest_cycle(client: BackendClient) -> HarvestCycleReport:
         twitch_catalog_prepared, twitch_catalog_sync = run_twitch_catalog_sync(client)
         run_monitored_steam_metrics_sync(client)
         run_monitored_twitch_metrics_sync(client)
+        social_prepared, social_sync = run_social_status_sync(client)
         telemetry_prepared, telemetry_sync = run_status_sync(client)
         platform_events_scraped, platform_events_pushed, context_chunks_indexed, platform_intel_sync = (
             run_platform_intel_pipeline(client)
@@ -282,7 +311,11 @@ def run_harvest_cycle(client: BackendClient) -> HarvestCycleReport:
             backend_reachable=health.success,
         )
 
-    logger.info("Harvest cycle finished")
+    logger.info(
+        "Harvest cycle finished (social=%s pushed=%s)",
+        social_prepared,
+        social_sync.success,
+    )
     return HarvestCycleReport(
         releases_prepared=releases_prepared,
         release_sync=release_sync,

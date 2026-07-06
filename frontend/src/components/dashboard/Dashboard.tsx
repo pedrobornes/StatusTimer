@@ -32,17 +32,14 @@ export default function Dashboard({
           <div className="mb-4 flex items-center gap-4 md:gap-5">
             <StatusTimerSonarLogo className="h-14 w-14 shrink-0 md:h-16 md:w-16" />
             <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-[0.35em] text-violet-100/90">
-                Live Monitor
-              </p>
-              <h1 className="heading-display text-4xl uppercase text-white md:text-5xl">
-                STATUSTIMER MONITOR
+              <h1 className="heading-display text-4xl text-white md:text-5xl">
+                Gaming status hub
               </h1>
             </div>
           </div>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300 md:text-base">
-            Check the live server status, regional ping, and official crash
-            reports for your favorite games instantly.
+            Live server status, player counts, Twitch viewership, incident
+            reports, and release dates — all in one place.
           </p>
 
           <div className="mt-6">

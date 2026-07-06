@@ -15,7 +15,7 @@ import type { TelemetryHistorySnapshot } from "@/types/telemetry";
 export const metadata: Metadata = {
   title: "Server Live Status",
   description:
-    "Full server status grid for all monitored games and social platforms.",
+    "Browse gaming server status, social platform connectivity, and recent outages in one place.",
 };
 
 export const revalidate = 60;
@@ -50,8 +50,8 @@ export default async function TelemetryPage() {
 
     return (
       <PageShell
-        title="SERVER LIVE STATUS"
-        subtitle="Every tracked game and social platform in one place. Status updates refresh automatically."
+        title="Server live status"
+        subtitle="Gaming telemetry, social platform checks, and recent outages — organized in three sections below."
         badge="Servers"
       >
         <TelemetryStatusHub

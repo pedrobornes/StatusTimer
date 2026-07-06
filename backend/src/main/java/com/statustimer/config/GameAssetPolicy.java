@@ -16,6 +16,11 @@ public final class GameAssetPolicy {
             "overwatch-2"
     );
 
+    private static final String STEAM_LOGO_TEMPLATE =
+            "https://cdn.cloudflare.steamstatic.com/steam/apps/%d/logo.png";
+    private static final String STEAM_LIBRARY_HERO_TEMPLATE =
+            "https://cdn.cloudflare.steamstatic.com/steam/apps/%d/library_hero.jpg";
+
     private static final String LOCAL_LOGO_TEMPLATE = "/images/logos/%s.png";
     private static final String LOCAL_COVER_TEMPLATE = "/images/covers/%s.jpg";
 
@@ -37,8 +42,17 @@ public final class GameAssetPolicy {
             String coverUrl,
             String twitchCoverUrl
     ) {
-        game.setLogoUrl(hasText(logoUrl) ? logoUrl.trim() : LOGO_NONE);
-        game.setCoverUrl(hasText(coverUrl) ? coverUrl.trim() : normalizeOptionalUrl(twitchCoverUrl));
+        String resolvedLogo = hasText(logoUrl)
+                ? logoUrl.trim()
+                : steamLogoUrl(game.getSteamAppId());
+        String resolvedCover = hasText(coverUrl)
+                ? coverUrl.trim()
+                : steamLibraryHeroUrl(game.getSteamAppId());
+
+        game.setLogoUrl(hasText(resolvedLogo) ? resolvedLogo : LOGO_NONE);
+        game.setCoverUrl(
+                hasText(resolvedCover) ? resolvedCover : normalizeOptionalUrl(twitchCoverUrl)
+        );
     }
 
     public static void applyTo(TrackedGame game, String twitchCoverUrl) {
@@ -63,7 +77,27 @@ public final class GameAssetPolicy {
             return localLogoUrl(slug);
         }
 
-        return LOGO_NONE;
+        return steamLogoUrl(steamAppId);
+    }
+
+    public static String steamLogoUrl(Integer steamAppId) {
+        if (steamAppId == null || steamAppId <= 0) {
+            return LOGO_NONE;
+        }
+
+        return STEAM_LOGO_TEMPLATE.formatted(steamAppId);
+    }
+
+    public static String steamLibraryHeroUrl(Integer steamAppId) {
+        if (steamAppId == null || steamAppId <= 0) {
+            return null;
+        }
+
+        return STEAM_LIBRARY_HERO_TEMPLATE.formatted(steamAppId);
+    }
+
+    public static boolean isRenderableLogo(String url) {
+        return hasText(url);
     }
 
     public static String resolveCoverUrl(String slug, String persistedCoverUrl, String twitchCoverUrl) {

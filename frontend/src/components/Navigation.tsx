@@ -50,7 +50,7 @@ export default function Navigation() {
   const pathname = usePathname();
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-violet-400/15 bg-black/40 backdrop-blur-xl">
+    <nav className="sticky top-0 z-50 border-b border-violet-400/15 bg-mystic-950/95">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8">
         <Link
           href="/"

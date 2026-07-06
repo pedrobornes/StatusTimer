@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { Radio } from "lucide-react";
 import { formatLocalizedTimestamp } from "@/utils/dateFormatter";
 import { resolveSocialServiceBrand } from "@/lib/socialServices";
@@ -9,10 +12,12 @@ interface SocialStatusCardProps {
 
 export default function SocialStatusCard({ status }: SocialStatusCardProps) {
   const brand = resolveSocialServiceBrand(status.serviceSlug);
+  const [logoFailed, setLogoFailed] = useState(false);
   const isOnline = status.isUp;
   const label = brand?.label ?? status.serviceName;
   const initials = brand?.initials ?? status.serviceName.slice(0, 2).toUpperCase();
   const description = brand?.description ?? "Social platform connectivity";
+  const showLogo = Boolean(brand?.logoUrl) && !logoFailed;
 
   return (
     <article
@@ -23,13 +28,26 @@ export default function SocialStatusCard({ status }: SocialStatusCardProps) {
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           <div
-            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border bg-gradient-to-br text-xs font-bold uppercase tracking-wider ${
+            className={`flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-gradient-to-br ${
               brand?.accentClass ??
               "from-fuchsia-500/20 to-fuchsia-900/10 text-fuchsia-100 border-fuchsia-400/25"
             }`}
-            aria-hidden
           >
-            {initials}
+            {showLogo ? (
+              <img
+                src={brand!.logoUrl}
+                alt=""
+                className="h-8 w-8 object-contain"
+                onError={() => setLogoFailed(true)}
+              />
+            ) : (
+              <span
+                className="text-xs font-bold uppercase tracking-wider"
+                aria-hidden
+              >
+                {initials}
+              </span>
+            )}
           </div>
 
           <div className="min-w-0">

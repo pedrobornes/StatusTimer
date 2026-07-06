@@ -103,6 +103,27 @@ const TRACKED_GAME_ASSETS: Record<string, GameAssetCatalogEntry> = {
   },
 };
 
+const LOCAL_LOGO_SLUGS = new Set([
+  "valorant",
+  "fortnite",
+  "gta-vi",
+  "league-of-legends",
+  "minecraft",
+  "overwatch-2",
+]);
+
+const LOCAL_LOGO_OVERRIDES: Record<string, string> = {
+  "overwatch-2": "/images/logos/overwatch-2.jpg",
+};
+
+function localLogoUrl(slug: string): string {
+  return LOCAL_LOGO_OVERRIDES[slug] ?? `/images/logos/${slug}.png`;
+}
+
+function steamLogoUrl(appId: number): string {
+  return `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/logo.png`;
+}
+
 export function getGameCatalogEntry(slug: string): GameAssetCatalogEntry | null {
   return TRACKED_GAME_ASSETS[slug] ?? null;
 }
@@ -150,14 +171,23 @@ export function isRenderableLogoUrl(
 }
 
 export function resolveGameLogoUrl(
-  _slug: string,
-  telemetry?: Pick<GameTelemetry, "logoUrl">,
+  slug: string,
+  telemetry?: Pick<GameTelemetry, "logoUrl" | "appId">,
 ): string | null {
-  if (!telemetry?.logoUrl || !isRenderableLogoUrl(telemetry.logoUrl)) {
-    return null;
+  if (telemetry?.logoUrl && isRenderableLogoUrl(telemetry.logoUrl)) {
+    return telemetry.logoUrl.trim();
   }
 
-  return telemetry.logoUrl.trim();
+  if (LOCAL_LOGO_SLUGS.has(slug)) {
+    return localLogoUrl(slug);
+  }
+
+  const appId = telemetry?.appId ?? TRACKED_GAME_ASSETS[slug]?.appId;
+  if (appId) {
+    return steamLogoUrl(appId);
+  }
+
+  return null;
 }
 
 export function resolveGameCoverUrl(

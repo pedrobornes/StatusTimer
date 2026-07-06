@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CalendarDays, Gauge } from "lucide-react";
 import StatusTimeline from "@/components/dashboard/telemetry/StatusTimeline";
 import GameLiveMetricsRow from "@/components/dashboard/GameLiveMetricsRow";
-import GameAssetImage from "@/components/ui/GameAssetImage";
+import GameBoxArtImage from "@/components/ui/GameBoxArtImage";
 import PlatformBadge from "@/components/ui/PlatformBadge";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { APP_ROUTES } from "@/config/routes";
@@ -53,27 +53,28 @@ export default function GameTelemetryCard({
 
   const headerContent = (
     <>
-      <div className="flex w-full items-center justify-between gap-4 pr-1">
-        <GameAssetImage
-          name={title}
-          src={logoUrl}
-          className="h-12 w-28 shrink-0"
-          imageClassName="object-contain p-1"
-        />
+      <div className="flex w-full items-stretch gap-3">
+        <GameBoxArtImage title={title} src={logoUrl} />
 
-        <StatusBadge status={upcoming ? "UPCOMING" : telemetry.status} />
+        <div className="flex min-w-0 flex-1 flex-col justify-center">
+          <GameLiveMetricsRow
+            livePlayers={telemetry.livePlayers}
+            twitchViewers={telemetry.twitchViewers}
+            orientation="vertical"
+            className="mt-0"
+          />
+        </div>
+
+        <div className="shrink-0 self-start">
+          <StatusBadge status={upcoming ? "UPCOMING" : telemetry.status} />
+        </div>
       </div>
 
-      <div className="mt-3 flex min-h-[3.5rem] w-full items-start">
-        <h3 className="line-clamp-2 text-lg font-bold leading-snug tracking-wide text-white transition-colors duration-200 group-hover:text-emerald-400 md:text-xl">
+      <div className="mt-4 w-full">
+        <h3 className="line-clamp-2 break-words whitespace-normal text-2xl font-bold tracking-tight text-white transition-colors duration-200 group-hover:text-emerald-400">
           {title}
         </h3>
       </div>
-
-      <GameLiveMetricsRow
-        livePlayers={telemetry.livePlayers}
-        twitchViewers={telemetry.twitchViewers}
-      />
     </>
   );
 
@@ -121,7 +122,9 @@ export default function GameTelemetryCard({
         <StatusTimeline snapshots={history} />
       )}
 
-      <footer className="mt-4 flex items-center gap-1.5 border-t border-white/8 pt-3 text-xs text-zinc-400">
+      <hr className="mt-4 border-white/5" />
+
+      <footer className="mt-3 flex items-center gap-1.5 text-xs text-zinc-400">
         <Gauge className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />
         <span>{formatProbeSource(telemetry.gameSlug, telemetry.dataSource)}</span>
         <span aria-hidden>•</span>
