@@ -4,6 +4,7 @@ import GameTelemetryCard from "@/components/dashboard/GameTelemetryCard";
 import IncidentLog from "@/components/dashboard/telemetry/IncidentLog";
 import PendingTelemetryGate from "@/components/dashboard/telemetry/PendingTelemetryGate";
 import NewsFeedPanel from "@/components/dashboard/NewsFeedPanel";
+import SteamStoreWidget from "@/components/dashboard/SteamStoreWidget";
 import PageShell from "@/components/PageShell";
 import GameStatusFaq from "@/components/seo/GameStatusFaq";
 import StatusContextBlock from "@/components/seo/StatusContextBlock";
@@ -51,7 +52,7 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
 
   try {
     const [
-      { telemetry, history, incidents, news, telemetryReady, firstMonitoredAt, uptime },
+      { telemetry, history, incidents, news, telemetryReady, firstMonitoredAt, uptime, steamStore },
       releases,
     ] = await Promise.all([
       getGameStatusDetail(slug),
@@ -63,6 +64,8 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
     const releasePlatforms = getConfirmedPlatforms(
       releases.find((release) => release.slug === slug)?.platforms ?? [],
     );
+
+    const steamAppId = steamStore?.steamAppId ?? telemetry?.appId ?? null;
 
     if (!telemetryReady || telemetry === null) {
       return (
@@ -86,12 +89,17 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
               </section>
             </div>
 
-            <NewsFeedPanel
-              news={news}
-              fillHeight
-              sectionTitle="Game News & Updates"
-              eyebrow="Latest Alerts"
-            />
+            <div className="space-y-8">
+              <NewsFeedPanel
+                news={news}
+                fillHeight
+                sectionTitle="Game News & Updates"
+                eyebrow="Latest Alerts"
+              />
+              {steamAppId ? (
+                <SteamStoreWidget steamAppId={steamAppId} gameName={gameName} />
+              ) : null}
+            </div>
           </div>
         </PageShell>
       );
@@ -187,6 +195,9 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
                 sectionTitle="Game News & Updates"
                 eyebrow="Latest Alerts"
               />
+              {steamAppId ? (
+                <SteamStoreWidget steamAppId={steamAppId} gameName={gameName} />
+              ) : null}
               <AdSlot
                 format="skyscraper"
                 slotId={`status-${slug}-skyscraper`}

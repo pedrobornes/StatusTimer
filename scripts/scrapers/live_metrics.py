@@ -11,6 +11,11 @@ import time
 from config.settings import settings
 from scrapers.parallel_utils import run_parallel
 from scrapers.status import monitored_target_scrape_tier, resolve_effective_scrape_tier
+from pipeline.steam_quarantine import (
+    record_steam_app_404,
+    record_steam_app_success,
+    should_skip_steam_app,
+)
 from scrapers.twitch_helix import (
     helix_get,
     parse_scrape_tier,
@@ -231,6 +236,9 @@ def fetch_steam_live_players(
     if app_id <= 0:
         return None
 
+    if should_skip_steam_app(app_id):
+        return None
+
     if not settings.steam_api_key:
         logger.debug("Steam API key missing; skipping live players for app %s", app_id)
         return None
@@ -244,8 +252,20 @@ def fetch_steam_live_players(
             params=params,
             timeout=settings.request_timeout_seconds,
         )
+        if response.status_code == 404:
+            record_steam_app_404(app_id)
+            logger.warning("Steam live players returned 404 for app %s", app_id)
+            return None
+
         response.raise_for_status()
         payload = response.json()
+    except requests.HTTPError as error:
+        if error.response is not None and error.response.status_code == 404:
+            record_steam_app_404(app_id)
+            logger.warning("Steam live players returned 404 for app %s", app_id)
+            return None
+        logger.warning("Steam live players failed for app %s: %s", app_id, error)
+        return None
     except (requests.RequestException, ValueError) as error:
         logger.warning("Steam live players failed for app %s: %s", app_id, error)
         return None
@@ -261,6 +281,7 @@ def fetch_steam_live_players(
     if player_count is None:
         return None
 
+    record_steam_app_success(app_id)
     return max(0, int(player_count))
 
 

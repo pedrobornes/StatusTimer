@@ -96,6 +96,31 @@ public class Game {
     @Builder.Default
     private Boolean steamAdultContent = false;
 
+    @Column(name = "steam_short_description", columnDefinition = "TEXT")
+    private String steamShortDescription;
+
+    @Column(name = "steam_price_final")
+    private Integer steamPriceFinal;
+
+    @Column(name = "steam_currency", length = 8)
+    private String steamCurrency;
+
+    @Column(name = "steam_windows", nullable = false)
+    @Builder.Default
+    private Boolean steamWindows = false;
+
+    @Column(name = "steam_mac", nullable = false)
+    @Builder.Default
+    private Boolean steamMac = false;
+
+    @Column(name = "steam_linux", nullable = false)
+    @Builder.Default
+    private Boolean steamLinux = false;
+
+    @Column(name = "steam_free_to_play", nullable = false)
+    @Builder.Default
+    private Boolean steamFreeToPlay = false;
+
     @Column(name = "live_players")
     private Long livePlayers;
 
@@ -158,6 +183,17 @@ public class Game {
     @Column(name = "trailer_video_ids_json", columnDefinition = "TEXT")
     @Builder.Default
     private List<String> trailerVideoIds = new ArrayList<>();
+
+    @Column(name = "steam_consecutive_404_count", nullable = false)
+    @Builder.Default
+    private Integer steamConsecutive404Count = 0;
+
+    @Column(name = "steam_blacklisted", nullable = false)
+    @Builder.Default
+    private Boolean steamBlacklisted = false;
+
+    @Column(name = "steam_blacklist_rescan_at")
+    private LocalDateTime steamBlacklistRescanAt;
 
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

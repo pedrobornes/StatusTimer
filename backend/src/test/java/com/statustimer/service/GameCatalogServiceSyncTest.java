@@ -56,7 +56,14 @@ class GameCatalogServiceSyncTest {
                         null,
                         null,
                         List.of(),
-                        List.of()
+                        List.of(),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
                 ))
         ));
 
@@ -94,7 +101,14 @@ class GameCatalogServiceSyncTest {
                         null,
                         null,
                         List.of(),
-                        List.of()
+                        List.of(),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
                 ))
         ));
 

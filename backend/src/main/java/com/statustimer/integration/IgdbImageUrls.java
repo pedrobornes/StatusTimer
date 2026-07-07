@@ -19,6 +19,14 @@ public final class IgdbImageUrls {
         return image(imageId, "t_thumb");
     }
 
+    public static String hero1080p(String imageId) {
+        return image(imageId, "t_1080p");
+    }
+
+    public static String screenshotHuge(String imageId) {
+        return image(imageId, "t_screenshot_huge");
+    }
+
     private static String image(String imageId, String size) {
         if (imageId == null || imageId.isBlank()) {
             return null;

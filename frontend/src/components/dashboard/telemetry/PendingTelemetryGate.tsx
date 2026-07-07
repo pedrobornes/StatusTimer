@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { getTelemetryReady } from "@/services/telemetryService";
 
-const POLL_INTERVAL_MS = 2000;
-const MAX_ATTEMPTS = 60;
-const SLOW_MESSAGE_AFTER_ATTEMPTS = 15;
+/** First check runs immediately; subsequent polls use a 30s cadence. */
+const POLL_INTERVAL_MS = 30_000;
+/** ~10 minutes of waiting at 30s intervals (plus the immediate first check). */
+const MAX_ATTEMPTS = 20;
+/** Show the "still working" copy after ~2 minutes. */
+const SLOW_MESSAGE_AFTER_ATTEMPTS = 4;
 
 interface PendingTelemetryGateProps {
   gameSlug: string;
@@ -16,48 +19,56 @@ interface PendingTelemetryGateProps {
 export default function PendingTelemetryGate({
   gameSlug,
 }: PendingTelemetryGateProps) {
-  const router = useRouter();
+  const pathname = usePathname();
   const [attempts, setAttempts] = useState(0);
   const [timedOut, setTimedOut] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    let timeoutId: number | undefined;
 
-    async function pollUntilReady() {
-      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
-        if (cancelled) {
-          return;
-        }
-
-        setAttempts(attempt);
-
-        try {
-          const result = await getTelemetryReady(gameSlug);
-          if (result.ready) {
-            router.refresh();
-            return;
-          }
-        } catch {
-          // Keep polling until attempts are exhausted.
-        }
-
-        if (attempt >= MAX_ATTEMPTS) {
-          setTimedOut(true);
-          return;
-        }
-
-        await new Promise<void>((resolve) => {
-          window.setTimeout(resolve, POLL_INTERVAL_MS);
-        });
-      }
+    async function checkReady(): Promise<boolean> {
+      const result = await getTelemetryReady(gameSlug);
+      return result.ready;
     }
 
-    void pollUntilReady();
+    async function pollUntilReady(attempt: number) {
+      if (cancelled) {
+        return;
+      }
+
+      setAttempts(attempt);
+
+      try {
+        const ready = await checkReady();
+        if (ready) {
+          // Hard navigation avoids stale RSC cache (revalidate=60 on the status page).
+          window.location.assign(pathname);
+          return;
+        }
+      } catch {
+        // Keep polling until attempts are exhausted.
+      }
+
+      if (attempt >= MAX_ATTEMPTS) {
+        setTimedOut(true);
+        return;
+      }
+
+      timeoutId = window.setTimeout(() => {
+        void pollUntilReady(attempt + 1);
+      }, POLL_INTERVAL_MS);
+    }
+
+    void pollUntilReady(1);
 
     return () => {
       cancelled = true;
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId);
+      }
     };
-  }, [gameSlug, router]);
+  }, [gameSlug, pathname]);
 
   const showSlowMessage =
     attempts >= SLOW_MESSAGE_AFTER_ATTEMPTS && !timedOut;

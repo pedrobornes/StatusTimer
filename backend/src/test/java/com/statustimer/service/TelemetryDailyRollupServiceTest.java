@@ -7,8 +7,10 @@ import static org.mockito.Mockito.when;
 
 import com.statustimer.config.TelemetryHistoryProperties;
 import com.statustimer.config.TelemetryRollupProperties;
+import com.statustimer.entity.Game;
 import com.statustimer.entity.TelemetryDailyRollup;
 import com.statustimer.entity.TelemetryStatus;
+import com.statustimer.repository.GameRepository;
 import com.statustimer.repository.GameTelemetryHistoryRepository;
 import com.statustimer.repository.TelemetryDailyRollupRepository;
 import java.time.LocalDate;
@@ -31,6 +33,9 @@ class TelemetryDailyRollupServiceTest {
     @Mock
     private GameTelemetryHistoryRepository gameTelemetryHistoryRepository;
 
+    @Mock
+    private GameRepository gameRepository;
+
     private TelemetryDailyRollupService telemetryDailyRollupService;
 
     @BeforeEach
@@ -38,6 +43,7 @@ class TelemetryDailyRollupServiceTest {
         telemetryDailyRollupService = new TelemetryDailyRollupService(
                 telemetryDailyRollupRepository,
                 gameTelemetryHistoryRepository,
+                gameRepository,
                 new TelemetryHistoryProperties(30, 60, 120, 72, 500, 3_600_000L),
                 new TelemetryRollupProperties(90, 5)
         );
@@ -46,8 +52,12 @@ class TelemetryDailyRollupServiceTest {
     @Test
     void recordSnapshotCreatesDailyRollup() {
         LocalDateTime checkedAt = LocalDateTime.of(2026, 7, 6, 12, 0);
-        when(telemetryDailyRollupRepository.findByGameSlugAndRollupDate("valorant", checkedAt.toLocalDate()))
-                .thenReturn(Optional.empty());
+        Game game = valorantGame();
+        when(gameRepository.findBySlug("valorant")).thenReturn(Optional.of(game));
+        when(telemetryDailyRollupRepository.findByGame_SlugAndRollupDate(
+                "valorant",
+                checkedAt.toLocalDate()
+        )).thenReturn(Optional.empty());
         when(telemetryDailyRollupRepository.save(any(TelemetryDailyRollup.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -57,7 +67,7 @@ class TelemetryDailyRollupServiceTest {
         verify(telemetryDailyRollupRepository).save(captor.capture());
 
         TelemetryDailyRollup rollup = captor.getValue();
-        assertThat(rollup.getGameSlug()).isEqualTo("valorant");
+        assertThat(rollup.getGame().getSlug()).isEqualTo("valorant");
         assertThat(rollup.getSampleCount()).isEqualTo(1);
         assertThat(rollup.getOnlineSamples()).isEqualTo(1);
     }
@@ -65,17 +75,21 @@ class TelemetryDailyRollupServiceTest {
     @Test
     void summarizeUptimeReturnsPercentWhenEnoughSamples() {
         LocalDate today = LocalDate.now();
-        when(telemetryDailyRollupRepository.findByGameSlugAndRollupDateGreaterThanEqual("valorant", today.minusDays(6)))
-                .thenReturn(List.of(
-                        rollupDay(today, 8, 6),
-                        rollupDay(today.minusDays(1), 4, 2)
-                ));
-        when(telemetryDailyRollupRepository.findByGameSlugAndRollupDateGreaterThanEqual("valorant", today.minusDays(29)))
-                .thenReturn(List.of(
-                        rollupDay(today, 8, 6),
-                        rollupDay(today.minusDays(1), 4, 2),
-                        rollupDay(today.minusDays(2), 10, 5)
-                ));
+        when(telemetryDailyRollupRepository.findByGame_SlugAndRollupDateGreaterThanEqual(
+                "valorant",
+                today.minusDays(6)
+        )).thenReturn(List.of(
+                rollupDay(today, 8, 6),
+                rollupDay(today.minusDays(1), 4, 2)
+        ));
+        when(telemetryDailyRollupRepository.findByGame_SlugAndRollupDateGreaterThanEqual(
+                "valorant",
+                today.minusDays(29)
+        )).thenReturn(List.of(
+                rollupDay(today, 8, 6),
+                rollupDay(today.minusDays(1), 4, 2),
+                rollupDay(today.minusDays(2), 10, 5)
+        ));
 
         var summary = telemetryDailyRollupService.summarizeUptime("valorant");
 
@@ -86,7 +100,7 @@ class TelemetryDailyRollupServiceTest {
     @Test
     void summarizeUptimeReturnsNullWhenInsufficientSamples() {
         LocalDate today = LocalDate.now();
-        when(telemetryDailyRollupRepository.findByGameSlugAndRollupDateGreaterThanEqual(any(), any()))
+        when(telemetryDailyRollupRepository.findByGame_SlugAndRollupDateGreaterThanEqual(any(), any()))
                 .thenReturn(List.of(rollupDay(today, 3, 2)));
 
         var summary = telemetryDailyRollupService.summarizeUptime("valorant");
@@ -95,9 +109,16 @@ class TelemetryDailyRollupServiceTest {
         assertThat(summary.uptime30dPercent()).isNull();
     }
 
+    private Game valorantGame() {
+        return Game.builder()
+                .slug("valorant")
+                .gameName("Valorant")
+                .build();
+    }
+
     private TelemetryDailyRollup rollupDay(LocalDate date, int total, int online) {
         return TelemetryDailyRollup.builder()
-                .gameSlug("valorant")
+                .game(valorantGame())
                 .rollupDate(date)
                 .sampleCount(total)
                 .onlineSamples(online)

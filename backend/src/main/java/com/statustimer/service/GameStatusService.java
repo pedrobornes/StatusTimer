@@ -5,6 +5,7 @@ import com.statustimer.dto.response.GameTelemetryResponse;
 import com.statustimer.dto.response.GamingNewsResponse;
 import com.statustimer.dto.response.TelemetryHistorySnapshotResponse;
 import com.statustimer.dto.response.TelemetryIncidentResponse;
+import com.statustimer.dto.response.SteamStoreListingResponse;
 import com.statustimer.dto.response.TelemetryUptimeSummaryResponse;
 import com.statustimer.repository.GameRepository;
 import java.time.LocalDateTime;
@@ -26,6 +27,7 @@ public class GameStatusService {
     private final CatalogActivationService catalogActivationService;
     private final GameRepository gameRepository;
     private final TelemetryDailyRollupService telemetryDailyRollupService;
+    private final GameCatalogService gameCatalogService;
 
     @Transactional
     public GameStatusDetailResponse findByGameSlug(String slug) {
@@ -34,29 +36,23 @@ public class GameStatusService {
         boolean telemetryReady = catalogActivationService.isTelemetryReady(slug);
         List<GamingNewsResponse> news = gamingNewsService.findByGameTag(slug, NEWS_LIMIT);
         LocalDateTime firstMonitoredAt = resolveFirstMonitoredAt(slug);
+        SteamStoreListingResponse steamStore = gameCatalogService.resolveSteamStoreListing(slug);
 
         if (!telemetryReady) {
-            return gameTelemetryService.findOptionalByGameSlug(slug)
-                    .map(telemetry -> buildDetailResponse(
-                            telemetry,
-                            slug,
-                            true,
-                            news,
-                            firstMonitoredAt
-                    ))
-                    .orElseGet(() -> new GameStatusDetailResponse(
-                            null,
-                            List.of(),
-                            List.of(),
-                            news,
-                            false,
-                            firstMonitoredAt,
-                            null
-                    ));
+            return new GameStatusDetailResponse(
+                    null,
+                    List.of(),
+                    List.of(),
+                    news,
+                    false,
+                    firstMonitoredAt,
+                    null,
+                    steamStore
+            );
         }
 
         GameTelemetryResponse telemetry = gameTelemetryService.findByGameSlug(slug);
-        return buildDetailResponse(telemetry, slug, true, news, firstMonitoredAt);
+        return buildDetailResponse(telemetry, slug, true, news, firstMonitoredAt, steamStore);
     }
 
     private GameStatusDetailResponse buildDetailResponse(
@@ -64,7 +60,8 @@ public class GameStatusService {
             String slug,
             boolean ready,
             List<GamingNewsResponse> news,
-            LocalDateTime firstMonitoredAt
+            LocalDateTime firstMonitoredAt,
+            SteamStoreListingResponse steamStore
     ) {
         List<TelemetryHistorySnapshotResponse> history =
                 gameTelemetryService.findHistoryByGameSlug(slug);
@@ -82,7 +79,8 @@ public class GameStatusService {
                 news,
                 ready,
                 firstMonitoredAt,
-                uptime
+                uptime,
+                steamStore
         );
     }
 

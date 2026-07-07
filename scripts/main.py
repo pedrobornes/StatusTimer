@@ -45,6 +45,7 @@ from scrapers.social_status import fetch_social_status_payloads
 from scrapers.status import fetch_game_telemetry
 from scrapers.igdb_popular_games import fetch_igdb_popular_catalog
 from scrapers.twitch_top_games import fetch_twitch_top_games_catalog
+from scrapers.steam_store import enrich_catalog_entries_with_steam_store
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -466,6 +467,24 @@ def _merge_dynamic_catalog_entries(
                 "critic_rating": existing.critic_rating or entry.critic_rating,
                 "screenshot_urls": existing.screenshot_urls or entry.screenshot_urls,
                 "trailer_video_ids": existing.trailer_video_ids or entry.trailer_video_ids,
+                "steam_short_description": existing.steam_short_description
+                or entry.steam_short_description,
+                "steam_price_final": existing.steam_price_final
+                if existing.steam_price_final is not None
+                else entry.steam_price_final,
+                "steam_currency": existing.steam_currency or entry.steam_currency,
+                "steam_windows": existing.steam_windows
+                if existing.steam_windows is not None
+                else entry.steam_windows,
+                "steam_mac": existing.steam_mac
+                if existing.steam_mac is not None
+                else entry.steam_mac,
+                "steam_linux": existing.steam_linux
+                if existing.steam_linux is not None
+                else entry.steam_linux,
+                "steam_free_to_play": existing.steam_free_to_play
+                if existing.steam_free_to_play is not None
+                else entry.steam_free_to_play,
             }
         )
 
@@ -529,15 +548,25 @@ def run_platform_intel_pipeline(client: BackendClient) -> tuple[int, int, int, P
     return _sync_prefetched_platform_intel(client, scraped_events)
 
 
+def _fetch_igdb_popular_catalog_safe() -> list:
+    """Fetch IGDB popular catalog without aborting the harvest cycle on failure."""
+    try:
+        return fetch_igdb_popular_catalog(limit=settings.twitch_top_n)
+    except Exception as error:
+        logger.warning(
+            "IGDB popular catalog unavailable; continuing cycle without IGDB entries: %s",
+            error,
+            exc_info=True,
+        )
+        return []
+
+
 def fetch_dynamic_catalog_entries() -> DynamicCatalogBundle:
     twitch_entries = fetch_with_retry(
         "Twitch top games fetch",
         fetch_twitch_top_games_catalog,
     )
-    igdb_entries = fetch_with_retry(
-        "IGDB popular games fetch",
-        lambda: fetch_igdb_popular_catalog(limit=settings.twitch_top_n),
-    )
+    igdb_entries = _fetch_igdb_popular_catalog_safe()
     return DynamicCatalogBundle(
         entries=_merge_dynamic_catalog_entries(twitch_entries, igdb_entries),
         twitch_count=len(twitch_entries),
@@ -785,6 +814,7 @@ def _sync_prefetched_catalog(
     if not entries:
         logger.warning("No Steam Charts catalog entries collected this cycle.")
         return 0, PushResult(success=True, status_code=204)
+    entries = enrich_catalog_entries_with_steam_store(entries)
     logger.info("Prepared %s Steam catalog payloads", len(entries))
     successful_items, results = _push_batches_with_fallback(
         items=entries,
@@ -821,6 +851,7 @@ def _sync_prefetched_dynamic_catalog(
     if not entries:
         logger.warning("No dynamic catalog entries collected this cycle.")
         return 0, PushResult(success=True, status_code=204)
+    entries = enrich_catalog_entries_with_steam_store(entries)
     logger.info(
         "Prepared %s dynamic catalog payloads (twitch=%s igdb=%s)",
         len(entries),
@@ -978,31 +1009,48 @@ def _resolve_prefetched_result(
 
 
 def run_scheduled_loop(client: BackendClient, interval_seconds: int) -> None:
+    on_demand_interval = settings.on_demand_poll_interval_seconds
     logger.info(
-        "Autonomous harvester started. Interval=%ss | Retries=%s | Delay=%ss",
+        "Autonomous harvester started. Full cycle=%ss | On-demand poll=%ss | Retries=%s | Delay=%ss",
         interval_seconds,
+        on_demand_interval,
         settings.request_retry_max_attempts,
         settings.request_retry_delay_seconds,
     )
 
     cycle_number = 0
+    next_full_cycle_at = 0.0
 
     while not _shutdown_requested:
-        cycle_number += 1
-        logger.info("=== Harvest cycle #%s ===", cycle_number)
-
         try:
-            run_harvest_cycle(client)
+            on_demand_jobs, on_demand_sync = run_on_demand_scrape_jobs(client)
+            if on_demand_jobs > 0:
+                _log_push_result("On-demand scrape jobs", on_demand_sync)
         except Exception:
-            logger.exception(
-                "Unhandled error in scheduled loop. Continuing after sleep.",
-            )
+            logger.exception("On-demand job pass failed. Continuing.")
+
+        if next_full_cycle_at == 0.0 or time.monotonic() >= next_full_cycle_at:
+            cycle_number += 1
+            logger.info("=== Harvest cycle #%s ===", cycle_number)
+
+            try:
+                run_harvest_cycle(client)
+            except Exception:
+                logger.exception(
+                    "Unhandled error in scheduled loop. Continuing after sleep.",
+                )
+
+            next_full_cycle_at = time.monotonic() + interval_seconds
 
         if _shutdown_requested:
             break
 
-        logger.info("Sleeping %ss until next cycle...", interval_seconds)
-        _sleep_with_shutdown(interval_seconds)
+        sleep_seconds = min(
+            on_demand_interval,
+            max(1, int(next_full_cycle_at - time.monotonic())),
+        )
+        logger.debug("Sleeping %ss until next on-demand poll...", sleep_seconds)
+        _sleep_with_shutdown(sleep_seconds)
 
     logger.info("Harvester stopped gracefully.")
 
@@ -1140,6 +1188,11 @@ def parse_args() -> argparse.Namespace:
         help="Run a single harvest cycle and exit.",
     )
     parser.add_argument(
+        "--on-demand-only",
+        action="store_true",
+        help="Process pending on-demand scrape jobs and exit.",
+    )
+    parser.add_argument(
         "--interval",
         type=int,
         default=settings.harvest_interval_seconds,
@@ -1189,6 +1242,14 @@ def main() -> None:
 
     if args.once:
         run_harvest_cycle(client)
+        return
+
+    if args.on_demand_only:
+        jobs, sync = run_on_demand_scrape_jobs(client)
+        if jobs > 0:
+            _log_push_result("On-demand scrape jobs", sync)
+        else:
+            logger.info("No pending on-demand scrape jobs.")
         return
 
     run_scheduled_loop(client, interval_seconds=args.interval)

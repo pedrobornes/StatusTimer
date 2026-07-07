@@ -20,6 +20,15 @@ class GameCatalogEntryPayload(BaseModel):
     critic_rating: int | None = Field(default=None, alias="criticRating", ge=0, le=100)
     screenshot_urls: list[str] = Field(default_factory=list, alias="screenshotUrls")
     trailer_video_ids: list[str] = Field(default_factory=list, alias="trailerVideoIds")
+    steam_short_description: str | None = Field(
+        default=None, alias="steamShortDescription"
+    )
+    steam_price_final: int | None = Field(default=None, alias="steamPriceFinal", ge=0)
+    steam_currency: str | None = Field(default=None, alias="steamCurrency", max_length=8)
+    steam_windows: bool | None = Field(default=None, alias="steamWindows")
+    steam_mac: bool | None = Field(default=None, alias="steamMac")
+    steam_linux: bool | None = Field(default=None, alias="steamLinux")
+    steam_free_to_play: bool | None = Field(default=None, alias="steamFreeToPlay")
 
     model_config = ConfigDict(populate_by_name=True)
 

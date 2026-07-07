@@ -84,12 +84,32 @@ public class SteamStoreAppDetailsClient {
             JsonNode data = appNode.path("data");
             LocalDate releaseDate = parseReleaseDate(data.path("release_date"));
             boolean adultContent = detectAdultContent(data);
+            JsonNode priceOverview = data.path("price_overview");
+            Integer priceFinal = parsePriceCents(priceOverview.path("final"));
+            String currency = readText(priceOverview, "currency");
+            boolean freeToPlay = priceFinal != null && priceFinal == 0
+                    || data.path("is_free").asBoolean(false);
+            if (priceFinal == null && freeToPlay) {
+                priceFinal = 0;
+            }
+
+            JsonNode platforms = data.path("platforms");
+            boolean windows = platforms.path("windows").asBoolean(false);
+            boolean mac = platforms.path("mac").asBoolean(false);
+            boolean linux = platforms.path("linux").asBoolean(false);
 
             return Optional.of(new SteamAppMetadata(
                     releaseDate,
                     adultContent,
                     null,
-                    null
+                    null,
+                    readText(data, "short_description"),
+                    priceFinal,
+                    currency,
+                    windows,
+                    mac,
+                    linux,
+                    freeToPlay
             ));
         } catch (Exception exception) {
             log.warn("Unable to parse Steam appdetails for app {}", appId, exception);
@@ -183,11 +203,31 @@ public class SteamStoreAppDetailsClient {
                 || value.contains("adult only");
     }
 
+    private Integer parsePriceCents(JsonNode value) {
+        if (value.isMissingNode() || value.isNull()) {
+            return null;
+        }
+
+        if (!value.canConvertToInt()) {
+            return null;
+        }
+
+        int cents = value.asInt(-1);
+        return cents >= 0 ? cents : null;
+    }
+
     public record SteamAppMetadata(
             LocalDate releaseDate,
             boolean adultContent,
             String logoUrl,
-            String coverUrl
+            String coverUrl,
+            String shortDescription,
+            Integer priceFinal,
+            String currency,
+            boolean windows,
+            boolean mac,
+            boolean linux,
+            boolean freeToPlay
     ) {
     }
 }

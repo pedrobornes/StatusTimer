@@ -20,6 +20,8 @@ public class TrackedGameCatalogSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        gameCatalogService.seedTrackedCatalogIfMissing();
+
         for (var game : gameRepository.findAll()) {
             if (game.getLifecycleState() == null) {
                 game.setLifecycleState(LifecycleState.MONITORED);

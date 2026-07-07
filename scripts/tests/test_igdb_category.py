@@ -14,8 +14,8 @@ class IgdbCategoryPolicyTests(unittest.TestCase):
     def test_is_main_game_rejects_mod_category(self) -> None:
         self.assertFalse(is_main_game({"name": "Rust Mod", "category": 5}))
 
-    def test_is_main_game_rejects_missing_category(self) -> None:
-        self.assertFalse(is_main_game({"name": "Legacy Game"}))
+    def test_is_main_game_accepts_missing_legacy_fields(self) -> None:
+        self.assertTrue(is_main_game({"name": "Legacy Game"}))
 
     def test_parse_metadata_rejects_mod_rows(self) -> None:
         with self.assertRaises(ValueError):
@@ -47,7 +47,7 @@ class IgdbCategoryPolicyTests(unittest.TestCase):
 
         query = post_mock.call_args[0][1]
         self.assertIn("category", query)
-        self.assertIn(f"where category = {MAIN_GAME_CATEGORY};", query)
+        self.assertIn("where game_type = 0;", query)
         self.assertIn('search "Rust";', query)
 
 

@@ -23,6 +23,9 @@ class Settings(BaseSettings):
         description="Optional SQLAlchemy URL override (mysql+pymysql://...)",
     )
     request_timeout_seconds: int = 15
+    backend_request_timeout_seconds: int = 60
+    steam_404_blacklist_threshold: int = 5
+    steam_blacklist_rescan_days: int = 7
     request_retry_max_attempts: int = 3
     request_retry_delay_seconds: int = 5
     batch_size_release_sync: int = 50
@@ -30,6 +33,7 @@ class Settings(BaseSettings):
     batch_size_dynamic_catalog_sync: int = 50
     batch_size_telemetry_sync: int = 50
     harvest_interval_seconds: int = 300
+    on_demand_poll_interval_seconds: int = 30
     http_rate_limit_per_minute: int = 20
     http_jitter_min_seconds: float = 0.3
     http_jitter_max_seconds: float = 1.5
@@ -69,6 +73,7 @@ class Settings(BaseSettings):
     igdb_releases_limit: int = 25
     igdb_min_hype: int = 10
     igdb_catalog_enrich_limit: int = 25
+    steam_store_enrich_limit: int = 40
     igdb_search_limit: int = 8
     steam_api_key: str = ""
     riot_api_key: str = ""

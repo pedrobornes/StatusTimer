@@ -338,6 +338,16 @@ export function resolveGameCoverUrl(
 
 ): string | null {
 
+  const heroUrl = telemetry?.logoUrl?.trim();
+
+  if (heroUrl && isRenderableLogoUrl(heroUrl) && !shouldUseCoverFit(heroUrl)) {
+
+    return heroUrl;
+
+  }
+
+
+
   const coverUrl = telemetry?.coverUrl?.trim();
 
   if (coverUrl && isRenderableLogoUrl(coverUrl)) {
@@ -348,11 +358,9 @@ export function resolveGameCoverUrl(
 
 
 
-  const logoUrl = telemetry?.logoUrl?.trim();
+  if (heroUrl && isRenderableLogoUrl(heroUrl)) {
 
-  if (logoUrl && isRenderableLogoUrl(logoUrl)) {
-
-    return logoUrl;
+    return heroUrl;
 
   }
 
@@ -370,6 +378,10 @@ export function resolveCatalogImageUrl(
 ): string | null {
   if (isIgdbImageUrl(coverUrl)) {
     return coverUrl!.trim();
+  }
+
+  if (isIgdbImageUrl(logoUrl) && shouldUseCoverFit(logoUrl)) {
+    return logoUrl!.trim();
   }
 
   if (isIgdbImageUrl(logoUrl)) {

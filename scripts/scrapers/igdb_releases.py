@@ -95,7 +95,7 @@ def map_igdb_metadata_to_release(
         platforms=platform_entries,
         hypeCount=metadata.hype_count,
         imageUrl=metadata.cover_url,
-        logoUrl=metadata.logo_url,
+        logoUrl=metadata.background_url or metadata.logo_url,
         igdbGameId=metadata.igdb_game_id,
         userRating=metadata.user_rating,
         criticRating=metadata.critic_rating,

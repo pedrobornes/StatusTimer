@@ -31,7 +31,7 @@ class BackendClient:
 
     def __init__(self) -> None:
         self._base_url = settings.backend_base_url.rstrip("/")
-        self._timeout = settings.request_timeout_seconds
+        self._timeout = settings.backend_request_timeout_seconds
         self._max_attempts = settings.request_retry_max_attempts
         self._retry_delay = settings.request_retry_delay_seconds
         self._headers = {

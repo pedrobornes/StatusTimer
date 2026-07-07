@@ -62,8 +62,8 @@ class IgdbSearchClientTest {
         verify(apiClient).postGamesQuery(bodyCaptor.capture());
 
         String body = bodyCaptor.getValue();
-        assertThat(body).contains("category");
-        assertThat(body).contains("where category = 0;");
+        assertThat(body).contains("game_type");
+        assertThat(body).contains("where game_type = 0;");
         assertThat(body).contains("search \"Rust\";");
         assertThat(matches).hasSize(1);
         assertThat(matches.getFirst().name()).isEqualTo("Rust");

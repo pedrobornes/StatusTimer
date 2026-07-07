@@ -65,7 +65,7 @@ class IndexabilityServiceTest {
         game.setTwitchViewers(50_000L);
 
         GameTelemetry telemetry = GameTelemetry.builder()
-                .gameSlug("valorant")
+                .game(game)
                 .status(TelemetryStatus.ONLINE)
                 .latencyMs(42)
                 .dataSource(TelemetrySource.NETWORK_PROBE)

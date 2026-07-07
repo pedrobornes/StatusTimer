@@ -38,6 +38,46 @@ class SteamStoreAppDetailsClientTest {
         org.junit.jupiter.api.Assertions.assertNull(metadata.get().coverUrl());
     }
 
+    @Test
+    void parseMetadataExtractsStoreListingFields() throws Exception {
+        String body = """
+                {
+                  "570": {
+                    "success": true,
+                    "data": {
+                      "short_description": "Every day, millions of players enter the battle.",
+                      "is_free": true,
+                      "platforms": {
+                        "windows": true,
+                        "mac": true,
+                        "linux": true
+                      },
+                      "price_overview": {
+                        "currency": "USD",
+                        "final": 0
+                      },
+                      "release_date": {
+                        "coming_soon": false,
+                        "date": "9 Jul, 2013"
+                      },
+                      "genres": [{"description": "Action"}]
+                    }
+                  }
+                }
+                """;
+
+        var metadata = invokeParse(body, 570);
+
+        assertTrue(metadata.isPresent());
+        assertEquals("Every day, millions of players enter the battle.", metadata.get().shortDescription());
+        assertEquals(0, metadata.get().priceFinal());
+        assertEquals("USD", metadata.get().currency());
+        assertTrue(metadata.get().windows());
+        assertTrue(metadata.get().mac());
+        assertTrue(metadata.get().linux());
+        assertTrue(metadata.get().freeToPlay());
+    }
+
     private java.util.Optional<SteamStoreAppDetailsClient.SteamAppMetadata> invokeParse(
             String body,
             int appId

@@ -9,9 +9,10 @@ from typing import Any
 IGDB_IMAGE_BASE = "https://images.igdb.com/igdb/image/upload"
 STEAM_EXTERNAL_CATEGORY = 1
 MAIN_GAME_CATEGORY = 0
+MAIN_GAME_TYPE = 0
 
 IGDB_GAME_FIELDS = (
-    "id, name, slug, category, first_release_date, platforms, genres.name, "
+    "id, name, slug, category, game_type, first_release_date, platforms, genres.name, "
     "cover.image_id, artworks.image_id, screenshots.image_id, "
     "hypes, rating, aggregated_rating, "
     "videos.video_id, external_games.uid, external_games.category"
@@ -25,6 +26,7 @@ class IgdbGameMetadata:
     slug: str
     logo_url: str | None
     cover_url: str | None
+    background_url: str | None
     user_rating: int | None
     critic_rating: int | None
     genre_names: list[str] = field(default_factory=list)
@@ -41,10 +43,15 @@ def igdb_image_url(image_id: str, size: str = "t_cover_big") -> str:
 
 
 def is_main_game(raw_game: dict[str, Any]) -> bool:
+    game_type = raw_game.get("game_type")
+    if isinstance(game_type, int):
+        return game_type == MAIN_GAME_TYPE
+
     category = raw_game.get("category")
     if isinstance(category, int):
         return category == MAIN_GAME_CATEGORY
-    return False
+
+    return True
 
 
 def parse_igdb_game_metadata(raw_game: dict[str, Any]) -> IgdbGameMetadata:
@@ -59,7 +66,8 @@ def parse_igdb_game_metadata(raw_game: dict[str, Any]) -> IgdbGameMetadata:
     parsed_id = igdb_game_id if isinstance(igdb_game_id, int) else None
 
     cover_url = _resolve_cover_url(raw_game.get("cover"))
-    logo_url = _resolve_logo_url(raw_game.get("artworks"), raw_game.get("cover"))
+    logo_url = _resolve_logo_url(raw_game.get("cover"))
+    background_url = _resolve_background_url(raw_game.get("artworks"))
 
     return IgdbGameMetadata(
         igdb_game_id=parsed_id,
@@ -67,6 +75,7 @@ def parse_igdb_game_metadata(raw_game: dict[str, Any]) -> IgdbGameMetadata:
         slug=str(raw_game.get("slug") or "").strip(),
         logo_url=logo_url,
         cover_url=cover_url,
+        background_url=background_url,
         user_rating=_normalize_rating(raw_game.get("rating")),
         critic_rating=_normalize_rating(raw_game.get("aggregated_rating")),
         genre_names=_resolve_genre_names(raw_game.get("genres")),
@@ -85,16 +94,21 @@ def _resolve_cover_url(raw_cover: Any) -> str | None:
     return igdb_image_url(image_id, "t_cover_big")
 
 
-def _resolve_logo_url(raw_artworks: Any, raw_cover: Any) -> str | None:
+def _resolve_logo_url(raw_cover: Any) -> str | None:
+    """Small vertical box art for search thumbnails and icons."""
+    image_id = _extract_image_id(raw_cover)
+    if image_id is None:
+        return None
+    return igdb_image_url(image_id, "t_cover_small")
+
+
+def _resolve_background_url(raw_artworks: Any) -> str | None:
+    """Horizontal profile background from the first IGDB artwork."""
     artworks = raw_artworks if isinstance(raw_artworks, list) else []
     for artwork in artworks:
         image_id = _extract_image_id(artwork)
         if image_id is not None:
-            return igdb_image_url(image_id, "t_thumb")
-
-    cover_id = _extract_image_id(raw_cover)
-    if cover_id is not None:
-        return igdb_image_url(cover_id, "t_cover_small")
+            return igdb_image_url(image_id, "t_screenshot_huge")
 
     return None
 
@@ -197,3 +211,17 @@ def _parse_release_date(raw_value: Any) -> date | None:
         return None
 
     return datetime.fromtimestamp(timestamp, tz=timezone.utc).date()
+
+
+def resolve_catalog_image_urls(
+    metadata: IgdbGameMetadata,
+) -> tuple[str | None, str | None]:
+    """
+    Map IGDB metadata to backend catalog fields.
+
+    cover_url  -> vertical box art (t_cover_big)
+    logo_url   -> horizontal hero background (t_screenshot_huge artwork)
+    """
+    cover_url = metadata.cover_url
+    hero_url = metadata.background_url or metadata.logo_url
+    return hero_url, cover_url

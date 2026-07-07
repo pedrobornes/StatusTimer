@@ -57,6 +57,7 @@ class ReleasePayloadTests(unittest.TestCase):
         self.assertEqual(payload.critic_rating, 95)
         self.assertEqual(payload.trailer_video_ids, ["abc123xyz"])
         self.assertTrue(payload.image_url.startswith("https://images.igdb.com/"))
+        self.assertIn("t_screenshot_huge/arlogo123", payload.logo_url or "")
 
     @patch("scrapers.releases.fetch_igdb_upcoming_releases")
     def test_fetch_upcoming_releases_serializes_image_url_for_sync(self, mock_fetch) -> None:

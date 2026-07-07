@@ -10,5 +10,6 @@ public record GameStatusDetailResponse(
         List<GamingNewsResponse> news,
         boolean telemetryReady,
         LocalDateTime firstMonitoredAt,
-        TelemetryUptimeSummaryResponse uptime
+        TelemetryUptimeSummaryResponse uptime,
+        SteamStoreListingResponse steamStore
 ) {}

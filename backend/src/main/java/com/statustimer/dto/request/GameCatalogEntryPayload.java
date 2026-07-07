@@ -18,6 +18,13 @@ public record GameCatalogEntryPayload(
         Integer userRating,
         Integer criticRating,
         List<String> screenshotUrls,
-        List<String> trailerVideoIds
+        List<String> trailerVideoIds,
+        String steamShortDescription,
+        Integer steamPriceFinal,
+        String steamCurrency,
+        Boolean steamWindows,
+        Boolean steamMac,
+        Boolean steamLinux,
+        Boolean steamFreeToPlay
 ) {
 }

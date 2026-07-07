@@ -15,9 +15,8 @@ import org.springframework.stereotype.Component;
 public class IgdbSearchClient {
 
     private static final int STEAM_EXTERNAL_CATEGORY = 1;
-    private static final int MAIN_GAME_CATEGORY = 0;
     private static final String GAME_FIELDS =
-            "id,name,slug,category,cover.image_id,artworks.image_id,hypes,rating,aggregated_rating,"
+            "id,name,slug,category,game_type,cover.image_id,artworks.image_id,hypes,rating,aggregated_rating,"
                     + "genres.name,external_games.uid,external_games.category";
 
     private final IgdbApiClient apiClient;
@@ -37,7 +36,7 @@ public class IgdbSearchClient {
         int fetchLimit = Math.max(resolvedLimit * 3, resolvedLimit);
         String escaped = trimmed.replace("\"", "\\\"");
         String body = "fields " + GAME_FIELDS + "; "
-                + "where category = " + MAIN_GAME_CATEGORY + "; "
+                + "where game_type = " + IgdbGameCategories.MAIN_GAME_TYPE + "; "
                 + "search \"" + escaped + "\"; "
                 + "limit " + fetchLimit + ";";
 
@@ -69,6 +68,30 @@ public class IgdbSearchClient {
         }
 
         return matches;
+    }
+
+    public Optional<IgdbGameMatch> lookupBySlug(String slug) {
+        String trimmed = slug == null ? "" : slug.trim();
+        if (trimmed.isEmpty() || !apiClient.isConfigured()) {
+            return Optional.empty();
+        }
+
+        String escaped = trimmed.replace("\"", "\\\"");
+        String body = "fields " + GAME_FIELDS + "; "
+                + "where slug = \"" + escaped + "\"; "
+                + "limit 1;";
+
+        Optional<JsonNode> payload = apiClient.postGamesQuery(body);
+        if (payload.isEmpty() || !payload.get().isArray() || payload.get().isEmpty()) {
+            return Optional.empty();
+        }
+
+        JsonNode row = payload.get().get(0);
+        if (!IgdbGameCategories.isMainGame(row)) {
+            return Optional.empty();
+        }
+
+        return parseMatch(row);
     }
 
     private Optional<IgdbGameMatch> parseMatch(JsonNode row) {
@@ -109,9 +132,9 @@ public class IgdbSearchClient {
         if (artworks.isArray()) {
             for (JsonNode artwork : artworks) {
                 String imageId = artwork.path("image_id").asText(null);
-                String thumb = IgdbImageUrls.thumb(imageId);
-                if (thumb != null) {
-                    return thumb;
+                String hero = IgdbImageUrls.screenshotHuge(imageId);
+                if (hero != null) {
+                    return hero;
                 }
             }
         }

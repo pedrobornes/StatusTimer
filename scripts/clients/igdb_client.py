@@ -11,7 +11,7 @@ import requests
 from config.settings import settings
 from scrapers.igdb_media import (
     IGDB_GAME_FIELDS,
-    MAIN_GAME_CATEGORY,
+    MAIN_GAME_TYPE,
     IgdbGameMetadata,
     is_main_game,
     parse_igdb_game_metadata,
@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 TWITCH_OAUTH_URL = "https://id.twitch.tv/oauth2/token"
 IGDB_API_BASE_URL = "https://api.igdb.com/v4"
+IGDB_MAX_PAGE_SIZE = 50
 
 
 def is_igdb_configured() -> bool:
@@ -48,7 +49,7 @@ class IgdbClient:
 
         query = (
             f"fields {IGDB_GAME_FIELDS}; "
-            f"where category = {MAIN_GAME_CATEGORY} & hypes >= {resolved_min_hype} "
+            f"where game_type = {MAIN_GAME_TYPE} & hypes >= {resolved_min_hype} "
             f"& (first_release_date > {now_unix} | first_release_date = null); "
             "sort hypes desc; "
             f"limit {resolved_limit};"
@@ -65,16 +66,31 @@ class IgdbClient:
             return []
 
         now_unix = int(time.time())
-        query = (
-            f"fields {IGDB_GAME_FIELDS}; "
-            f"where category = {MAIN_GAME_CATEGORY} "
-            f"& first_release_date != null "
-            f"& first_release_date <= {now_unix}; "
-            "sort total_rating_count desc, total_rating desc; "
-            f"limit {limit};"
-        )
+        collected: list[dict[str, Any]] = []
+        offset = 0
 
-        return self._fetch_games(query)
+        while len(collected) < limit:
+            page_limit = min(IGDB_MAX_PAGE_SIZE, limit - len(collected))
+            query = (
+                f"fields {IGDB_GAME_FIELDS}; "
+                f"where game_type = {MAIN_GAME_TYPE} "
+                f"& first_release_date != null "
+                f"& first_release_date <= {now_unix}; "
+                "sort total_rating_count desc; "
+                f"limit {page_limit}; "
+                f"offset {offset};"
+            )
+            page = self._fetch_games(query)
+            if not page:
+                break
+
+            collected.extend(page)
+            if len(page) < page_limit:
+                break
+
+            offset += page_limit
+
+        return collected[:limit]
 
     def lookup_game_metadata(self, game_name: str) -> IgdbGameMetadata | None:
         if not is_igdb_configured():
@@ -83,7 +99,7 @@ class IgdbClient:
         escaped_name = game_name.replace('"', '\\"')
         query = (
             f"fields {IGDB_GAME_FIELDS}; "
-            f"where category = {MAIN_GAME_CATEGORY}; "
+            f"where game_type = {MAIN_GAME_TYPE}; "
             f'search "{escaped_name}"; '
             "limit 8;"
         )
@@ -110,10 +126,13 @@ class IgdbClient:
     def _post(self, endpoint: str, body: str) -> Any:
         token = self._ensure_access_token()
         url = f"{IGDB_API_BASE_URL}/{endpoint.lstrip('/')}"
+        normalized_body = body.strip()
+
+        logger.info("IGDB POST %s | payload=%s", endpoint, normalized_body)
 
         response = self._session.post(
             url,
-            data=body,
+            data=normalized_body,
             headers={
                 "Client-ID": settings.igdb_client_id,
                 "Authorization": f"Bearer {token}",
@@ -121,6 +140,15 @@ class IgdbClient:
             },
             timeout=settings.request_timeout_seconds,
         )
+
+        if not response.ok:
+            logger.error(
+                "IGDB request rejected: endpoint=%s status=%s response=%s",
+                endpoint,
+                response.status_code,
+                response.text[:500],
+            )
+
         response.raise_for_status()
         return response.json()
 

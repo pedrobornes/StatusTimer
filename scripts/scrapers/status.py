@@ -130,7 +130,7 @@ def _target(
     fallback_port: int = 443,
     skip_live_probe: bool = False,
 ) -> MonitoredGameTarget:
-    """Build a monitored target with tier resolved from ALWAYS_TIER_1 first."""
+    """Build a monitored target; ALWAYS_TIER_1 is applied at runtime via monitored_target_scrape_tier."""
     return MonitoredGameTarget(
         slug=slug,
         display_name=display_name,
@@ -139,7 +139,7 @@ def _target(
         fallback_host=fallback_host,
         fallback_port=fallback_port,
         skip_live_probe=skip_live_probe,
-        scrape_tier=resolve_effective_scrape_tier(slug),
+        scrape_tier=TIER_HIGH if slug in ALWAYS_TIER_1 else TIER_MEDIUM,
     )
 
 

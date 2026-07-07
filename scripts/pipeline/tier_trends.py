@@ -19,7 +19,6 @@ from scrapers.status import (
     TIER_HIGH,
     TIER_LOW,
     TIER_MEDIUM,
-    resolve_effective_scrape_tier,
 )
 
 logger = logging.getLogger(__name__)

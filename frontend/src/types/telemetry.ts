@@ -50,6 +50,17 @@ export interface TelemetryUptimeSummary {
   uptime30dPercent: number | null;
 }
 
+export interface SteamStoreListing {
+  steamAppId: number;
+  shortDescription?: string | null;
+  priceFinal?: number | null;
+  currency?: string | null;
+  windows?: boolean;
+  mac?: boolean;
+  linux?: boolean;
+  freeToPlay?: boolean;
+}
+
 export interface GameStatusDetail {
   telemetry: GameTelemetry | null;
   history: TelemetryHistorySnapshot[];
@@ -58,4 +69,5 @@ export interface GameStatusDetail {
   telemetryReady: boolean;
   firstMonitoredAt?: string | null;
   uptime?: TelemetryUptimeSummary | null;
+  steamStore?: SteamStoreListing | null;
 }
