@@ -1,0 +1,22 @@
+{
+  "cycles": {
+    "requested": 10,
+    "executed": 10
+  },
+  "avg_duration_ms": {
+    "preload": 10.12,
+    "fetch_concurrent": 13216.62,
+    "normalization": 24930.85,
+    "batch_sync": 76606.79
+  },
+  "batch": {
+    "success_rate_percent": 66.67,
+    "successful": 20,
+    "total": 30
+  },
+  "items_processed": {
+    "total": 560,
+    "synced": 560,
+    "failed": 0
+  }
+}

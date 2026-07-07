@@ -29,7 +29,8 @@ class LiveMetricsTests(unittest.TestCase):
 
         self.assertEqual(fetch_steam_live_players(730, session), 125430)
 
-    def test_fetch_twitch_viewers_sums_stream_counts(self) -> None:
+    @patch("scrapers.live_metrics.helix_get")
+    def test_fetch_twitch_viewers_sums_stream_counts(self, helix_mock: MagicMock) -> None:
         session = MagicMock()
         response = MagicMock()
         response.json.return_value = {
@@ -39,11 +40,12 @@ class LiveMetricsTests(unittest.TestCase):
             ],
             "pagination": {},
         }
-        session.get.return_value = response
+        helix_mock.return_value = response
 
         self.assertEqual(fetch_twitch_viewers("516575", session), 2000)
 
-    def test_fetch_twitch_game_ids_by_names_maps_categories(self) -> None:
+    @patch("scrapers.live_metrics.helix_get")
+    def test_fetch_twitch_game_ids_by_names_maps_categories(self, helix_mock: MagicMock) -> None:
         session = MagicMock()
         response = MagicMock()
         response.json.return_value = {
@@ -52,13 +54,14 @@ class LiveMetricsTests(unittest.TestCase):
                 {"id": "33214", "name": "Fortnite"},
             ]
         }
-        session.get.return_value = response
+        helix_mock.return_value = response
 
         resolved = fetch_twitch_game_ids_by_names(["Valorant", "Fortnite"], session)
 
         self.assertEqual(resolved["valorant"], "516575")
         self.assertEqual(resolved["fortnite"], "33214")
 
+    @patch("scrapers.live_metrics.run_twitch_batched")
     @patch("scrapers.live_metrics.fetch_twitch_viewers")
     @patch("scrapers.live_metrics.fetch_twitch_game_ids_by_names")
     @patch("scrapers.twitch_auth.get_twitch_access_token")
@@ -69,6 +72,7 @@ class LiveMetricsTests(unittest.TestCase):
         token_mock: MagicMock,
         ids_mock: MagicMock,
         viewers_mock: MagicMock,
+        batched_mock: MagicMock,
     ) -> None:
         settings_mock.twitch_client_id = "client-id"
         settings_mock.twitch_client_secret = "client-secret"
@@ -76,6 +80,8 @@ class LiveMetricsTests(unittest.TestCase):
         token_mock.return_value = "token-abc"
         ids_mock.return_value = {"valorant": "516575", "fortnite": "33214"}
         viewers_mock.return_value = 99_000
+
+        batched_mock.side_effect = lambda items, fn: [fn(item) for item in items]
 
         entries = fetch_monitored_twitch_live_metrics()
         slugs = {entry.slug for entry in entries}

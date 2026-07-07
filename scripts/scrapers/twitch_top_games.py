@@ -12,8 +12,13 @@ from models.catalog_schemas import GameCatalogEntryPayload
 from scrapers.igdb_catalog_enrichment import enrich_catalog_entries_with_igdb
 from models.normalization import to_slug
 from scrapers.live_metrics import fetch_twitch_viewers
-from scrapers.parallel_utils import run_parallel
 from scrapers.twitch_auth import get_twitch_access_token
+from scrapers.twitch_helix import (
+    helix_get,
+    run_twitch_batched,
+    should_enrich_twitch_viewers_for_rank,
+    twitch_guard,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -110,14 +115,30 @@ def _enrich_twitch_viewers(
     entries: list[TwitchTopGameEntry],
     access_token: str,
 ) -> list[TwitchTopGameEntry]:
-    """Fetch live viewer counts for all entries concurrently."""
+    """Fetch live viewer counts in tier-aware batches (no parallel burst)."""
+    if not entries or not twitch_guard.check_available():
+        return entries
+
+    enrichable = [
+        entry for entry in entries if should_enrich_twitch_viewers_for_rank(entry.twitch_rank)
+    ]
+    skipped_ranks = len(entries) - len(enrichable)
+    if skipped_ranks > 0:
+        logger.info(
+            "Skipping Twitch viewer enrichment for %s lower-priority rank(s).",
+            skipped_ranks,
+        )
+
+    if not enrichable:
+        return entries
+
+    session = _build_twitch_session(access_token)
 
     def fetch_viewers(entry: TwitchTopGameEntry) -> TwitchTopGameEntry:
-        session = _build_twitch_session(access_token)
         try:
             twitch_viewers = fetch_twitch_viewers(entry.twitch_game_id, session)
-        finally:
-            session.close()
+        except Exception:
+            twitch_viewers = None
 
         return TwitchTopGameEntry(
             twitch_game_id=entry.twitch_game_id,
@@ -127,7 +148,19 @@ def _enrich_twitch_viewers(
             twitch_viewers=twitch_viewers,
         )
 
-    return run_parallel(entries, fetch_viewers)
+    try:
+        enriched_by_slug = {
+            entry.slug: entry
+            for entry in run_twitch_batched(enrichable, fetch_viewers)
+            if entry is not None
+        }
+    finally:
+        session.close()
+
+    return [
+        enriched_by_slug.get(entry.slug, entry)
+        for entry in entries
+    ]
 
 
 def _fetch_top_games_page(
@@ -140,12 +173,13 @@ def _fetch_top_games_page(
     if after:
         params["after"] = after
 
-    response = session.get(
+    response = helix_get(
+        session,
         TWITCH_HELIX_GAMES_TOP_URL,
         params=params,
-        timeout=settings.request_timeout_seconds,
     )
-    response.raise_for_status()
+    if response is None:
+        raise RuntimeError("Twitch /games/top request blocked or rate-limited")
 
     payload = response.json()
     data = payload.get("data", [])

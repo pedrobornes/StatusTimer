@@ -29,6 +29,85 @@ class ProbeStrategy(str, Enum):
     EPIC_LIGHTSWITCH = "epic_lightswitch"
 
 
+# Star titles that must always remain Tier 1 regardless of trend calculations.
+ALWAYS_TIER_1: frozenset[str] = frozenset(
+    {
+        "counter-strike-2",
+        "dota-2",
+        "valorant",
+        "apex-legends",
+        "rust",
+        "gta-v",
+        "fortnite",
+        "dead-by-daylight",
+        "world-of-warcraft",
+    }
+)
+
+# Formal scrape-tier buckets (transparent priority model).
+TIER_HIGH = 1       # ALWAYS_TIER_1 + 3-day Top-20 trend promotions
+TIER_MEDIUM = 2     # Current rank 1-50 (not promoted to Tier 1 yet)
+TIER_LOW = 3        # Rank > 50 or unknown — strict per-cycle API cap
+
+_DB_SCRAPE_TIERS: dict[str, int] = {}
+_DB_TWITCH_RANKS: dict[str, int] = {}
+
+
+def refresh_effective_scrape_tier_cache(
+    db_tiers: dict[str, int] | None = None,
+    twitch_ranks: dict[str, int] | None = None,
+) -> None:
+    global _DB_SCRAPE_TIERS, _DB_TWITCH_RANKS
+    _DB_SCRAPE_TIERS = dict(db_tiers or {})
+    _DB_TWITCH_RANKS = dict(twitch_ranks or {})
+
+
+def resolve_effective_scrape_tier(
+    slug: str,
+    *,
+    db_tier: int | None = None,
+    current_rank: int | None = None,
+) -> int:
+    """
+    Resolve scrape tier using the three-bucket model.
+
+    Tier 1: ALWAYS_TIER_1 + active trend promotions (3-day Top 20).
+    Tier 2: Current Twitch rank 1-50 (medium frequency).
+    Tier 3: Rank > 50 or missing (low frequency, API-capped per cycle).
+    """
+    if slug in ALWAYS_TIER_1:
+        return TIER_HIGH
+
+    from pipeline.tier_trends import classify_scrape_tier, is_trend_promoted_tier1
+
+    rank = current_rank
+    if rank is None:
+        rank = _DB_TWITCH_RANKS.get(slug)
+
+    if rank is not None:
+        return classify_scrape_tier(
+            slug,
+            current_rank=rank,
+            trend_promoted=is_trend_promoted_tier1(slug),
+        )
+
+    if is_trend_promoted_tier1(slug):
+        return TIER_HIGH
+
+    if db_tier in {TIER_HIGH, TIER_MEDIUM, TIER_LOW}:
+        return db_tier
+
+    cached = _DB_SCRAPE_TIERS.get(slug)
+    if cached in {TIER_HIGH, TIER_MEDIUM, TIER_LOW}:
+        return cached
+
+    return TIER_MEDIUM
+
+
+def monitored_target_scrape_tier(target: "MonitoredGameTarget") -> int:
+    return resolve_effective_scrape_tier(target.slug)
+
+
 @dataclass(frozen=True)
 class MonitoredGameTarget:
     slug: str
@@ -38,10 +117,34 @@ class MonitoredGameTarget:
     fallback_host: str | None = None
     fallback_port: int = 443
     skip_live_probe: bool = False
+    scrape_tier: int = 2
+
+
+def _target(
+    *,
+    slug: str,
+    display_name: str,
+    strategy: ProbeStrategy,
+    steam_app_id: int | None = None,
+    fallback_host: str | None = None,
+    fallback_port: int = 443,
+    skip_live_probe: bool = False,
+) -> MonitoredGameTarget:
+    """Build a monitored target with tier resolved from ALWAYS_TIER_1 first."""
+    return MonitoredGameTarget(
+        slug=slug,
+        display_name=display_name,
+        strategy=strategy,
+        steam_app_id=steam_app_id,
+        fallback_host=fallback_host,
+        fallback_port=fallback_port,
+        skip_live_probe=skip_live_probe,
+        scrape_tier=resolve_effective_scrape_tier(slug),
+    )
 
 
 MONITORED_GAME_TARGETS: tuple[MonitoredGameTarget, ...] = (
-    MonitoredGameTarget(
+    _target(
         slug="counter-strike-2",
         display_name="Counter-Strike 2",
         strategy=ProbeStrategy.STEAM,
@@ -49,14 +152,14 @@ MONITORED_GAME_TARGETS: tuple[MonitoredGameTarget, ...] = (
         fallback_host="162.254.196.0",
         fallback_port=27015,
     ),
-    MonitoredGameTarget(
+    _target(
         slug="valorant",
         display_name="Valorant",
         strategy=ProbeStrategy.RIOT,
         fallback_host="104.160.131.3",
         fallback_port=443,
     ),
-    MonitoredGameTarget(
+    _target(
         slug="dota-2",
         display_name="Dota 2",
         strategy=ProbeStrategy.STEAM,
@@ -64,7 +167,7 @@ MONITORED_GAME_TARGETS: tuple[MonitoredGameTarget, ...] = (
         fallback_host="146.66.158.0",
         fallback_port=27015,
     ),
-    MonitoredGameTarget(
+    _target(
         slug="pubg",
         display_name="PUBG",
         strategy=ProbeStrategy.STEAM,
@@ -72,35 +175,35 @@ MONITORED_GAME_TARGETS: tuple[MonitoredGameTarget, ...] = (
         fallback_host="52.84.31.105",
         fallback_port=443,
     ),
-    MonitoredGameTarget(
+    _target(
         slug="fortnite",
         display_name="Fortnite",
         strategy=ProbeStrategy.EPIC_LIGHTSWITCH,
         fallback_host="epicgames.com",
         fallback_port=443,
     ),
-    MonitoredGameTarget(
+    _target(
         slug="league-of-legends",
         display_name="League of Legends",
         strategy=ProbeStrategy.RIOT,
         fallback_host="leagueoflegends.com",
         fallback_port=443,
     ),
-    MonitoredGameTarget(
+    _target(
         slug="minecraft",
         display_name="Minecraft",
         strategy=ProbeStrategy.STEAM,
         fallback_host="minecraft.net",
         fallback_port=443,
     ),
-    MonitoredGameTarget(
+    _target(
         slug="roblox",
         display_name="Roblox",
         strategy=ProbeStrategy.STEAM,
         fallback_host="roblox.com",
         fallback_port=443,
     ),
-    MonitoredGameTarget(
+    _target(
         slug="apex-legends",
         display_name="Apex Legends",
         strategy=ProbeStrategy.STEAM,
@@ -108,7 +211,7 @@ MONITORED_GAME_TARGETS: tuple[MonitoredGameTarget, ...] = (
         fallback_host="ea.com",
         fallback_port=443,
     ),
-    MonitoredGameTarget(
+    _target(
         slug="call-of-duty",
         display_name="Call of Duty",
         strategy=ProbeStrategy.STEAM,
@@ -116,7 +219,7 @@ MONITORED_GAME_TARGETS: tuple[MonitoredGameTarget, ...] = (
         fallback_host="callofduty.com",
         fallback_port=443,
     ),
-    MonitoredGameTarget(
+    _target(
         slug="gta-v",
         display_name="GTA V",
         strategy=ProbeStrategy.STEAM,
@@ -124,14 +227,14 @@ MONITORED_GAME_TARGETS: tuple[MonitoredGameTarget, ...] = (
         fallback_host="rockstargames.com",
         fallback_port=443,
     ),
-    MonitoredGameTarget(
+    _target(
         slug="overwatch-2",
         display_name="Overwatch 2",
         strategy=ProbeStrategy.STEAM,
         fallback_host="overwatch.blizzard.com",
         fallback_port=443,
     ),
-    MonitoredGameTarget(
+    _target(
         slug="rainbow-six-siege",
         display_name="Rainbow Six Siege",
         strategy=ProbeStrategy.STEAM,
@@ -139,7 +242,7 @@ MONITORED_GAME_TARGETS: tuple[MonitoredGameTarget, ...] = (
         fallback_host="ubisoft.com",
         fallback_port=443,
     ),
-    MonitoredGameTarget(
+    _target(
         slug="rocket-league",
         display_name="Rocket League",
         strategy=ProbeStrategy.STEAM,
@@ -147,7 +250,7 @@ MONITORED_GAME_TARGETS: tuple[MonitoredGameTarget, ...] = (
         fallback_host="psyonix.com",
         fallback_port=443,
     ),
-    MonitoredGameTarget(
+    _target(
         slug="destiny-2",
         display_name="Destiny 2",
         strategy=ProbeStrategy.STEAM,
@@ -155,7 +258,7 @@ MONITORED_GAME_TARGETS: tuple[MonitoredGameTarget, ...] = (
         fallback_host="bungie.net",
         fallback_port=443,
     ),
-    MonitoredGameTarget(
+    _target(
         slug="rust",
         display_name="Rust",
         strategy=ProbeStrategy.STEAM,
@@ -163,12 +266,27 @@ MONITORED_GAME_TARGETS: tuple[MonitoredGameTarget, ...] = (
         fallback_host="facepunch.com",
         fallback_port=443,
     ),
-    MonitoredGameTarget(
+    _target(
         slug="elden-ring",
         display_name="Elden Ring",
         strategy=ProbeStrategy.STEAM,
         steam_app_id=1245620,
         fallback_host="bandainamcoent.eu",
+        fallback_port=443,
+    ),
+    _target(
+        slug="dead-by-daylight",
+        display_name="Dead by Daylight",
+        strategy=ProbeStrategy.STEAM,
+        steam_app_id=381210,
+        fallback_host="deadbydaylight.com",
+        fallback_port=443,
+    ),
+    _target(
+        slug="world-of-warcraft",
+        display_name="World of Warcraft",
+        strategy=ProbeStrategy.STEAM,
+        fallback_host="worldofwarcraft.com",
         fallback_port=443,
     ),
 )

@@ -43,23 +43,30 @@ class TwitchTopGamesTests(unittest.TestCase):
 
         self.assertIsNone(entry)
 
+    @patch("scrapers.twitch_top_games.run_twitch_batched")
     @patch("scrapers.twitch_top_games.fetch_twitch_viewers")
     @patch("scrapers.twitch_top_games.get_twitch_access_token")
     @patch("scrapers.twitch_top_games._build_twitch_session")
+    @patch("scrapers.twitch_top_games.helix_get")
     @patch("scrapers.twitch_top_games.settings")
     def test_fetch_twitch_top_games_skips_non_game_categories_and_reindexes_rank(
         self,
         settings_mock: MagicMock,
+        helix_mock: MagicMock,
         build_session_mock: MagicMock,
         token_mock: MagicMock,
         viewers_mock: MagicMock,
+        batched_mock: MagicMock,
     ) -> None:
         settings_mock.twitch_client_id = "client-id"
         settings_mock.twitch_client_secret = "client-secret"
         settings_mock.twitch_top_n = 3
         settings_mock.request_timeout_seconds = 15
+        settings_mock.twitch_viewer_enrich_tier1_max_rank = 25
+        settings_mock.twitch_viewer_enrich_tier2_max_rank = 50
         token_mock.return_value = "token-abc"
         viewers_mock.return_value = 42_000
+        batched_mock.side_effect = lambda items, fn: [fn(item) for item in items]
 
         session = MagicMock()
         build_session_mock.return_value = session
@@ -92,7 +99,7 @@ class TwitchTopGamesTests(unittest.TestCase):
             ],
             "pagination": {},
         }
-        session.get.side_effect = [first_response, second_response]
+        helix_mock.side_effect = [first_response, second_response]
 
         entries = fetch_twitch_top_games(limit=3)
 
@@ -103,7 +110,7 @@ class TwitchTopGamesTests(unittest.TestCase):
         self.assertEqual(entries[1].twitch_rank, 2)
         self.assertEqual(entries[2].twitch_rank, 3)
         self.assertEqual(entries[0].twitch_viewers, 42_000)
-        self.assertEqual(session.get.call_count, 2)
+        self.assertEqual(helix_mock.call_count, 2)
         self.assertEqual(viewers_mock.call_count, 3)
 
     @patch("scrapers.twitch_top_games.settings")

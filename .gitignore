@@ -78,5 +78,6 @@ pnpm-debug.log*
 # Ocultar carpetas de planes, metodologías y prompts de agentes
 plans/
 agents/
+GUIA-USO.md
 *.md
 !README.md

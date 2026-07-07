@@ -1,9 +1,13 @@
 """Environment-driven configuration for the StatusTimer harvester script."""
 
 from functools import cached_property
+from pathlib import Path
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_SCRIPTS_DIR = Path(__file__).resolve().parent.parent
+_ENV_FILE = _SCRIPTS_DIR / ".env"
 
 
 class Settings(BaseSettings):
@@ -21,13 +25,36 @@ class Settings(BaseSettings):
     request_timeout_seconds: int = 15
     request_retry_max_attempts: int = 3
     request_retry_delay_seconds: int = 5
+    batch_size_release_sync: int = 50
+    batch_size_catalog_sync: int = 50
+    batch_size_dynamic_catalog_sync: int = 50
+    batch_size_telemetry_sync: int = 50
     harvest_interval_seconds: int = 300
     http_rate_limit_per_minute: int = 20
     http_jitter_min_seconds: float = 0.3
     http_jitter_max_seconds: float = 1.5
     http_circuit_failure_threshold: int = 3
     http_circuit_open_seconds: int = 300
+    phase_circuit_failure_threshold: int = 3
+    phase_circuit_open_seconds: int = 600
+    twitch_batch_size: int = 5
+    twitch_batch_pause_seconds: float = 1.2
+    twitch_circuit_failure_threshold: int = 2
+    twitch_circuit_open_seconds: int = 600
+    twitch_games_lookup_batch_size: int = 20
+    twitch_viewer_enrich_tier1_max_rank: int = 25
+    twitch_viewer_enrich_tier2_max_rank: int = 50
+    twitch_metrics_max_tier3_per_cycle: int = 5
     dedup_state_file: str = ".harvest_state/processed_hashes.json"
+    tier_rank_history_file: str = ".harvest_state/tier_rank_history.json"
+    tier_trend_state_file: str = ".harvest_state/tier_trend_state.json"
+    tier_rank_history_keep_days: int = 14
+    tier_trend_lookback_days: int = 3
+    tier_trend_promote_top_rank: int = 20
+    tier_trend_demote_below_rank: int = 50
+    tier_trend_promotion_days: int = 7
+    tier_rebalance_interval_days: int = 3
+    tier_rebalance_force_monday: bool = True
     feed_lookback_days: int = 7
     steam_news_max_items: int = 10
     steam_news_top_n: int = 15
@@ -58,7 +85,7 @@ class Settings(BaseSettings):
     incident_fallback_message: str = "NO_ACTIONABLE_STATUS_INFO"
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(_ENV_FILE),
         env_file_encoding="utf-8",
         case_sensitive=False,
     )

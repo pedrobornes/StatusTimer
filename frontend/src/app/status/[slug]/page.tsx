@@ -69,7 +69,7 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
         <PageShell
           badge="Live Server Status"
           title={`Is ${gameName} Down?`}
-          subtitle={`Activating live monitoring for ${gameName}. First check in progress.`}
+          subtitle={`We're checking ${gameName} servers right now. It may take a few minutes.`}
           coverUrl={coverUrl}
           coverAlt={gameName}
         >

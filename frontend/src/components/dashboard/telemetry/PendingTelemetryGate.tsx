@@ -75,22 +75,23 @@ export default function PendingTelemetryGate({
         />
         <div className="space-y-2">
           <p className="text-base font-medium text-white">
-            Calibrating live telemetry…
+            Looking for live server info…
           </p>
           <p className="text-sm leading-6 text-slate-400">
-            This usually takes less than a minute. We do not show placeholder
-            data while the harvester completes the first live check.
+            We are checking if the game is online right now. This can take a few
+            minutes. Please wait — the page will update on its own when we have
+            the answer.
           </p>
           {showSlowMessage ? (
             <p className="text-sm leading-6 text-amber-200/80">
-              Still in the priority queue. This page will refresh automatically
-              as soon as real data arrives.
+              Still working on it. Thanks for waiting — we have not forgotten
+              this game.
             </p>
           ) : null}
           {timedOut ? (
             <p className="text-sm leading-6 text-rose-200/90">
-              Calibration is taking longer than usual. You can reload in a few
-              seconds or check back shortly.
+              This is taking longer than usual. Try refreshing the page, or
+              check back in a few minutes.
             </p>
           ) : null}
         </div>

@@ -6,9 +6,19 @@ import logging
 from typing import TYPE_CHECKING
 
 import requests
+import time
 
 from config.settings import settings
 from scrapers.parallel_utils import run_parallel
+from scrapers.status import monitored_target_scrape_tier, resolve_effective_scrape_tier
+from scrapers.twitch_helix import (
+    helix_get,
+    parse_scrape_tier,
+    prioritize_by_tier,
+    prioritize_workload_targets,
+    run_twitch_batched,
+    twitch_guard,
+)
 
 if TYPE_CHECKING:
     from scrapers.status import MonitoredGameTarget
@@ -21,7 +31,6 @@ STEAM_PLAYERS_URL = (
 TWITCH_STREAMS_URL = "https://api.twitch.tv/helix/streams"
 TWITCH_GAMES_URL = "https://api.twitch.tv/helix/games"
 TWITCH_STREAMS_PAGE_SIZE = 100
-TWITCH_GAMES_LOOKUP_BATCH_SIZE = 100
 
 
 def _normalize_twitch_game_name(name: str) -> str:
@@ -73,26 +82,29 @@ def fetch_twitch_game_ids_by_names(
     session: requests.Session,
 ) -> dict[str, str]:
     """Resolve Twitch Helix game ids keyed by exact category name."""
-    if not game_names:
+    if not game_names or not twitch_guard.check_available():
         return {}
 
     unique_names = list(dict.fromkeys(name for name in game_names if name))
     resolved: dict[str, str] = {}
+    batch_size = settings.twitch_games_lookup_batch_size
 
-    for offset in range(0, len(unique_names), TWITCH_GAMES_LOOKUP_BATCH_SIZE):
-        chunk = unique_names[offset : offset + TWITCH_GAMES_LOOKUP_BATCH_SIZE]
+    for offset in range(0, len(unique_names), batch_size):
+        if not twitch_guard.check_available():
+            logger.warning("Twitch circuit open — stopping /games lookup early.")
+            break
+
+        chunk = unique_names[offset : offset + batch_size]
         params: list[tuple[str, str]] = [("name", name) for name in chunk]
 
+        response = helix_get(session, TWITCH_GAMES_URL, params=params)
+        if response is None:
+            continue
+
         try:
-            response = session.get(
-                TWITCH_GAMES_URL,
-                params=params,
-                timeout=settings.request_timeout_seconds,
-            )
-            response.raise_for_status()
             payload = response.json()
-        except (requests.RequestException, ValueError) as error:
-            logger.warning("Twitch /games lookup failed: %s", error)
+        except ValueError as error:
+            logger.warning("Twitch /games lookup returned invalid JSON: %s", error)
             continue
 
         games = payload.get("data", [])
@@ -111,6 +123,9 @@ def fetch_twitch_game_ids_by_names(
                 and game_name.strip()
             ):
                 resolved[_normalize_twitch_game_name(game_name)] = game_id
+
+        if offset + batch_size < len(unique_names) and twitch_guard.check_available():
+            time.sleep(settings.twitch_batch_pause_seconds)
 
     return resolved
 
@@ -138,7 +153,11 @@ def _fetch_monitored_twitch_entry(
         return None
 
     session = _build_twitch_session(access_token)
-    twitch_viewers = fetch_twitch_viewers(twitch_game_id, session)
+    try:
+        twitch_viewers = fetch_twitch_viewers(twitch_game_id, session)
+    finally:
+        session.close()
+
     if twitch_viewers is None:
         return None
 
@@ -150,8 +169,17 @@ def _fetch_monitored_twitch_entry(
     )
 
 
+def _prioritize_monitored_twitch_targets(
+    targets: list["MonitoredGameTarget"],
+) -> list["MonitoredGameTarget"]:
+    return prioritize_by_tier(
+        targets,
+        tier_getter=monitored_target_scrape_tier,
+    )
+
+
 def fetch_monitored_twitch_live_metrics() -> list:
-    """Build Twitch viewer patches for all actively monitored titles."""
+    """Build Twitch viewer patches for actively monitored titles (tier-prioritized)."""
     from scrapers.status import MONITORED_GAME_TARGETS
     from scrapers.twitch_auth import get_twitch_access_token
     from config.twitch_game_registry import resolve_twitch_lookup_name
@@ -160,16 +188,23 @@ def fetch_monitored_twitch_live_metrics() -> list:
         logger.warning("Twitch credentials not configured; skipping monitored Twitch metrics.")
         return []
 
-    active_targets = [
-        target for target in MONITORED_GAME_TARGETS if not target.skip_live_probe
-    ]
+    active_targets = _prioritize_monitored_twitch_targets(
+        [target for target in MONITORED_GAME_TARGETS if not target.skip_live_probe]
+    )
     if not active_targets:
+        return []
+
+    if not twitch_guard.check_available():
+        logger.warning("Twitch circuit open — skipping monitored Twitch metrics.")
         return []
 
     access_token = get_twitch_access_token()
     session = _build_twitch_session(access_token)
-    lookup_names = [resolve_twitch_lookup_name(target) for target in active_targets]
-    game_ids_by_name = fetch_twitch_game_ids_by_names(lookup_names, session)
+    try:
+        lookup_names = [resolve_twitch_lookup_name(target) for target in active_targets]
+        game_ids_by_name = fetch_twitch_game_ids_by_names(lookup_names, session)
+    finally:
+        session.close()
 
     def fetch_entry(target: "MonitoredGameTarget"):
         return _fetch_monitored_twitch_entry(
@@ -178,10 +213,13 @@ def fetch_monitored_twitch_live_metrics() -> list:
             game_ids_by_name=game_ids_by_name,
         )
 
-    raw_entries = run_parallel(active_targets, fetch_entry)
+    raw_entries = run_twitch_batched(active_targets, fetch_entry)
     entries = [entry for entry in raw_entries if entry is not None]
 
-    logger.info("Prepared %s monitored Twitch viewer patches", len(entries))
+    logger.info(
+        "Prepared %s monitored Twitch viewer patches (tier-prioritized, batched)",
+        len(entries),
+    )
     return entries
 
 
@@ -231,7 +269,7 @@ def fetch_twitch_viewers(
     session: requests.Session,
 ) -> int | None:
     """Sum live viewer counts across active Twitch streams for a game."""
-    if not twitch_game_id:
+    if not twitch_game_id or not twitch_guard.check_available():
         return None
 
     total_viewers = 0
@@ -245,17 +283,19 @@ def fetch_twitch_viewers(
         if cursor:
             params["after"] = cursor
 
-        try:
-            response = session.get(
-                TWITCH_STREAMS_URL,
-                params=params,
-                timeout=settings.request_timeout_seconds,
-            )
-            response.raise_for_status()
-            payload = response.json()
-        except (requests.RequestException, ValueError) as error:
+        response = helix_get(session, TWITCH_STREAMS_URL, params=params)
+        if response is None:
             logger.warning(
-                "Twitch streams lookup failed for game_id=%s: %s",
+                "Twitch streams lookup failed for game_id=%s",
+                twitch_game_id,
+            )
+            return None
+
+        try:
+            payload = response.json()
+        except ValueError as error:
+            logger.warning(
+                "Twitch streams lookup returned invalid JSON for game_id=%s: %s",
                 twitch_game_id,
                 error,
             )
@@ -329,6 +369,10 @@ def fetch_scheduled_steam_metrics(targets: list[dict[str, object]]) -> list:
                     display_name=str(entry.get("gameName") or slug),
                     strategy=ProbeStrategy.STEAM,
                     steam_app_id=steam_app_id,
+                    scrape_tier=resolve_effective_scrape_tier(
+                        slug,
+                        db_tier=parse_scrape_tier(entry.get("scrapeTier")),
+                    ),
                 )
             )
 
@@ -339,7 +383,7 @@ def fetch_scheduled_steam_metrics(targets: list[dict[str, object]]) -> list:
 
 
 def fetch_scheduled_twitch_metrics(targets: list[dict[str, object]]) -> list:
-    """Build Twitch viewer patches for scheduler-selected targets."""
+    """Build Twitch viewer patches for scheduler-selected targets (tier-prioritized)."""
     from config.twitch_game_registry import resolve_twitch_lookup_name
     from scrapers.status import MONITORED_GAME_TARGETS, MonitoredGameTarget, ProbeStrategy
     from scrapers.twitch_auth import get_twitch_access_token
@@ -351,10 +395,15 @@ def fetch_scheduled_twitch_metrics(targets: list[dict[str, object]]) -> list:
         logger.warning("Twitch credentials not configured; skipping scheduled Twitch metrics.")
         return []
 
+    if not twitch_guard.check_available():
+        logger.warning("Twitch circuit open — skipping scheduled Twitch metrics.")
+        return []
+
+    prioritized_targets = prioritize_workload_targets(targets)
     monitored_by_slug = {target.slug: target for target in MONITORED_GAME_TARGETS}
     resolved_targets: list[MonitoredGameTarget] = []
 
-    for entry in targets:
+    for entry in prioritized_targets:
         slug = str(entry.get("slug") or "")
         if not slug:
             continue
@@ -370,6 +419,10 @@ def fetch_scheduled_twitch_metrics(targets: list[dict[str, object]]) -> list:
                 slug=slug,
                 display_name=game_name,
                 strategy=ProbeStrategy.STEAM,
+                scrape_tier=resolve_effective_scrape_tier(
+                    slug,
+                    db_tier=parse_scrape_tier(entry.get("scrapeTier")),
+                ),
             )
         )
 
@@ -378,17 +431,23 @@ def fetch_scheduled_twitch_metrics(targets: list[dict[str, object]]) -> list:
 
     access_token = get_twitch_access_token()
     session = _build_twitch_session(access_token)
-    lookup_names = [resolve_twitch_lookup_name(target) for target in resolved_targets]
-    game_ids_by_name = fetch_twitch_game_ids_by_names(lookup_names, session)
+    try:
+        lookup_names = [resolve_twitch_lookup_name(target) for target in resolved_targets]
+        game_ids_by_name = fetch_twitch_game_ids_by_names(lookup_names, session)
+    finally:
+        session.close()
 
-    def fetch_entry(target: "MonitoredGameTarget"):
+    def fetch_entry(target: MonitoredGameTarget):
         return _fetch_monitored_twitch_entry(
             target,
             access_token=access_token,
             game_ids_by_name=game_ids_by_name,
         )
 
-    raw_entries = run_parallel(resolved_targets, fetch_entry)
+    raw_entries = run_twitch_batched(resolved_targets, fetch_entry)
     entries = [entry for entry in raw_entries if entry is not None]
-    logger.info("Prepared %s scheduled Twitch viewer patches", len(entries))
+    logger.info(
+        "Prepared %s scheduled Twitch viewer patches (tier-prioritized, batched)",
+        len(entries),
+    )
     return entries
