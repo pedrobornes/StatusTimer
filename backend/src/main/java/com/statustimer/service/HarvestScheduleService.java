@@ -4,10 +4,10 @@ import com.statustimer.config.HarvestScheduleProperties;
 import com.statustimer.dto.request.CompleteHarvestWorkRequest;
 import com.statustimer.dto.response.HarvestWorkTargetResponse;
 import com.statustimer.dto.response.HarvestWorkloadResponse;
+import com.statustimer.entity.Game;
 import com.statustimer.entity.HarvestWorkType;
 import com.statustimer.entity.LifecycleState;
-import com.statustimer.entity.TrackedGame;
-import com.statustimer.repository.TrackedGameRepository;
+import com.statustimer.repository.GameRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -25,7 +25,7 @@ public class HarvestScheduleService {
             LifecycleState.INDEXABLE
     );
 
-    private final TrackedGameRepository trackedGameRepository;
+    private final GameRepository gameRepository;
     private final HarvestScheduleProperties harvestScheduleProperties;
 
     @Transactional(readOnly = true)
@@ -63,15 +63,15 @@ public class HarvestScheduleService {
                 continue;
             }
 
-            trackedGameRepository.findBySlug(result.slug()).ifPresent(game -> {
+            gameRepository.findBySlug(result.slug()).ifPresent(game -> {
                 applyWorkResult(game, result.workType(), result.success(), now);
-                trackedGameRepository.save(game);
+                gameRepository.save(game);
             });
         }
     }
 
     @Transactional
-    public void ensureScheduleInitialized(TrackedGame game) {
+    public void ensureScheduleInitialized(Game game) {
         LocalDateTime now = LocalDateTime.now();
         boolean changed = false;
 
@@ -91,12 +91,12 @@ public class HarvestScheduleService {
         }
 
         if (changed) {
-            trackedGameRepository.save(game);
+            gameRepository.save(game);
         }
     }
 
     private List<HarvestWorkTargetResponse> findTelemetryDue(LocalDateTime now) {
-        return trackedGameRepository
+        return gameRepository
                 .findByLifecycleStateInAndNextTelemetryAtLessThanEqualOrderByScrapeTierAsc(
                         ACTIVE_MONITORING,
                         now,
@@ -108,7 +108,7 @@ public class HarvestScheduleService {
     }
 
     private List<HarvestWorkTargetResponse> findMetricsDue(LocalDateTime now) {
-        return trackedGameRepository
+        return gameRepository
                 .findByLifecycleStateInAndNextMetricsAtLessThanEqualOrderByScrapeTierAsc(
                         ACTIVE_MONITORING,
                         now,
@@ -120,7 +120,7 @@ public class HarvestScheduleService {
     }
 
     private List<HarvestWorkTargetResponse> findNewsDue(LocalDateTime now) {
-        return trackedGameRepository
+        return gameRepository
                 .findByLifecycleStateInAndNextNewsAtLessThanEqualOrderByScrapeTierAsc(
                         ACTIVE_MONITORING,
                         now,
@@ -132,12 +132,12 @@ public class HarvestScheduleService {
     }
 
     private void applyWorkResult(
-            TrackedGame game,
+            Game game,
             HarvestWorkType workType,
             boolean success,
             LocalDateTime now
     ) {
-        int tier = game.getScrapeTier() != null ? game.getScrapeTier() : 3;
+        int tier = java.util.Objects.requireNonNullElse(game.getScrapeTier(), 3);
 
         if (workType == HarvestWorkType.TELEMETRY) {
             if (success) {
@@ -174,7 +174,7 @@ public class HarvestScheduleService {
         }
     }
 
-    private HarvestWorkTargetResponse toTargetResponse(TrackedGame game) {
+    private HarvestWorkTargetResponse toTargetResponse(Game game) {
         return new HarvestWorkTargetResponse(
                 game.getSlug(),
                 game.getGameName(),
@@ -184,7 +184,7 @@ public class HarvestScheduleService {
         );
     }
 
-    private boolean isActiveMonitoring(TrackedGame game) {
+    private boolean isActiveMonitoring(Game game) {
         return game.getLifecycleState() == LifecycleState.MONITORED
                 || game.getLifecycleState() == LifecycleState.INDEXABLE;
     }

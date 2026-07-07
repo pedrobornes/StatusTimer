@@ -107,6 +107,16 @@ public class PublicApiController {
         return gamingNewsService.findLatest();
     }
 
+    @GetMapping("/news/{id}")
+    public GamingNewsResponse getGamingNewsById(@PathVariable Long id) {
+        return gamingNewsService.findById(id);
+    }
+
+    @GetMapping("/news/slug/{slug}")
+    public GamingNewsResponse getGamingNewsBySlug(@PathVariable String slug) {
+        return gamingNewsService.findBySlug(slug);
+    }
+
     @GetMapping("/releases")
     public List<UpcomingReleaseResponse> getUpcomingReleases() {
         return upcomingReleaseService.findAll();

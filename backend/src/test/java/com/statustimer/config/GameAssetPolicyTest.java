@@ -3,14 +3,14 @@ package com.statustimer.config;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import com.statustimer.entity.TrackedGame;
+import com.statustimer.entity.Game;
 import org.junit.jupiter.api.Test;
 
 class GameAssetPolicyTest {
 
     @Test
     void applyIgdbAssetsPersistsLogoAndCoverUrls() {
-        TrackedGame game = TrackedGame.builder()
+        Game game = Game.builder()
                 .slug("grand-theft-auto-vi")
                 .gameName("Grand Theft Auto VI")
                 .build();
@@ -33,7 +33,7 @@ class GameAssetPolicyTest {
 
     @Test
     void applyIgdbAssetsRejectsSteamAndTwitchUrls() {
-        TrackedGame game = TrackedGame.builder()
+        Game game = Game.builder()
                 .slug("valorant")
                 .gameName("Valorant")
                 .build();
@@ -50,7 +50,7 @@ class GameAssetPolicyTest {
 
     @Test
     void normalizeStoredAssetsClearsLegacyNonIgdbUrls() {
-        TrackedGame game = TrackedGame.builder()
+        Game game = Game.builder()
                 .slug("counter-strike-2")
                 .gameName("Counter-Strike 2")
                 .logoUrl("https://static-cdn.jtvnw.net/ttv-boxart/32399-300x400.jpg")

@@ -4,10 +4,8 @@ import { useMemo, useState } from "react";
 import GenreFilterBar from "@/components/GenreFilterBar";
 import ReleasesGrid from "@/components/ReleasesGrid";
 import {
-  collectReleaseThemes,
   filterReleasesByGenre,
   filterReleasesByMinRating,
-  filterReleasesByTheme,
   sortReleases,
   type ReleaseGenreFilter,
   type ReleaseSortMode,
@@ -20,24 +18,17 @@ interface ReleasesHubProps {
 
 export default function ReleasesHub({ releases }: ReleasesHubProps) {
   const [currentGenre, setCurrentGenre] = useState<ReleaseGenreFilter>("All");
-  const [currentTheme, setCurrentTheme] = useState<string | "All">("All");
   const [minRating, setMinRating] = useState<number | null>(null);
   const [sortMode, setSortMode] = useState<ReleaseSortMode>("hype");
 
-  const availableThemes = useMemo(
-    () => collectReleaseThemes(releases),
-    [releases],
-  );
-
   const filteredReleases = useMemo(() => {
     const byGenre = filterReleasesByGenre(releases, currentGenre);
-    const byTheme = filterReleasesByTheme(byGenre, currentTheme);
-    const byRating = filterReleasesByMinRating(byTheme, minRating);
+    const byRating = filterReleasesByMinRating(byGenre, minRating);
     return sortReleases(byRating, sortMode);
-  }, [releases, currentGenre, currentTheme, minRating, sortMode]);
+  }, [releases, currentGenre, minRating, sortMode]);
 
   const emptyMessage =
-    currentGenre === "All" && currentTheme === "All" && minRating == null
+    currentGenre === "All" && minRating == null
       ? "No upcoming games found right now. Check back soon for new reveals!"
       : "No releases match the selected filters yet.";
 
@@ -86,36 +77,6 @@ export default function ReleasesHub({ releases }: ReleasesHubProps) {
         currentGenre={currentGenre}
         onGenreChange={setCurrentGenre}
       />
-
-      {availableThemes.length > 0 ? (
-        <div className="mb-6 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setCurrentTheme("All")}
-            className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition ${
-              currentTheme === "All"
-                ? "border-violet-400/35 bg-violet-500/20 text-violet-50"
-                : "border-white/12 bg-white/[0.04] text-slate-300 hover:border-violet-400/25 hover:text-white"
-            }`}
-          >
-            All themes
-          </button>
-          {availableThemes.map((theme) => (
-            <button
-              key={theme}
-              type="button"
-              onClick={() => setCurrentTheme(theme)}
-              className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition ${
-                currentTheme === theme
-                  ? "border-violet-400/35 bg-violet-500/20 text-violet-50"
-                  : "border-white/12 bg-white/[0.04] text-slate-300 hover:border-violet-400/25 hover:text-white"
-              }`}
-            >
-              {theme}
-            </button>
-          ))}
-        </div>
-      ) : null}
 
       <ReleasesGrid releases={filteredReleases} emptyMessage={emptyMessage} />
     </>

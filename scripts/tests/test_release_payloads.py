@@ -36,10 +36,10 @@ class ReleasePayloadTests(unittest.TestCase):
             {
                 "id": 42,
                 "name": "Grand Theft Auto VI",
+                "category": 0,
                 "first_release_date": 1795046400,
                 "platforms": [167, 169],
                 "genres": [{"name": "Adventure"}],
-                "themes": [{"name": "Open world"}],
                 "hypes": 12840,
                 "rating": 92.5,
                 "aggregated_rating": 95.0,
@@ -55,7 +55,6 @@ class ReleasePayloadTests(unittest.TestCase):
         self.assertEqual(payload.hype_count, 12840)
         self.assertEqual(payload.user_rating, 92)
         self.assertEqual(payload.critic_rating, 95)
-        self.assertEqual(payload.themes, ["Open world"])
         self.assertEqual(payload.trailer_video_ids, ["abc123xyz"])
         self.assertTrue(payload.image_url.startswith("https://images.igdb.com/"))
 
@@ -64,6 +63,7 @@ class ReleasePayloadTests(unittest.TestCase):
         metadata = parse_igdb_game_metadata(
             {
                 "name": "Grand Theft Auto VI",
+                "category": 0,
                 "first_release_date": 1795046400,
                 "platforms": [167, 169],
                 "genres": [{"name": "Adventure"}],

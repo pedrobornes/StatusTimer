@@ -40,7 +40,7 @@ export function usePlatformIntel(
       const message =
         fetchError instanceof Error
           ? fetchError.message
-          : "Unable to load platform intelligence feed.";
+          : "Unable to load latest updates right now.";
       setError(message);
     } finally {
       setLoading(false);

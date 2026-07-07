@@ -1,12 +1,12 @@
 package com.statustimer.service;
 
 import com.statustimer.config.TelemetryHistoryProperties;
+import com.statustimer.entity.Game;
 import com.statustimer.entity.GameTelemetryHistory;
 import com.statustimer.entity.TelemetrySource;
 import com.statustimer.entity.TelemetryStatus;
-import com.statustimer.entity.TrackedGame;
+import com.statustimer.repository.GameRepository;
 import com.statustimer.repository.GameTelemetryHistoryRepository;
-import com.statustimer.repository.TrackedGameRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class TelemetryHistoryService {
 
     private final GameTelemetryHistoryRepository gameTelemetryHistoryRepository;
-    private final TrackedGameRepository trackedGameRepository;
+    private final GameRepository gameRepository;
     private final TelemetryHistoryProperties telemetryHistoryProperties;
     private final TelemetryDailyRollupService telemetryDailyRollupService;
 
@@ -35,9 +35,13 @@ public class TelemetryHistoryService {
         if (!shouldAppendSnapshot(gameSlug, status, checkedAt)) {
             return;
         }
+        Game game = gameRepository.findBySlug(gameSlug).orElse(null);
+        if (game == null) {
+            return;
+        }
 
         gameTelemetryHistoryRepository.save(GameTelemetryHistory.builder()
-                .gameSlug(gameSlug)
+                .game(game)
                 .status(status)
                 .dataSource(dataSource)
                 .checkedAt(checkedAt)
@@ -77,7 +81,7 @@ public class TelemetryHistoryService {
             TelemetryStatus status,
             LocalDateTime checkedAt
     ) {
-        return gameTelemetryHistoryRepository.findTopByGameSlugOrderByCheckedAtDesc(gameSlug)
+        return gameTelemetryHistoryRepository.findTopByGame_SlugOrderByCheckedAtDesc(gameSlug)
                 .map(latest -> shouldAppendAfterLatest(latest, gameSlug, status, checkedAt))
                 .orElse(true);
     }
@@ -98,8 +102,8 @@ public class TelemetryHistoryService {
     }
 
     private int resolveHeartbeatMinutes(String gameSlug) {
-        return trackedGameRepository.findBySlug(gameSlug)
-                .map(TrackedGame::getScrapeTier)
+        return gameRepository.findBySlug(gameSlug)
+                .map(com.statustimer.entity.Game::getScrapeTier)
                 .map(telemetryHistoryProperties::heartbeatMinutesForTier)
                 .orElse(telemetryHistoryProperties.heartbeatMinutesTier2());
     }

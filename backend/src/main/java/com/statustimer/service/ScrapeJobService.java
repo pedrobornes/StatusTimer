@@ -1,12 +1,12 @@
 package com.statustimer.service;
 
 import com.statustimer.dto.response.PendingScrapeJobResponse;
+import com.statustimer.entity.Game;
 import com.statustimer.entity.ScrapeJob;
 import com.statustimer.entity.ScrapeJobStatus;
 import com.statustimer.entity.ScrapeJobType;
-import com.statustimer.entity.TrackedGame;
+import com.statustimer.repository.GameRepository;
 import com.statustimer.repository.ScrapeJobRepository;
-import com.statustimer.repository.TrackedGameRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +23,7 @@ public class ScrapeJobService {
     public static final int ON_DEMAND_PRIORITY = 100;
 
     private final ScrapeJobRepository scrapeJobRepository;
-    private final TrackedGameRepository trackedGameRepository;
+    private final GameRepository gameRepository;
 
     @Transactional
     public boolean enqueueFullJob(String slug) {
@@ -107,7 +107,7 @@ public class ScrapeJobService {
     }
 
     private PendingScrapeJobResponse toPendingResponse(ScrapeJob job) {
-        TrackedGame game = trackedGameRepository.findBySlug(job.getSlug()).orElse(null);
+        Game game = gameRepository.findBySlug(job.getSlug()).orElse(null);
 
         return new PendingScrapeJobResponse(
                 job.getId(),

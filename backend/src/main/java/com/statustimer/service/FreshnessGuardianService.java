@@ -2,9 +2,9 @@ package com.statustimer.service;
 
 import com.statustimer.config.CacheConfig;
 import com.statustimer.config.IndexabilityProperties;
+import com.statustimer.entity.Game;
 import com.statustimer.entity.LifecycleState;
-import com.statustimer.entity.TrackedGame;
-import com.statustimer.repository.TrackedGameRepository;
+import com.statustimer.repository.GameRepository;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;
@@ -25,7 +25,7 @@ public class FreshnessGuardianService {
             LifecycleState.INDEXABLE
     );
 
-    private final TrackedGameRepository trackedGameRepository;
+    private final GameRepository gameRepository;
     private final IndexabilityProperties indexabilityProperties;
     private final IndexabilityService indexabilityService;
 
@@ -42,7 +42,7 @@ public class FreshnessGuardianService {
         int changed = 0;
         LocalDateTime now = LocalDateTime.now();
 
-        for (TrackedGame game : trackedGameRepository.findAll()) {
+        for (Game game : gameRepository.findAll()) {
             if (!GUARDED_LIFECYCLES.contains(game.getLifecycleState())) {
                 continue;
             }
@@ -55,7 +55,7 @@ public class FreshnessGuardianService {
                 continue;
             }
 
-            int tier = game.getScrapeTier() != null ? game.getScrapeTier() : 3;
+            int tier = java.util.Objects.requireNonNullElse(game.getScrapeTier(), 3);
             long hoursSinceTelemetry = ChronoUnit.HOURS.between(game.getLastTelemetryAt(), now);
             if (hoursSinceTelemetry <= indexabilityProperties.freshnessHoursForTier(tier)) {
                 continue;
@@ -66,7 +66,7 @@ public class FreshnessGuardianService {
             if (game.getLifecycleState() == LifecycleState.INDEXABLE) {
                 game.setLifecycleState(LifecycleState.MONITORED);
             }
-            trackedGameRepository.save(game);
+            gameRepository.save(game);
             changed++;
         }
 
@@ -82,24 +82,24 @@ public class FreshnessGuardianService {
     public void reportApiOutage(String domain, boolean active) {
         if (active) {
             apiOutageReportedAt = LocalDateTime.now();
-            for (TrackedGame game : trackedGameRepository.findAll()) {
+            for (Game game : gameRepository.findAll()) {
                 if (!GUARDED_LIFECYCLES.contains(game.getLifecycleState())) {
                     continue;
                 }
                 game.setStaleReason(IndexabilityProperties.STALE_REASON_API_OUTAGE);
-                trackedGameRepository.save(game);
+                gameRepository.save(game);
             }
             log.warn("API outage reported for domain={} — SEO grace period enabled", domain);
             return;
         }
 
         apiOutageReportedAt = null;
-        for (TrackedGame game : trackedGameRepository.findAll()) {
+        for (Game game : gameRepository.findAll()) {
             if (!IndexabilityProperties.STALE_REASON_API_OUTAGE.equals(game.getStaleReason())) {
                 continue;
             }
             game.setStaleReason(null);
-            trackedGameRepository.save(game);
+            gameRepository.save(game);
             indexabilityService.recalculateForSlug(game.getSlug());
         }
         log.info("API outage cleared for domain={}", domain);

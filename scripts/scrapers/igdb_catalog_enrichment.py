@@ -44,7 +44,6 @@ def enrich_catalog_entries_with_igdb(
                     "genre_name": metadata.genre_names[0] if metadata.genre_names else None,
                     "user_rating": metadata.user_rating,
                     "critic_rating": metadata.critic_rating,
-                    "themes": metadata.themes,
                     "screenshot_urls": metadata.screenshot_urls,
                     "trailer_video_ids": metadata.trailer_video_ids,
                 }

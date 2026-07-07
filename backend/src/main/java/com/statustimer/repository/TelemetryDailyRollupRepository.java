@@ -11,9 +11,9 @@ import org.springframework.data.repository.query.Param;
 
 public interface TelemetryDailyRollupRepository extends JpaRepository<TelemetryDailyRollup, Long> {
 
-    Optional<TelemetryDailyRollup> findByGameSlugAndRollupDate(String gameSlug, LocalDate rollupDate);
+    Optional<TelemetryDailyRollup> findByGame_SlugAndRollupDate(String gameSlug, LocalDate rollupDate);
 
-    List<TelemetryDailyRollup> findByGameSlugAndRollupDateGreaterThanEqual(
+    List<TelemetryDailyRollup> findByGame_SlugAndRollupDateGreaterThanEqual(
             String gameSlug,
             LocalDate rollupDate
     );

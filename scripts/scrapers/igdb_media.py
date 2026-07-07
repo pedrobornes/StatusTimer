@@ -11,7 +11,7 @@ STEAM_EXTERNAL_CATEGORY = 1
 MAIN_GAME_CATEGORY = 0
 
 IGDB_GAME_FIELDS = (
-    "id, name, slug, category, first_release_date, platforms, genres.name, themes.name, "
+    "id, name, slug, category, first_release_date, platforms, genres.name, "
     "cover.image_id, artworks.image_id, screenshots.image_id, "
     "hypes, rating, aggregated_rating, "
     "videos.video_id, external_games.uid, external_games.category"
@@ -27,7 +27,6 @@ class IgdbGameMetadata:
     cover_url: str | None
     user_rating: int | None
     critic_rating: int | None
-    themes: list[str] = field(default_factory=list)
     genre_names: list[str] = field(default_factory=list)
     screenshot_urls: list[str] = field(default_factory=list)
     trailer_video_ids: list[str] = field(default_factory=list)
@@ -43,8 +42,6 @@ def igdb_image_url(image_id: str, size: str = "t_cover_big") -> str:
 
 def is_main_game(raw_game: dict[str, Any]) -> bool:
     category = raw_game.get("category")
-    if category is None:
-        return True
     if isinstance(category, int):
         return category == MAIN_GAME_CATEGORY
     return False
@@ -72,7 +69,6 @@ def parse_igdb_game_metadata(raw_game: dict[str, Any]) -> IgdbGameMetadata:
         cover_url=cover_url,
         user_rating=_normalize_rating(raw_game.get("rating")),
         critic_rating=_normalize_rating(raw_game.get("aggregated_rating")),
-        themes=_resolve_theme_names(raw_game.get("themes")),
         genre_names=_resolve_genre_names(raw_game.get("genres")),
         screenshot_urls=_resolve_screenshot_urls(raw_game.get("screenshots")),
         trailer_video_ids=_resolve_trailer_ids(raw_game.get("videos")),
@@ -128,10 +124,6 @@ def _resolve_trailer_ids(raw_videos: Any) -> list[str]:
             trailer_ids.append(video_id.strip())
 
     return trailer_ids
-
-
-def _resolve_theme_names(raw_themes: Any) -> list[str]:
-    return _resolve_expanded_names(raw_themes)
 
 
 def _resolve_genre_names(raw_genres: Any) -> list[str]:

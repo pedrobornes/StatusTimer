@@ -4,6 +4,7 @@ import DashboardError from "@/components/dashboard/DashboardError";
 import type { ApiRequestOptions } from "@/services/api";
 import { getGamingNews } from "@/services/newsService";
 import { getUpcomingReleases } from "@/services/releasesService";
+import { getServerStatuses } from "@/services/statusService";
 import {
   getDashboardTelemetry,
   getGameTelemetry,
@@ -71,11 +72,12 @@ async function loadTelemetryHistoryBySlug(
 
 export default async function HomePage() {
   try {
-    const [gameTelemetry, news, releases, incidents] = await Promise.all([
+    const [gameTelemetry, news, releases, incidents, statuses] = await Promise.all([
       loadDashboardTelemetry(DASHBOARD_TELEMETRY_LIMIT),
       getGamingNews(),
       getUpcomingReleases(),
       getTelemetryIncidents().catch(() => []),
+      getServerStatuses().catch(() => []),
     ]);
 
     const historyBySlug = await loadTelemetryHistoryBySlug(
@@ -89,6 +91,7 @@ export default async function HomePage() {
         news={news.slice(0, 12)}
         releases={releases.slice(0, 4)}
         incidents={incidents}
+        statuses={statuses}
       />
     );
   } catch (error) {

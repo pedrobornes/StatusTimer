@@ -1,11 +1,10 @@
 package com.statustimer.service;
 
 import com.statustimer.config.GameSlugMapper;
-import com.statustimer.config.TrackedGameCatalog;
 import com.statustimer.dto.response.GameActivationResponse;
+import com.statustimer.entity.Game;
 import com.statustimer.entity.LifecycleState;
-import com.statustimer.entity.TrackedGame;
-import com.statustimer.repository.TrackedGameRepository;
+import com.statustimer.repository.GameRepository;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class CatalogActivationService {
 
-    private final TrackedGameRepository trackedGameRepository;
+    private final GameRepository gameRepository;
     private final GameSlugMapper gameSlugMapper;
     private final ScrapeJobService scrapeJobService;
     private final HarvestScheduleService harvestScheduleService;
@@ -23,8 +22,8 @@ public class CatalogActivationService {
     @Transactional
     public GameActivationResponse activateOnDemand(String slug) {
         String canonicalSlug = gameSlugMapper.resolveCanonicalSlug(slug);
-        TrackedGame game = trackedGameRepository.findBySlug(canonicalSlug)
-                .orElseGet(() -> createPersistedGameIfKnown(canonicalSlug));
+        Game game = gameRepository.findBySlug(canonicalSlug)
+                .orElseGet(this::createPersistedGameIfKnown);
 
         if (game == null) {
             return new GameActivationResponse(canonicalSlug, false, false, false);
@@ -33,7 +32,7 @@ public class CatalogActivationService {
         boolean promoted = promoteToMonitoredIfNeeded(game);
         boolean jobQueued = scrapeJobService.enqueueFullJob(canonicalSlug);
 
-        trackedGameRepository.save(game);
+        gameRepository.save(game);
         harvestScheduleService.ensureScheduleInitialized(game);
 
         return new GameActivationResponse(
@@ -47,20 +46,20 @@ public class CatalogActivationService {
     @Transactional(readOnly = true)
     public boolean isTelemetryReady(String slug) {
         String canonicalSlug = gameSlugMapper.resolveCanonicalSlug(slug);
-        return trackedGameRepository.findBySlug(canonicalSlug)
+        return gameRepository.findBySlug(canonicalSlug)
                 .map(game -> Boolean.TRUE.equals(game.getInitialTelemetryReady()))
                 .orElse(true);
     }
 
     @Transactional
     public void markTelemetryReady(String slug) {
-        trackedGameRepository.findBySlug(slug).ifPresent(game -> {
+        gameRepository.findBySlug(slug).ifPresent(game -> {
             game.setInitialTelemetryReady(true);
-            trackedGameRepository.save(game);
+            gameRepository.save(game);
         });
     }
 
-    private boolean promoteToMonitoredIfNeeded(TrackedGame game) {
+    private boolean promoteToMonitoredIfNeeded(Game game) {
         if (game.getLifecycleState() != LifecycleState.CATALOG) {
             scheduleDueChecks(game);
             return false;
@@ -79,7 +78,7 @@ public class CatalogActivationService {
         return true;
     }
 
-    private void scheduleDueChecks(TrackedGame game) {
+    private void scheduleDueChecks(Game game) {
         LocalDateTime now = LocalDateTime.now();
         game.setNextTelemetryAt(now);
         game.setNextMetricsAt(now);
@@ -89,16 +88,7 @@ public class CatalogActivationService {
         }
     }
 
-    private TrackedGame createPersistedGameIfKnown(String slug) {
-        return TrackedGameCatalog.findBySlug(slug)
-                .map(metadata -> trackedGameRepository.save(TrackedGame.builder()
-                        .slug(slug)
-                        .gameName(metadata.gameName())
-                        .steamAppId(metadata.appId())
-                        .featured(metadata.featured())
-                        .lifecycleState(LifecycleState.CATALOG)
-                        .scrapeTier(metadata.featured() ? 1 : 2)
-                        .build()))
-                .orElse(null);
+    private Game createPersistedGameIfKnown() {
+        return null;
     }
 }

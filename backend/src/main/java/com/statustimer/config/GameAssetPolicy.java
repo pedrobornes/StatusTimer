@@ -1,6 +1,6 @@
 package com.statustimer.config;
 
-import com.statustimer.entity.TrackedGame;
+import com.statustimer.entity.Game;
 import java.util.Locale;
 
 public final class GameAssetPolicy {
@@ -12,7 +12,7 @@ public final class GameAssetPolicy {
     }
 
     public static void applyIgdbAssets(
-            TrackedGame game,
+            Game game,
             String logoUrl,
             String coverUrl
     ) {
@@ -27,7 +27,7 @@ public final class GameAssetPolicy {
         }
     }
 
-    public static void normalizeStoredAssets(TrackedGame game) {
+    public static void normalizeStoredAssets(Game game) {
         if (!isIgdbImageUrl(game.getLogoUrl())) {
             game.setLogoUrl(null);
         }
@@ -58,7 +58,7 @@ public final class GameAssetPolicy {
         return trimmed;
     }
 
-    public static boolean needsIgdbAssets(TrackedGame game) {
+    public static boolean needsIgdbAssets(Game game) {
         return !isIgdbImageUrl(game.getLogoUrl()) || !isIgdbImageUrl(game.getCoverUrl());
     }
 

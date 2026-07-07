@@ -14,7 +14,6 @@ public record GameReleasePayload(
         Long igdbGameId,
         Integer userRating,
         Integer criticRating,
-        List<String> themes,
         List<String> screenshotUrls,
         List<String> trailerVideoIds
 ) {

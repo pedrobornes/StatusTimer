@@ -56,6 +56,26 @@ class IgdbClient:
 
         return self._fetch_games(query)
 
+    def fetch_popular_right_now_games(
+        self,
+        *,
+        limit: int,
+    ) -> list[dict[str, Any]]:
+        if not is_igdb_configured() or limit <= 0:
+            return []
+
+        now_unix = int(time.time())
+        query = (
+            f"fields {IGDB_GAME_FIELDS}; "
+            f"where category = {MAIN_GAME_CATEGORY} "
+            f"& first_release_date != null "
+            f"& first_release_date <= {now_unix}; "
+            "sort total_rating_count desc, total_rating desc; "
+            f"limit {limit};"
+        )
+
+        return self._fetch_games(query)
+
     def lookup_game_metadata(self, game_name: str) -> IgdbGameMetadata | None:
         if not is_igdb_configured():
             return None

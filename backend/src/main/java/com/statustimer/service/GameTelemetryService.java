@@ -9,15 +9,13 @@ import com.statustimer.dto.response.SyncTelemetryResponse;
 import com.statustimer.dto.response.TelemetryHistorySnapshotResponse;
 import com.statustimer.dto.response.TelemetryIncidentResponse;
 import com.statustimer.entity.GameTelemetry;
-import com.statustimer.entity.GameTelemetryHistory;
 import com.statustimer.entity.LifecycleState;
 import com.statustimer.entity.ScrapeJobStatus;
 import com.statustimer.entity.TelemetrySource;
 import com.statustimer.entity.TelemetryStatus;
-import com.statustimer.entity.TrackedGame;
+import com.statustimer.entity.Game;
 import com.statustimer.repository.GameRepository;
 import com.statustimer.repository.GameTelemetryRepository;
-import com.statustimer.repository.TrackedGameRepository;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,7 +45,6 @@ public class GameTelemetryService {
     private final GameTelemetryRepository gameTelemetryRepository;
     private final GameRepository gameRepository;
     private final GameCatalogService gameCatalogService;
-    private final TrackedGameRepository trackedGameRepository;
     private final GameSlugMapper gameSlugMapper;
     private final IndexabilityService indexabilityService;
     private final CatalogActivationService catalogActivationService;
@@ -65,7 +62,7 @@ public class GameTelemetryService {
     @Transactional(readOnly = true)
     public List<GameTelemetryResponse> findAllFeatured() {
         return gameTelemetryRepository.findAll().stream()
-                .filter(entity -> gameCatalogService.isFeatured(entity.getGameSlug()))
+                .filter(entity -> gameCatalogService.isFeatured(entity.getGame().getSlug()))
                 .map(this::toResponse)
                 .toList();
     }
@@ -75,22 +72,22 @@ public class GameTelemetryService {
         int safeLimit = Math.max(1, Math.min(limit, 12));
         List<String> candidateSlugs = new ArrayList<>();
 
-        trackedGameRepository
+        gameRepository
                 .findByTwitchRankNotNullOrderByTwitchRankAsc(
                         PageRequest.of(0, DASHBOARD_TELEMETRY_CANDIDATE_LIMIT)
                 )
                 .stream()
-                .map(TrackedGame::getSlug)
+                .map(Game::getSlug)
                 .forEach(candidateSlugs::add);
 
         gameTelemetryRepository.findAll().stream()
-                .map(GameTelemetry::getGameSlug)
+                .map(entity -> entity.getGame().getSlug())
                 .filter(slug -> !candidateSlugs.contains(slug))
                 .filter(gameCatalogService::isFeatured)
                 .forEach(candidateSlugs::add);
 
         return candidateSlugs.stream()
-                .map(gameTelemetryRepository::findByGameSlug)
+                .map(gameTelemetryRepository::findByGame_Slug)
                 .flatMap(java.util.Optional::stream)
                 .filter(entity -> entity.getStatus() != TelemetryStatus.UPCOMING)
                 .map(this::toResponse)
@@ -119,7 +116,7 @@ public class GameTelemetryService {
         }
 
         return gameTelemetryRepository.findAll().stream()
-                .filter(entity -> matchingSlugs.contains(entity.getGameSlug()))
+                .filter(entity -> matchingSlugs.contains(entity.getGame().getSlug()))
                 .map(this::toResponse)
                 .toList();
     }
@@ -127,14 +124,14 @@ public class GameTelemetryService {
     @Transactional(readOnly = true)
     public Optional<GameTelemetryResponse> findOptionalByGameSlug(String gameSlug) {
         String canonicalSlug = gameSlugMapper.resolveCanonicalSlug(gameSlug);
-        return gameTelemetryRepository.findByGameSlug(canonicalSlug)
+        return gameTelemetryRepository.findByGame_Slug(canonicalSlug)
                 .map(this::toResponse);
     }
 
     @Transactional
     public GameTelemetryResponse findByGameSlug(String gameSlug) {
         String canonicalSlug = gameSlugMapper.resolveCanonicalSlug(gameSlug);
-        return gameTelemetryRepository.findByGameSlug(canonicalSlug)
+        return gameTelemetryRepository.findByGame_Slug(canonicalSlug)
                 .map(this::toResponse)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
@@ -145,15 +142,15 @@ public class GameTelemetryService {
     @Transactional
     public void consolidateSlugAliases() {
         gameSlugMapper.slugAliases().forEach((aliasSlug, canonicalSlug) -> {
-            gameTelemetryRepository.findByGameSlug(aliasSlug).ifPresent(aliasTelemetry -> {
-                if (gameTelemetryRepository.findByGameSlug(canonicalSlug).isPresent()) {
+            gameTelemetryRepository.findByGame_Slug(aliasSlug).ifPresent(aliasTelemetry -> {
+                if (gameTelemetryRepository.findByGame_Slug(canonicalSlug).isPresent()) {
                     gameTelemetryRepository.delete(aliasTelemetry);
                 }
             });
 
-            trackedGameRepository.findBySlug(aliasSlug).ifPresent(aliasGame -> {
-                if (trackedGameRepository.findBySlug(canonicalSlug).isPresent()) {
-                    trackedGameRepository.delete(aliasGame);
+            gameRepository.findBySlug(aliasSlug).ifPresent(aliasGame -> {
+                if (gameRepository.findBySlug(canonicalSlug).isPresent()) {
+                    gameRepository.delete(aliasGame);
                 }
             });
         });
@@ -250,13 +247,18 @@ public class GameTelemetryService {
 
         String canonicalSlug = gameSlugMapper.resolveCanonicalSlug(gameSlug);
 
-        if (gameTelemetryRepository.findByGameSlug(canonicalSlug).isPresent()) {
+        if (gameTelemetryRepository.findByGame_Slug(canonicalSlug).isPresent()) {
             return;
         }
 
+        Game game = gameRepository.findBySlug(canonicalSlug)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Game not found for telemetry slug: " + canonicalSlug
+                ));
         LocalDateTime checkedAt = LocalDateTime.now();
         gameTelemetryRepository.save(GameTelemetry.builder()
-                .gameSlug(canonicalSlug)
+                .game(game)
                 .status(TelemetryStatus.ONLINE)
                 .latencyMs(0)
                 .dataSource(TelemetrySource.STATUS_PAGE)
@@ -273,7 +275,7 @@ public class GameTelemetryService {
     private GameTelemetryResponse toResponse(GameTelemetry entity) {
         return GameTelemetryResponse.fromEntity(
                 entity,
-                gameRepository.findBySlug(entity.getGameSlug()),
+                Optional.ofNullable(entity.getGame()),
                 gameCatalogService
         );
     }
@@ -281,9 +283,15 @@ public class GameTelemetryService {
     private boolean upsertTelemetry(GameTelemetryPayload payload) {
         validatePayload(payload);
 
-        GameTelemetry telemetry = gameTelemetryRepository.findByGameSlug(payload.gameSlug())
+        String canonicalSlug = gameSlugMapper.resolveCanonicalSlug(payload.gameSlug());
+        Game game = gameRepository.findBySlug(canonicalSlug)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Unknown game slug for telemetry sync: " + canonicalSlug
+                ));
+        GameTelemetry telemetry = gameTelemetryRepository.findByGame_Slug(canonicalSlug)
                 .orElseGet(() -> GameTelemetry.builder()
-                        .gameSlug(payload.gameSlug())
+                        .game(game)
                         .build());
 
         boolean isNew = telemetry.getId() == null;
@@ -294,15 +302,16 @@ public class GameTelemetryService {
         telemetry.setLatencyMs(payload.latencyMs());
         telemetry.setDataSource(dataSource);
         telemetry.setLastChecked(checkedAt);
+        telemetry.setGame(game);
 
         gameTelemetryRepository.save(telemetry);
-        appendHistorySnapshotIfNeeded(payload.gameSlug(), payload.status(), dataSource, checkedAt);
-        touchTrackedGameAfterTelemetry(payload.gameSlug(), checkedAt);
+        appendHistorySnapshotIfNeeded(canonicalSlug, payload.status(), dataSource, checkedAt);
+        touchTrackedGameAfterTelemetry(canonicalSlug, checkedAt);
         return isNew;
     }
 
     private void touchTrackedGameAfterTelemetry(String gameSlug, LocalDateTime checkedAt) {
-        trackedGameRepository.findBySlug(gameSlug).ifPresent(game -> {
+        gameRepository.findBySlug(gameSlug).ifPresent(game -> {
             game.setLastTelemetryAt(checkedAt);
             game.setInitialTelemetryReady(true);
 
@@ -314,7 +323,7 @@ public class GameTelemetryService {
                 game.setLifecycleState(LifecycleState.MONITORED);
             }
 
-            trackedGameRepository.save(game);
+            gameRepository.save(game);
             catalogActivationService.markTelemetryReady(gameSlug);
             scrapeJobService.completeRunningJobsForSlug(gameSlug, ScrapeJobStatus.DONE);
             harvestScheduleService.recordTelemetrySuccess(gameSlug);

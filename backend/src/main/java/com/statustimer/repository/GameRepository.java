@@ -1,8 +1,12 @@
 package com.statustimer.repository;
 
 import com.statustimer.entity.Game;
+import com.statustimer.entity.LifecycleState;
+import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -17,5 +21,33 @@ public interface GameRepository extends JpaRepository<Game, Long> {
     List<Game> findAll();
 
     @EntityGraph(attributePaths = {"platforms"})
+    @Override
     Optional<Game> findById(Long id);
+
+    List<Game> findByTwitchRankNotNullOrderByTwitchRankAsc(Pageable pageable);
+
+    List<Game> findByGameNameContainingIgnoreCaseOrSlugContainingIgnoreCase(
+            String gameName,
+            String slug
+    );
+
+    List<Game> findByIsIndexableTrueOrderBySlugAsc();
+
+    List<Game> findByLifecycleStateInAndNextTelemetryAtLessThanEqualOrderByScrapeTierAsc(
+            Collection<LifecycleState> lifecycleStates,
+            LocalDateTime cutoff,
+            Pageable pageable
+    );
+
+    List<Game> findByLifecycleStateInAndNextMetricsAtLessThanEqualOrderByScrapeTierAsc(
+            Collection<LifecycleState> lifecycleStates,
+            LocalDateTime cutoff,
+            Pageable pageable
+    );
+
+    List<Game> findByLifecycleStateInAndNextNewsAtLessThanEqualOrderByScrapeTierAsc(
+            Collection<LifecycleState> lifecycleStates,
+            LocalDateTime cutoff,
+            Pageable pageable
+    );
 }

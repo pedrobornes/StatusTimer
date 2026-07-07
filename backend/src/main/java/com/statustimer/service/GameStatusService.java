@@ -6,8 +6,7 @@ import com.statustimer.dto.response.GamingNewsResponse;
 import com.statustimer.dto.response.TelemetryHistorySnapshotResponse;
 import com.statustimer.dto.response.TelemetryIncidentResponse;
 import com.statustimer.dto.response.TelemetryUptimeSummaryResponse;
-import com.statustimer.entity.TelemetryStatus;
-import com.statustimer.repository.TrackedGameRepository;
+import com.statustimer.repository.GameRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -22,15 +21,10 @@ public class GameStatusService {
     private static final int INCIDENT_LIMIT = 5;
     private static final int NEWS_LIMIT = 6;
 
-    private static final List<TelemetryStatus> INCIDENT_STATUSES = List.of(
-            TelemetryStatus.DOWN,
-            TelemetryStatus.MAINTENANCE
-    );
-
     private final GameTelemetryService gameTelemetryService;
     private final GamingNewsService gamingNewsService;
     private final CatalogActivationService catalogActivationService;
-    private final TrackedGameRepository trackedGameRepository;
+    private final GameRepository gameRepository;
     private final TelemetryDailyRollupService telemetryDailyRollupService;
 
     @Transactional
@@ -93,7 +87,7 @@ public class GameStatusService {
     }
 
     private LocalDateTime resolveFirstMonitoredAt(String slug) {
-        return trackedGameRepository.findBySlug(slug)
+        return gameRepository.findBySlug(slug)
                 .map(game -> game.getFirstMonitoredAt())
                 .orElse(null);
     }

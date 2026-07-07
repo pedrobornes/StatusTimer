@@ -78,6 +78,11 @@ def fetch_steam_app_name(app_id: int, session: requests.Session) -> str | None:
         return None
 
     data = entry.get("data", {})
+    app_type = data.get("type")
+    if isinstance(app_type, str) and app_type.strip().lower() != "game":
+        logger.info("Skipping non-game Steam app %s (type=%s)", app_id, app_type)
+        return None
+
     name = data.get("name")
     if not isinstance(name, str) or not name.strip():
         return None

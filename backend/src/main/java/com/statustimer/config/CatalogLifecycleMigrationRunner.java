@@ -1,9 +1,9 @@
 package com.statustimer.config;
 
 import com.statustimer.entity.LifecycleState;
-import com.statustimer.entity.TrackedGame;
+import com.statustimer.entity.Game;
+import com.statustimer.repository.GameRepository;
 import com.statustimer.repository.GameTelemetryRepository;
-import com.statustimer.repository.TrackedGameRepository;
 import com.statustimer.service.HarvestScheduleService;
 import com.statustimer.service.IndexabilityService;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 @Slf4j
 public class CatalogLifecycleMigrationRunner implements CommandLineRunner {
 
-    private final TrackedGameRepository trackedGameRepository;
+    private final GameRepository gameRepository;
     private final GameTelemetryRepository gameTelemetryRepository;
     private final IndexabilityService indexabilityService;
     private final HarvestScheduleService harvestScheduleService;
@@ -29,9 +29,9 @@ public class CatalogLifecycleMigrationRunner implements CommandLineRunner {
     public void run(String... args) {
         int migrated = 0;
 
-        for (TrackedGame game : trackedGameRepository.findAll()) {
+        for (Game game : gameRepository.findAll()) {
             if (backfillLifecycleFields(game)) {
-                trackedGameRepository.save(game);
+                gameRepository.save(game);
                 migrated++;
             }
             harvestScheduleService.ensureScheduleInitialized(game);
@@ -44,10 +44,10 @@ public class CatalogLifecycleMigrationRunner implements CommandLineRunner {
         }
     }
 
-    private boolean backfillLifecycleFields(TrackedGame game) {
+    private boolean backfillLifecycleFields(Game game) {
         boolean changed = false;
 
-        var telemetry = gameTelemetryRepository.findByGameSlug(game.getSlug());
+        var telemetry = gameTelemetryRepository.findByGame_Slug(game.getSlug());
 
         if (game.getLifecycleState() == null) {
             game.setLifecycleState(LifecycleState.CATALOG);

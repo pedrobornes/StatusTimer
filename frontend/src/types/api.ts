@@ -11,9 +11,11 @@ export interface ServerStatus {
 
 export interface GamingNews {
   id: number;
+  slug: string;
   title: string;
   content: string;
   gameTag: string;
+  gameCoverUrl?: string | null;
   createdAt: string;
   publishedAt?: string;
 }
@@ -45,7 +47,6 @@ export interface UpcomingRelease {
   igdbGameId?: number | null;
   userRating?: number | null;
   criticRating?: number | null;
-  themes?: string[];
   screenshotUrls?: string[];
   trailerVideoIds?: string[];
   platforms: PlatformDetail[];

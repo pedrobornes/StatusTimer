@@ -12,7 +12,7 @@ public record TelemetryIncidentResponse(
 
     public static TelemetryIncidentResponse fromEntity(GameTelemetryHistory entity) {
         return new TelemetryIncidentResponse(
-                entity.getGameSlug(),
+                entity.getGame().getSlug(),
                 entity.getStatus().name(),
                 entity.getDataSource().name(),
                 entity.getCheckedAt()

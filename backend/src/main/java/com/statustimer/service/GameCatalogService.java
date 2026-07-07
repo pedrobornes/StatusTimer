@@ -4,24 +4,21 @@ import com.statustimer.config.GameAssetPolicy;
 import com.statustimer.config.CacheConfig;
 import com.statustimer.config.GameSlugMapper;
 import com.statustimer.config.KnownSteamAppRegistry;
-import com.statustimer.config.TrackedGameCatalog;
 import com.statustimer.dto.request.GameCatalogEntryPayload;
 import com.statustimer.dto.request.SyncGameCatalogRequest;
 import com.statustimer.dto.response.GameCatalogSearchResponse;
 import com.statustimer.dto.response.GameIndexableSlugResponse;
 import com.statustimer.dto.response.SyncGameCatalogResponse;
-import com.statustimer.entity.LifecycleState;
-import com.statustimer.entity.TrackedGame;
+import com.statustimer.entity.Game;
 import com.statustimer.integration.IgdbSearchClient;
 import com.statustimer.integration.IgdbSearchClient.IgdbGameMatch;
-import com.statustimer.repository.TrackedGameRepository;
+import com.statustimer.repository.GameRepository;
 import com.statustimer.util.IgdbMetadataSupport;
 import com.statustimer.util.SlugUtils;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -35,14 +32,13 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class GameCatalogService {
 
-    private static final int MAX_URL_LENGTH = 2048;
     private static final Set<String> MANUAL_PROTECTED_SLUGS = Set.of(
             "valorant",
             "fortnite"
     );
     private static final int IGDB_DISCOVERY_LIMIT = 8;
 
-    private final TrackedGameRepository trackedGameRepository;
+    private final GameRepository gameRepository;
     private final IgdbSearchClient igdbSearchClient;
     private final GameSlugMapper gameSlugMapper;
     private final KnownSteamAppRegistry knownSteamAppRegistry;
@@ -51,7 +47,7 @@ public class GameCatalogService {
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = CacheConfig.INDEXABLE_SLUGS_CACHE)
     public List<GameIndexableSlugResponse> findIndexableSlugs() {
-        return trackedGameRepository.findByIsIndexableTrueOrderBySlugAsc().stream()
+        return gameRepository.findByIsIndexableTrueOrderBySlugAsc().stream()
                 .map(game -> new GameIndexableSlugResponse(
                         game.getSlug(),
                         game.getLastTelemetryAt() != null
@@ -63,16 +59,15 @@ public class GameCatalogService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<TrackedGame> findBySlug(String slug) {
+    public Optional<Game> findBySlug(String slug) {
         String canonicalSlug = gameSlugMapper.resolveCanonicalSlug(slug);
-        return trackedGameRepository.findBySlug(canonicalSlug)
-                .or(() -> Optional.ofNullable(toStaticTrackedGame(canonicalSlug)));
+        return gameRepository.findBySlug(canonicalSlug);
     }
 
     @Transactional(readOnly = true)
     public boolean isFeatured(String slug) {
         return findBySlug(slug)
-                .map(TrackedGame::getFeatured)
+                .map(Game::getFeatured)
                 .orElse(false);
     }
 
@@ -80,67 +75,66 @@ public class GameCatalogService {
     public String resolveGameName(String slug) {
         String canonicalSlug = gameSlugMapper.resolveCanonicalSlug(slug);
         return findBySlug(slug)
-                .map(TrackedGame::getGameName)
-                .orElseGet(() -> TrackedGameCatalog.resolveGameName(canonicalSlug));
+                .map(Game::getGameName)
+                .orElseGet(() -> formatSlugLabel(canonicalSlug));
     }
 
     @Transactional(readOnly = true)
     public Integer resolveAppId(String slug) {
-        String canonicalSlug = gameSlugMapper.resolveCanonicalSlug(slug);
         return findBySlug(slug)
-                .map(TrackedGame::getSteamAppId)
-                .or(() -> knownSteamAppRegistry.resolveAppId(canonicalSlug))
-                .orElseGet(() -> TrackedGameCatalog.resolveAppId(canonicalSlug));
+                .map(Game::getSteamAppId)
+                .or(() -> knownSteamAppRegistry.resolveAppId(gameSlugMapper.resolveCanonicalSlug(slug)))
+                .orElse(null);
     }
 
     @Transactional(readOnly = true)
     public Integer resolveTwitchRank(String slug) {
         return findBySlug(slug)
-                .map(TrackedGame::getTwitchRank)
+                .map(Game::getTwitchRank)
                 .orElse(null);
     }
 
     @Transactional(readOnly = true)
     public java.time.LocalDate resolveSteamReleaseDate(String slug) {
         return findBySlug(slug)
-                .map(TrackedGame::getSteamReleaseDate)
+                .map(Game::getSteamReleaseDate)
                 .orElse(null);
     }
 
     @Transactional(readOnly = true)
     public boolean isSteamAdultContent(String slug) {
         return findBySlug(slug)
-                .map(TrackedGame::getSteamAdultContent)
+                .map(Game::getSteamAdultContent)
                 .orElse(false);
     }
 
     @Transactional(readOnly = true)
     public Long resolveLivePlayers(String slug) {
         return findBySlug(slug)
-                .map(TrackedGame::getLivePlayers)
+                .map(Game::getLivePlayers)
                 .orElse(null);
     }
 
     @Transactional(readOnly = true)
     public Long resolveTwitchViewers(String slug) {
         return findBySlug(slug)
-                .map(TrackedGame::getTwitchViewers)
+                .map(Game::getTwitchViewers)
                 .orElse(null);
     }
 
     @Transactional(readOnly = true)
     public String resolveTwitchGameId(String slug) {
         return findBySlug(slug)
-                .map(TrackedGame::getTwitchGameId)
+                .map(Game::getTwitchGameId)
                 .orElse(null);
     }
 
     @Transactional(readOnly = true)
     public String resolveLogoUrl(String slug, String fallbackLogoUrl) {
         String canonicalSlug = gameSlugMapper.resolveCanonicalSlug(slug);
-        Optional<TrackedGame> tracked = findBySlug(slug);
+        Optional<Game> tracked = findBySlug(slug);
 
-        String persisted = tracked.map(TrackedGame::getLogoUrl).orElse(null);
+        String persisted = tracked.map(Game::getLogoUrl).orElse(null);
         String resolved = GameAssetPolicy.resolveLogoUrl(canonicalSlug, persisted);
         if (GameAssetPolicy.isRenderableLogo(resolved)) {
             return resolved;
@@ -156,7 +150,7 @@ public class GameCatalogService {
 
     @Transactional(readOnly = true)
     public String resolveCoverUrl(String slug, String fallbackCoverUrl) {
-        Optional<TrackedGame> tracked = findBySlug(slug);
+        Optional<Game> tracked = findBySlug(slug);
         if (tracked.isPresent()) {
             String coverUrl = GameAssetPolicy.sanitizeImageUrl(tracked.get().getCoverUrl());
             if (coverUrl != null) {
@@ -182,7 +176,7 @@ public class GameCatalogService {
         int remaining = IGDB_DISCOVERY_LIMIT - results.size();
         if (remaining > 0 && igdbSearchClient.isConfigured()) {
             for (IgdbGameMatch match : igdbSearchClient.search(trimmed, remaining)) {
-                TrackedGame discovered = upsertFromIgdbDiscovery(match);
+                Game discovered = upsertFromIgdbDiscovery(match);
                 if (discovered == null) {
                     continue;
                 }
@@ -201,54 +195,24 @@ public class GameCatalogService {
             List<GameCatalogSearchResponse> results,
             Set<String> seenSlugs
     ) {
-        for (TrackedGame game : trackedGameRepository
+        for (Game game : gameRepository
                 .findByGameNameContainingIgnoreCaseOrSlugContainingIgnoreCase(query, query)) {
             if (seenSlugs.add(game.getSlug())) {
                 results.add(toSearchResponse(game));
             }
         }
 
-        String normalizedQuery = query.toLowerCase(Locale.ROOT);
-        String slugQuery = SlugUtils.toSlug(query);
-
-        for (var entry : TrackedGameCatalog.allEntries().entrySet()) {
-            String slug = entry.getKey();
-            if (seenSlugs.contains(slug)) {
-                continue;
-            }
-
-            TrackedGameCatalog.GameAssetMetadata metadata = entry.getValue();
-            boolean matchesName = metadata.gameName().toLowerCase(Locale.ROOT).contains(normalizedQuery);
-            boolean matchesSlug = !slugQuery.isBlank() && slug.contains(slugQuery);
-
-            if (!matchesName && !matchesSlug) {
-                continue;
-            }
-
-            seenSlugs.add(slug);
-            results.add(new GameCatalogSearchResponse(
-                    slug,
-                    metadata.gameName(),
-                    GameAssetPolicy.resolveLogoUrl(slug, null),
-                    null,
-                    metadata.appId(),
-                    null,
-                    null,
-                    null,
-                    List.of()
-            ));
-        }
     }
 
-    private TrackedGame upsertFromIgdbDiscovery(IgdbGameMatch match) {
+    private Game upsertFromIgdbDiscovery(IgdbGameMatch match) {
         String slug = SlugUtils.toSlug(match.name());
         if (slug.isBlank() || MANUAL_PROTECTED_SLUGS.contains(slug)) {
             return null;
         }
 
-        Optional<TrackedGame> existing = trackedGameRepository.findBySlug(slug);
+        Optional<Game> existing = gameRepository.findBySlug(slug);
         if (existing.isPresent()) {
-            TrackedGame game = existing.get();
+            Game game = existing.get();
             if (Boolean.TRUE.equals(game.getManualLock())) {
                 return null;
             }
@@ -257,12 +221,12 @@ public class GameCatalogService {
                     && match.steamAppId() != null
                     && !game.getSteamAppId().equals(match.steamAppId())) {
                 slug = slug + "-" + match.steamAppId();
-                existing = trackedGameRepository.findBySlug(slug);
+                existing = gameRepository.findBySlug(slug);
             }
         }
 
         final String resolvedSlug = slug;
-        TrackedGame game = existing.orElseGet(() -> TrackedGame.builder()
+        Game game = existing.orElseGet(() -> Game.builder()
                 .slug(resolvedSlug)
                 .gameName(match.name())
                 .featured(false)
@@ -274,12 +238,11 @@ public class GameCatalogService {
         }
 
         GameAssetPolicy.applyIgdbAssets(game, match.logoUrl(), match.coverUrl());
-        IgdbMetadataSupport.applyToTrackedGame(
+        IgdbMetadataSupport.applyToGame(
                 game,
                 match.igdbId(),
                 match.userRating(),
                 match.criticRating(),
-                match.themes(),
                 List.of(),
                 List.of()
         );
@@ -292,10 +255,10 @@ public class GameCatalogService {
             game.setLogoUrl(GameAssetPolicy.LOGO_NONE);
         }
 
-        return trackedGameRepository.save(game);
+        return gameRepository.save(game);
     }
 
-    private GameCatalogSearchResponse toSearchResponse(TrackedGame game) {
+    private GameCatalogSearchResponse toSearchResponse(Game game) {
         String logoUrl = game.getLogoUrl();
         if (logoUrl == null || logoUrl.isBlank()) {
             logoUrl = GameAssetPolicy.LOGO_NONE;
@@ -309,8 +272,7 @@ public class GameCatalogService {
                 game.getSteamAppId(),
                 game.getUserRating(),
                 game.getCriticRating(),
-                game.getGenreName(),
-                List.copyOf(game.getThemes())
+                game.getGenreName()
         );
     }
 
@@ -344,7 +306,7 @@ public class GameCatalogService {
                 continue;
             }
 
-            Optional<TrackedGame> existing = trackedGameRepository.findBySlug(targetSlug);
+            Optional<Game> existing = gameRepository.findBySlug(targetSlug);
             if (existing.isPresent() && Boolean.TRUE.equals(existing.get().getManualLock())) {
                 if (updateTwitchMetricsOnly(payload, targetSlug)) {
                     updated++;
@@ -354,7 +316,7 @@ public class GameCatalogService {
                 continue;
             }
 
-            TrackedGame game = existing.orElseGet(() -> TrackedGame.builder()
+            Game game = existing.orElseGet(() -> Game.builder()
                     .slug(targetSlug)
                     .manualLock(false)
                     .featured(false)
@@ -375,7 +337,7 @@ public class GameCatalogService {
                 game.setFeatured(payload.featured());
             }
 
-            trackedGameRepository.save(game);
+            gameRepository.save(game);
             indexabilityService.recalculateForSlug(targetSlug);
 
             if (isNew) {
@@ -395,7 +357,7 @@ public class GameCatalogService {
 
     @Transactional
     public void enrichMissingLogos() {
-        for (TrackedGame game : trackedGameRepository.findAll()) {
+        for (Game game : gameRepository.findAll()) {
             GameAssetPolicy.normalizeStoredAssets(game);
 
             if (!Boolean.TRUE.equals(game.getManualLock())) {
@@ -410,12 +372,12 @@ public class GameCatalogService {
                 game.setLogoUrl(GameAssetPolicy.LOGO_NONE);
             }
 
-            trackedGameRepository.save(game);
+            gameRepository.save(game);
         }
     }
 
     private boolean applyMissingAssetsFromPayload(
-            TrackedGame game,
+            Game game,
             GameCatalogEntryPayload payload
     ) {
         String previousLogo = game.getLogoUrl();
@@ -425,15 +387,14 @@ public class GameCatalogService {
                 || !java.util.Objects.equals(previousCover, game.getCoverUrl());
     }
 
-    private void applyGameAssets(TrackedGame game, GameCatalogEntryPayload payload) {
+    private void applyGameAssets(Game game, GameCatalogEntryPayload payload) {
         if (payload != null) {
             GameAssetPolicy.applyIgdbAssets(game, payload.logoUrl(), payload.coverUrl());
-            IgdbMetadataSupport.applyToTrackedGame(
+            IgdbMetadataSupport.applyToGame(
                     game,
                     payload.igdbGameId(),
                     payload.userRating(),
                     payload.criticRating(),
-                    payload.themes(),
                     payload.screenshotUrls(),
                     payload.trailerVideoIds()
             );
@@ -451,7 +412,7 @@ public class GameCatalogService {
         }
     }
 
-    private void enrichFromIgdbSearch(TrackedGame game) {
+    private void enrichFromIgdbSearch(Game game) {
         if (!igdbSearchClient.isConfigured()) {
             return;
         }
@@ -468,12 +429,11 @@ public class GameCatalogService {
             }
 
             GameAssetPolicy.applyIgdbAssets(game, match.logoUrl(), match.coverUrl());
-            IgdbMetadataSupport.applyToTrackedGame(
+            IgdbMetadataSupport.applyToGame(
                     game,
                     match.igdbId(),
                     match.userRating(),
                     match.criticRating(),
-                    match.themes(),
                     List.of(),
                     List.of()
             );
@@ -504,15 +464,9 @@ public class GameCatalogService {
         return false;
     }
 
-    private void resolveAllSteamAppIds(TrackedGame game) {
+    private void resolveAllSteamAppIds(Game game) {
         knownSteamAppRegistry.resolveAppId(game.getSlug()).ifPresent(game::setSteamAppId);
         if (game.getSteamAppId() != null) {
-            return;
-        }
-
-        Integer catalogAppId = TrackedGameCatalog.resolveAppId(game.getSlug());
-        if (catalogAppId != null) {
-            game.setSteamAppId(catalogAppId);
             return;
         }
 
@@ -541,7 +495,7 @@ public class GameCatalogService {
         }
     }
 
-    private void resolveSteamAppIdForSync(TrackedGame game, GameCatalogEntryPayload payload) {
+    private void resolveSteamAppIdForSync(Game game, GameCatalogEntryPayload payload) {
         if (payload.steamAppId() != null) {
             game.setSteamAppId(payload.steamAppId());
             return;
@@ -556,33 +510,27 @@ public class GameCatalogService {
             return;
         }
 
-        Integer catalogAppId = TrackedGameCatalog.resolveAppId(game.getSlug());
-        if (catalogAppId != null) {
-            game.setSteamAppId(catalogAppId);
-            return;
-        }
-
         resolveSteamAppIdFromLinkedSlug(game);
     }
 
-    private void resolveSteamAppIdFromLinkedSlug(TrackedGame game) {
+    private void resolveSteamAppIdFromLinkedSlug(Game game) {
         String steamSlug = gameSlugMapper.getSteamSlug(game.getSlug());
         if (steamSlug.equals(game.getSlug())) {
             return;
         }
 
-        trackedGameRepository.findBySlug(steamSlug)
-                .map(TrackedGame::getSteamAppId)
+        gameRepository.findBySlug(steamSlug)
+                .map(Game::getSteamAppId)
                 .ifPresent(game::setSteamAppId);
     }
 
     private boolean updateTwitchMetricsOnly(GameCatalogEntryPayload payload, String targetSlug) {
-        Optional<TrackedGame> existing = trackedGameRepository.findBySlug(targetSlug);
+        Optional<Game> existing = gameRepository.findBySlug(targetSlug);
         if (existing.isEmpty()) {
             return false;
         }
 
-        TrackedGame game = existing.get();
+        Game game = existing.get();
         boolean changed = applyTwitchFields(game, payload);
         changed = applyLiveMetricsFields(game, payload) || changed;
         if (!GameAssetPolicy.isRenderableLogo(game.getLogoUrl())) {
@@ -599,12 +547,12 @@ public class GameCatalogService {
             return false;
         }
 
-        trackedGameRepository.save(game);
+        gameRepository.save(game);
         indexabilityService.recalculateForSlug(targetSlug);
         return true;
     }
 
-    private boolean applyLiveMetricsFields(TrackedGame game, GameCatalogEntryPayload payload) {
+    private boolean applyLiveMetricsFields(Game game, GameCatalogEntryPayload payload) {
         boolean changed = false;
 
         if (payload.livePlayers() != null) {
@@ -620,7 +568,7 @@ public class GameCatalogService {
         return changed;
     }
 
-    private boolean applyTwitchFields(TrackedGame game, GameCatalogEntryPayload payload) {
+    private boolean applyTwitchFields(Game game, GameCatalogEntryPayload payload) {
         boolean changed = false;
 
         if (payload.twitchGameId() != null && !payload.twitchGameId().isBlank()) {
@@ -647,19 +595,26 @@ public class GameCatalogService {
         return payload.gameName().trim();
     }
 
-    private TrackedGame toStaticTrackedGame(String slug) {
-        return TrackedGameCatalog.findBySlug(slug)
-                .map(metadata -> {
-                    TrackedGame game = TrackedGame.builder()
-                            .slug(slug)
-                            .gameName(metadata.gameName())
-                            .steamAppId(metadata.appId())
-                            .featured(metadata.featured())
-                            .manualLock(MANUAL_PROTECTED_SLUGS.contains(slug))
-                            .build();
+    private String formatSlugLabel(String slug) {
+        if (slug == null || slug.isBlank()) {
+            return "";
+        }
 
-                    return game;
-                })
-                .orElse(null);
+        String[] words = slug.split("-");
+        StringBuilder builder = new StringBuilder();
+        for (String word : words) {
+            if (word.isBlank()) {
+                continue;
+            }
+
+            if (!builder.isEmpty()) {
+                builder.append(' ');
+            }
+            builder.append(Character.toUpperCase(word.charAt(0)));
+            if (word.length() > 1) {
+                builder.append(word.substring(1));
+            }
+        }
+        return builder.isEmpty() ? slug : builder.toString();
     }
 }

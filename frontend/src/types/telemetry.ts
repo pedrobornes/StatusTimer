@@ -28,7 +28,6 @@ export interface GameTelemetry {
   userRating?: number | null;
   criticRating?: number | null;
   genreName?: string | null;
-  themes?: string[];
 }
 
 export interface TelemetryHistorySnapshot {

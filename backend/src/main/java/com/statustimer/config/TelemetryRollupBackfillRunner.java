@@ -1,6 +1,6 @@
 package com.statustimer.config;
 
-import com.statustimer.repository.TrackedGameRepository;
+import com.statustimer.repository.GameRepository;
 import com.statustimer.service.TelemetryDailyRollupService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,14 +14,14 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class TelemetryRollupBackfillRunner implements CommandLineRunner {
 
-    private final TrackedGameRepository trackedGameRepository;
+    private final GameRepository gameRepository;
     private final TelemetryDailyRollupService telemetryDailyRollupService;
 
     @Override
     public void run(String... args) {
         int totalUpserted = 0;
 
-        for (var game : trackedGameRepository.findAll()) {
+        for (var game : gameRepository.findAll()) {
             totalUpserted += telemetryDailyRollupService.backfillFromHistory(game.getSlug());
         }
 

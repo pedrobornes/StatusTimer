@@ -5,9 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.statustimer.dto.request.GameCatalogEntryPayload;
 import com.statustimer.dto.request.SyncGameCatalogRequest;
-import com.statustimer.entity.TrackedGame;
-import com.statustimer.repository.TrackedGameRepository;
+import com.statustimer.entity.Game;
+import com.statustimer.entity.LifecycleState;
+import com.statustimer.repository.GameRepository;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -23,13 +25,19 @@ class GameCatalogServiceSyncTest {
     private GameCatalogService gameCatalogService;
 
     @Autowired
-    private TrackedGameRepository trackedGameRepository;
+    private GameRepository gameRepository;
+
+    @BeforeEach
+    void seedGames() {
+        ensureGame("valorant", "Valorant", true);
+        ensureGame("counter-strike-2", "Counter-Strike 2", false);
+    }
 
     @Test
     void syncCatalogUpdatesManualProtectedTwitchMetrics() {
-        TrackedGame existing = trackedGameRepository.findBySlug("valorant").orElseThrow();
+        Game existing = gameRepository.findBySlug("valorant").orElseThrow();
         existing.setLogoUrl("none");
-        trackedGameRepository.save(existing);
+        gameRepository.save(existing);
 
         var response = gameCatalogService.syncCatalog(new SyncGameCatalogRequest(
                 List.of(new GameCatalogEntryPayload(
@@ -48,14 +56,13 @@ class GameCatalogServiceSyncTest {
                         null,
                         null,
                         List.of(),
-                        List.of(),
                         List.of()
                 ))
         ));
 
         assertEquals(1, response.updated());
 
-        TrackedGame updated = trackedGameRepository.findBySlug("valorant").orElseThrow();
+        Game updated = gameRepository.findBySlug("valorant").orElseThrow();
         assertEquals(existing.getId(), updated.getId());
         assertEquals(135_611L, updated.getTwitchViewers());
         assertEquals("516575", updated.getTwitchGameId());
@@ -68,7 +75,7 @@ class GameCatalogServiceSyncTest {
 
     @Test
     void syncCatalogMapsTwitchSlugToMonitoredTitleForMetrics() {
-        TrackedGame existing = trackedGameRepository.findBySlug("counter-strike-2").orElseThrow();
+        Game existing = gameRepository.findBySlug("counter-strike-2").orElseThrow();
 
         gameCatalogService.syncCatalog(new SyncGameCatalogRequest(
                 List.of(new GameCatalogEntryPayload(
@@ -87,14 +94,27 @@ class GameCatalogServiceSyncTest {
                         null,
                         null,
                         List.of(),
-                        List.of(),
                         List.of()
                 ))
         ));
 
-        TrackedGame updated = trackedGameRepository.findBySlug("counter-strike-2").orElseThrow();
+        Game updated = gameRepository.findBySlug("counter-strike-2").orElseThrow();
         assertEquals(existing.getId(), updated.getId());
         assertEquals(62_172L, updated.getTwitchViewers());
         assertNotNull(updated.getTwitchGameId());
+    }
+
+    private void ensureGame(String slug, String gameName, boolean featured) {
+        if (gameRepository.findBySlug(slug).isPresent()) {
+            return;
+        }
+        gameRepository.save(Game.builder()
+                .slug(slug)
+                .gameName(gameName)
+                .featured(featured)
+                .manualLock(false)
+                .lifecycleState(LifecycleState.MONITORED)
+                .scrapeTier(featured ? 1 : 2)
+                .build());
     }
 }

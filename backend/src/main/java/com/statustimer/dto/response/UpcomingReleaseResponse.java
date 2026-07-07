@@ -16,7 +16,6 @@ public record UpcomingReleaseResponse(
         Long igdbGameId,
         Integer userRating,
         Integer criticRating,
-        List<String> themes,
         List<String> screenshotUrls,
         List<String> trailerVideoIds,
         List<PlatformReleaseResponse> platforms
@@ -35,7 +34,6 @@ public record UpcomingReleaseResponse(
                 entity.getIgdbGameId(),
                 entity.getUserRating(),
                 entity.getCriticRating(),
-                List.copyOf(entity.getThemes()),
                 List.copyOf(entity.getScreenshotUrls()),
                 List.copyOf(entity.getTrailerVideoIds()),
                 entity.getPlatforms().stream()

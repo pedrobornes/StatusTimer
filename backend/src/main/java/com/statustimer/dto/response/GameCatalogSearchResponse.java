@@ -1,7 +1,5 @@
 package com.statustimer.dto.response;
 
-import java.util.List;
-
 public record GameCatalogSearchResponse(
         String slug,
         String gameName,
@@ -10,7 +8,6 @@ public record GameCatalogSearchResponse(
         Integer steamAppId,
         Integer userRating,
         Integer criticRating,
-        String genreName,
-        List<String> themes
+        String genreName
 ) {
 }

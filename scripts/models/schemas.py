@@ -41,7 +41,6 @@ class GameReleasePayload(BaseModel):
     igdb_game_id: int | None = Field(default=None, alias="igdbGameId", ge=1)
     user_rating: int | None = Field(default=None, alias="userRating", ge=0, le=100)
     critic_rating: int | None = Field(default=None, alias="criticRating", ge=0, le=100)
-    themes: list[str] = Field(default_factory=list)
     screenshot_urls: list[str] = Field(default_factory=list, alias="screenshotUrls")
     trailer_video_ids: list[str] = Field(default_factory=list, alias="trailerVideoIds")
 

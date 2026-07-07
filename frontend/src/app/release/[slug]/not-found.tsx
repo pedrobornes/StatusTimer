@@ -4,14 +4,13 @@ import PageShell from "@/components/PageShell";
 export default function ReleaseNotFound() {
   return (
     <PageShell
-      title="PROFILE NOT FOUND"
-      subtitle="No release profile matches this route slug. The target may not be indexed yet."
+      title="RELEASE NOT FOUND"
+      subtitle="We could not find this release page."
       badge="Release"
     >
       <div className="glass-panel rounded-3xl p-8 text-center">
         <p className="text-sm text-violet-200/60">
-          [ROUTE MISS] Verify the slug or return to the main monitor to browse
-          tracked releases.
+          Check the URL or return to the main page to browse tracked releases.
         </p>
         <Link
           href="/"

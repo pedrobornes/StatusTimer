@@ -7,6 +7,8 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
@@ -28,8 +30,9 @@ public class GameTelemetry {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
-    private String gameSlug;
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "game_id", nullable = false, unique = true)
+    private Game game;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

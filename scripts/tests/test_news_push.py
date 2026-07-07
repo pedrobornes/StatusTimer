@@ -44,3 +44,24 @@ def test_push_news_events_skips_already_pushed(tmp_path: Path) -> None:
 
     assert pushed_again == 0
     client.push_patch_note.assert_called_once()
+
+
+def test_push_news_events_skips_non_steam_sources(tmp_path: Path) -> None:
+    store = NewsPushStore(tmp_path / "pushed_news.json")
+    client = Mock(spec=BackendClient)
+    client.push_patch_note.return_value = PushResult(success=True, status_code=201)
+
+    riot_event = ScrapedFeedEvent(
+        source=FeedSource.RIOT,
+        kind=FeedEventKind.NEWS,
+        external_id="riot-1",
+        game_tag="valorant",
+        title="Service update",
+        plain_text="Some update from Riot.",
+        published_at=datetime(2026, 7, 6, tzinfo=timezone.utc),
+    )
+
+    pushed = push_news_events(client, [riot_event], store)
+
+    assert pushed == 0
+    client.push_patch_note.assert_not_called()

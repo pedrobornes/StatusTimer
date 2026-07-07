@@ -4,10 +4,12 @@ import IntelFeedContent from "@/components/dashboard/IntelFeedContent";
 import SidebarPanelHeader, {
   SidebarEmptyState,
 } from "@/components/dashboard/SidebarPanelHeader";
+import GameAssetImage from "@/components/ui/GameAssetImage";
 import {
   classifyIntelArticle,
   getIntelArticleAccent,
 } from "@/lib/intelFeed";
+import { resolveCatalogImageUrl } from "@/lib/gameAssets";
 import { formatRelativeTime, resolveRecordDate } from "@/utils/dateFormatter";
 import type { GamingNews } from "@/types/api";
 
@@ -113,68 +115,106 @@ export default function NewsFeedPanel({
               const publishedIso = resolveNewsDateIso(article);
               const kind = classifyIntelArticle(article.title);
               const accent = getIntelArticleAccent(kind);
+                const coverSrc = resolveCatalogImageUrl(
+                  article.gameCoverUrl ?? null,
+                  null,
+                );
 
               if (sidebar) {
                 return (
-                  <article
-                    key={article.id}
-                    className={`rounded-2xl border border-white/8 bg-white/[0.04] p-4 transition hover:bg-white/[0.06] ${accent.borderClass}`}
-                  >
-                    <div className="mb-2 flex flex-wrap items-center gap-2">
-                      <span
-                        className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${accent.badgeClass}`}
+                    <Link
+                      key={article.id}
+                      href={`/news/${article.slug}`}
+                      className="block"
+                    >
+                      <article
+                        className={`rounded-2xl border border-white/8 bg-white/[0.04] p-4 transition hover:bg-white/[0.06] ${accent.borderClass}`}
                       >
-                        {accent.label}
-                      </span>
-                      <time
-                        dateTime={publishedIso ?? undefined}
-                        className="text-[10px] text-slate-500"
-                      >
-                        {formatRelativeTime(
-                          article.publishedAt ?? article.createdAt,
-                        )}
-                      </time>
-                    </div>
+                        <div className="mb-3 flex items-start gap-3">
+                          <GameAssetImage
+                            name={article.gameTag}
+                            src={coverSrc}
+                            className="h-10 w-8"
+                            imageClassName="object-cover"
+                          />
 
-                    <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-white">
-                      {article.title}
-                    </h3>
-                  </article>
+                          <div className="min-w-0 flex-1">
+                            <div className="mb-2 flex flex-wrap items-center gap-2">
+                              <span
+                                className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${accent.badgeClass}`}
+                              >
+                                {accent.label}
+                              </span>
+                              <time
+                                dateTime={publishedIso ?? undefined}
+                                className="text-[10px] text-slate-500"
+                              >
+                                {formatRelativeTime(
+                                  article.publishedAt ?? article.createdAt,
+                                )}
+                              </time>
+                            </div>
+
+                            <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-white">
+                              {article.title}
+                            </h3>
+                          </div>
+                        </div>
+                      </article>
+                    </Link>
                 );
               }
 
-              return (
-                <article
-                  key={article.id}
-                  className={`rounded-2xl border border-white/8 bg-white/[0.04] p-5 transition hover:bg-white/[0.06] ${accent.borderClass}`}
-                >
-                  <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${accent.badgeClass}`}
+                return (
+                  <Link
+                    key={article.id}
+                    href={`/news/${article.slug}`}
+                    className="block"
+                  >
+                    <article
+                      className={`rounded-2xl border border-white/8 bg-white/[0.04] p-5 transition hover:bg-white/[0.06] ${accent.borderClass}`}
                     >
-                      <Sparkles className="h-3 w-3" />
-                      {accent.label}
-                    </span>
-                    <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-slate-300">
-                      {article.gameTag}
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-xs text-slate-400">
-                      <CalendarDays className="h-3.5 w-3.5" />
-                      <time dateTime={publishedIso ?? undefined}>
-                        {formatRelativeTime(
-                          article.publishedAt ?? article.createdAt,
-                        )}
-                      </time>
-                    </span>
-                  </div>
+                      <div className="mb-4 flex flex-wrap items-start gap-4">
+                        <div className="flex w-20 shrink-0 items-center justify-center">
+                          <GameAssetImage
+                            name={article.gameTag}
+                            src={coverSrc}
+                            className="h-16 w-16"
+                            imageClassName="object-cover"
+                          />
+                        </div>
 
-                  <h3 className="mb-3 text-base font-bold leading-snug text-white">
-                    {article.title}
-                  </h3>
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-3 flex flex-wrap items-center gap-2">
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${accent.badgeClass}`}
+                            >
+                              <Sparkles className="h-3 w-3" />
+                              {accent.label}
+                            </span>
+                            <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-slate-300">
+                              {article.gameTag}
+                            </span>
+                            <span className="inline-flex items-center gap-1 text-xs text-slate-400">
+                              <CalendarDays className="h-3.5 w-3.5" />
+                              <time dateTime={publishedIso ?? undefined}>
+                                {formatRelativeTime(
+                                  article.publishedAt ?? article.createdAt,
+                                )}
+                              </time>
+                            </span>
+                          </div>
 
-                  <IntelFeedContent content={article.content} />
-                </article>
-              );
+                          <h3 className="mb-3 text-base font-bold leading-snug text-white">
+                            {article.title}
+                          </h3>
+                        </div>
+                      </div>
+
+                      <IntelFeedContent content={article.content} />
+                    </article>
+                  </Link>
+                );
             })}
           </div>
         )}

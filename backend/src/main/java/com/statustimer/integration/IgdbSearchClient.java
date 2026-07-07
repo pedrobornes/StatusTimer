@@ -18,7 +18,7 @@ public class IgdbSearchClient {
     private static final int MAIN_GAME_CATEGORY = 0;
     private static final String GAME_FIELDS =
             "id,name,slug,category,cover.image_id,artworks.image_id,hypes,rating,aggregated_rating,"
-                    + "genres.name,themes.name,external_games.uid,external_games.category";
+                    + "genres.name,external_games.uid,external_games.category";
 
     private final IgdbApiClient apiClient;
     private final IgdbProperties properties;
@@ -99,7 +99,6 @@ public class IgdbSearchClient {
                 resolveSteamAppId(row.path("external_games")),
                 normalizeRating(row.path("rating")),
                 normalizeRating(row.path("aggregated_rating")),
-                parseNames(row.path("themes")),
                 parseNames(row.path("genres")),
                 row.path("hypes").asInt(0)
         ));
@@ -126,14 +125,26 @@ public class IgdbSearchClient {
         }
 
         for (JsonNode entry : externalGames) {
-            int category = entry.path("category").asInt(STEAM_EXTERNAL_CATEGORY);
-            if (entry.has("category") && category != STEAM_EXTERNAL_CATEGORY) {
+            if (!entry.has("category")) {
                 continue;
             }
 
-            String uid = entry.path("uid").asText("").trim();
-            if (uid.matches("\\d+")) {
-                return Integer.parseInt(uid);
+            int category = entry.path("category").asInt(-1);
+            if (category != STEAM_EXTERNAL_CATEGORY) {
+                continue;
+            }
+
+            JsonNode uidNode = entry.path("uid");
+            if (uidNode.canConvertToInt()) {
+                int uid = uidNode.asInt(-1);
+                if (uid > 0) {
+                    return uid;
+                }
+            }
+
+            String uidText = uidNode.asText("").trim();
+            if (uidText.matches("\\d+")) {
+                return Integer.valueOf(uidText);
             }
         }
 
@@ -186,7 +197,6 @@ public class IgdbSearchClient {
             Integer steamAppId,
             Integer userRating,
             Integer criticRating,
-            List<String> themes,
             List<String> genreNames,
             int hypeCount
     ) {

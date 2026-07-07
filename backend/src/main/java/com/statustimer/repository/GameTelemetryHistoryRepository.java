@@ -12,9 +12,9 @@ import org.springframework.data.repository.query.Param;
 
 public interface GameTelemetryHistoryRepository extends JpaRepository<GameTelemetryHistory, Long> {
 
-    Optional<GameTelemetryHistory> findTopByGameSlugOrderByCheckedAtDesc(String gameSlug);
+    Optional<GameTelemetryHistory> findTopByGame_SlugOrderByCheckedAtDesc(String gameSlug);
 
-    List<GameTelemetryHistory> findByGameSlugAndCheckedAtAfterOrderByCheckedAtAsc(
+    List<GameTelemetryHistory> findByGame_SlugAndCheckedAtAfterOrderByCheckedAtAsc(
             String gameSlug,
             LocalDateTime checkedAt
     );

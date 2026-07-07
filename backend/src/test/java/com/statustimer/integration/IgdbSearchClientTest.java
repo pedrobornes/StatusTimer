@@ -69,4 +69,32 @@ class IgdbSearchClientTest {
         assertThat(matches.getFirst().name()).isEqualTo("Rust");
         assertThat(matches.getFirst().igdbSlug()).isEqualTo("rust");
     }
+
+    @Test
+    void steamAppIdRequiresSteamExternalCategory() throws Exception {
+        String payload = """
+                [
+                  {
+                    "id": 252490,
+                    "name": "Rust",
+                    "slug": "rust",
+                    "category": 0,
+                    "external_games": [
+                      { "uid": "252490" },
+                      { "uid": "0000", "category": 2 },
+                      { "uid": "252490", "category": 1 }
+                    ]
+                  }
+                ]
+                """;
+
+        when(apiClient.isConfigured()).thenReturn(true);
+        when(apiClient.postGamesQuery(anyString()))
+                .thenReturn(Optional.of(new ObjectMapper().readTree(payload)));
+
+        List<IgdbSearchClient.IgdbGameMatch> matches = searchClient.search("Rust", 3);
+
+        assertThat(matches).hasSize(1);
+        assertThat(matches.getFirst().steamAppId()).isEqualTo(252490);
+    }
 }

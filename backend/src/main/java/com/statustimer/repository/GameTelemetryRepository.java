@@ -14,11 +14,11 @@ import org.springframework.data.repository.query.Param;
 
 public interface GameTelemetryRepository extends JpaRepository<GameTelemetry, Long> {
 
-    Optional<GameTelemetry> findByGameSlug(String gameSlug);
+    Optional<GameTelemetry> findByGame_Slug(String gameSlug);
 
     @Query("""
             SELECT h FROM GameTelemetryHistory h
-            WHERE h.gameSlug = :gameSlug
+            WHERE h.game.slug = :gameSlug
               AND h.checkedAt >= :since
             ORDER BY h.checkedAt ASC
             """)
@@ -39,7 +39,7 @@ public interface GameTelemetryRepository extends JpaRepository<GameTelemetry, Lo
 
     @Query("""
             SELECT h FROM GameTelemetryHistory h
-            WHERE h.gameSlug = :gameSlug
+            WHERE h.game.slug = :gameSlug
               AND h.status IN :statuses
             ORDER BY h.checkedAt DESC
             """)

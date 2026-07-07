@@ -26,7 +26,6 @@ import org.springframework.web.server.ResponseStatusException;
 public class GameSyncService {
 
     private static final int MAX_URL_LENGTH = 2048;
-    private static final int RECENT_RELEASE_WINDOW_DAYS = 7;
 
     private final GameRepository gameRepository;
 
@@ -79,7 +78,6 @@ public class GameSyncService {
                 payload.igdbGameId(),
                 payload.userRating(),
                 payload.criticRating(),
-                payload.themes(),
                 payload.screenshotUrls(),
                 payload.trailerVideoIds()
         );

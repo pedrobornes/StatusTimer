@@ -99,7 +99,6 @@ def map_igdb_metadata_to_release(
         igdbGameId=metadata.igdb_game_id,
         userRating=metadata.user_rating,
         criticRating=metadata.critic_rating,
-        themes=metadata.themes,
         screenshotUrls=metadata.screenshot_urls,
         trailerVideoIds=metadata.trailer_video_ids,
     )

@@ -6,6 +6,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
@@ -20,11 +22,11 @@ import lombok.Setter;
 @Table(
         name = "telemetry_daily_rollup",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_telemetry_rollup_slug_date",
-                columnNames = {"game_slug", "rollup_date"}
+                name = "uk_telemetry_rollup_game_date",
+                columnNames = {"game_id", "rollup_date"}
         ),
         indexes = {
-                @Index(name = "idx_telemetry_rollup_slug_date", columnList = "game_slug, rollup_date")
+                @Index(name = "idx_telemetry_rollup_game_date", columnList = "game_id, rollup_date")
         }
 )
 @Getter
@@ -38,8 +40,9 @@ public class TelemetryDailyRollup {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "game_slug", nullable = false)
-    private String gameSlug;
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "game_id", nullable = false)
+    private Game game;
 
     @Column(name = "rollup_date", nullable = false)
     private LocalDate rollupDate;

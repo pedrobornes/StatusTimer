@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from clients.backend_client import BackendClient
 from clients.http_result import PushResult
 from config.settings import settings
-from models.catalog_schemas import SyncGameCatalogRequest
+from models.catalog_schemas import GameCatalogEntryPayload, SyncGameCatalogRequest
 from models.schemas import SyncGamesRequest
 from models.telemetry import SyncTelemetryRequest
 from pipeline.context_pipeline import ingest_events_into_context_store
@@ -29,6 +29,7 @@ from scrapers.releases import fetch_upcoming_releases
 from scrapers.steam_charts import fetch_steam_charts_catalog
 from scrapers.social_status import fetch_social_status_payloads
 from scrapers.status import fetch_game_telemetry
+from scrapers.igdb_popular_games import fetch_igdb_popular_catalog
 from scrapers.twitch_top_games import fetch_twitch_top_games_catalog
 
 logging.basicConfig(
@@ -130,17 +131,60 @@ def run_catalog_sync(client: BackendClient) -> tuple[int, PushResult]:
 
 
 def run_twitch_catalog_sync(client: BackendClient) -> tuple[int, PushResult]:
-    entries = fetch_twitch_top_games_catalog()
+    twitch_entries = fetch_twitch_top_games_catalog()
+    igdb_entries = fetch_igdb_popular_catalog(limit=settings.twitch_top_n)
+    entries = _merge_dynamic_catalog_entries(twitch_entries, igdb_entries)
 
     if not entries:
-        logger.warning("No Twitch catalog entries collected this cycle.")
+        logger.warning("No dynamic catalog entries collected this cycle.")
         return 0, PushResult(success=True, status_code=204)
 
     payload = SyncGameCatalogRequest(entries=entries)
-    logger.info("Prepared %s Twitch catalog payloads", len(entries))
+    logger.info(
+        "Prepared %s dynamic catalog payloads (twitch=%s igdb=%s)",
+        len(entries),
+        len(twitch_entries),
+        len(igdb_entries),
+    )
     result = client.sync_game_catalog(payload)
-    _log_push_result("Twitch catalog sync", result)
+    _log_push_result("Dynamic catalog sync", result)
     return len(entries), result
+
+
+def _merge_dynamic_catalog_entries(
+    primary: list[GameCatalogEntryPayload],
+    secondary: list[GameCatalogEntryPayload],
+) -> list[GameCatalogEntryPayload]:
+    merged: dict[str, GameCatalogEntryPayload] = {}
+    order: list[str] = []
+
+    for entry in primary:
+        if entry.slug not in merged:
+            order.append(entry.slug)
+        merged[entry.slug] = entry
+
+    for entry in secondary:
+        existing = merged.get(entry.slug)
+        if existing is None:
+            merged[entry.slug] = entry
+            order.append(entry.slug)
+            continue
+
+        merged[entry.slug] = existing.model_copy(
+            update={
+                "steam_app_id": existing.steam_app_id or entry.steam_app_id,
+                "logo_url": existing.logo_url or entry.logo_url,
+                "cover_url": existing.cover_url or entry.cover_url,
+                "igdb_game_id": existing.igdb_game_id or entry.igdb_game_id,
+                "genre_name": existing.genre_name or entry.genre_name,
+                "user_rating": existing.user_rating or entry.user_rating,
+                "critic_rating": existing.critic_rating or entry.critic_rating,
+                "screenshot_urls": existing.screenshot_urls or entry.screenshot_urls,
+                "trailer_video_ids": existing.trailer_video_ids or entry.trailer_video_ids,
+            }
+        )
+
+    return [merged[slug] for slug in order]
 
 
 def run_release_sync(client: BackendClient) -> tuple[int, PushResult]:

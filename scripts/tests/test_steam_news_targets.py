@@ -17,8 +17,6 @@ class BuildSteamNewsTargetsTests(unittest.TestCase):
                 slug="counter-strike",
                 twitch_rank=1,
                 twitch_viewers=100_000,
-                logo_url="https://example/logo.png",
-                cover_url="https://example/cover.png",
             ),
             TwitchTopGameEntry(
                 twitch_game_id="2",
@@ -26,8 +24,6 @@ class BuildSteamNewsTargetsTests(unittest.TestCase):
                 slug="unknown-title",
                 twitch_rank=2,
                 twitch_viewers=50_000,
-                logo_url="https://example/logo2.png",
-                cover_url="https://example/cover2.png",
             ),
         ]
 

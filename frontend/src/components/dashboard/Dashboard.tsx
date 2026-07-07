@@ -7,7 +7,7 @@ import UpcomingReleasesPanel from "@/components/dashboard/UpcomingReleasesPanel"
 import GameSearchBar from "@/components/ui/GameSearchBar";
 import StatusTimerSonarLogo from "@/components/ui/StatusTimerSonarLogo";
 import { APP_ROUTES } from "@/config/routes";
-import type { GamingNews, UpcomingRelease } from "@/types/api";
+import type { GamingNews, ServerStatus, UpcomingRelease } from "@/types/api";
 import type { GameTelemetry, TelemetryHistorySnapshot, TelemetryIncident } from "@/types/telemetry";
 
 interface DashboardProps {
@@ -16,6 +16,7 @@ interface DashboardProps {
   news: GamingNews[];
   releases: UpcomingRelease[];
   incidents: TelemetryIncident[];
+  statuses: ServerStatus[];
 }
 
 export default function Dashboard({
@@ -24,7 +25,12 @@ export default function Dashboard({
   news,
   releases,
   incidents,
+  statuses,
 }: DashboardProps) {
+  const socialPlatformAlerts = statuses.filter(
+    (status) => status.category === "SOCIAL" && status.isUp === false,
+  );
+
   return (
     <div className="mystery-grid min-h-screen">
       <div className="mx-auto w-full max-w-[1400px] px-4 py-8 md:px-8 md:py-12">
@@ -66,7 +72,11 @@ export default function Dashboard({
           </div>
 
           <aside className="min-w-0 space-y-6">
-            <IncidentLog incidents={incidents} sidebar />
+            <IncidentLog
+              incidents={incidents}
+              platformAlerts={socialPlatformAlerts}
+              sidebar
+            />
             <NewsFeedPanel
               news={news}
               sidebar

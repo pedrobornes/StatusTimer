@@ -3,13 +3,13 @@ package com.statustimer.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.statustimer.config.IndexabilityProperties;
+import com.statustimer.entity.Game;
 import com.statustimer.entity.GameTelemetry;
 import com.statustimer.entity.LifecycleState;
 import com.statustimer.entity.TelemetrySource;
 import com.statustimer.entity.TelemetryStatus;
-import com.statustimer.entity.TrackedGame;
+import com.statustimer.repository.GameRepository;
 import com.statustimer.repository.GameTelemetryRepository;
-import com.statustimer.repository.TrackedGameRepository;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,7 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class IndexabilityServiceTest {
 
     @Mock
-    private TrackedGameRepository trackedGameRepository;
+    private GameRepository gameRepository;
 
     @Mock
     private GameTelemetryRepository gameTelemetryRepository;
@@ -33,7 +33,7 @@ class IndexabilityServiceTest {
     void setUp() {
         IndexabilityProperties properties = new IndexabilityProperties(48, 24, 48, 72, 900_000L, 1);
         indexabilityService = new IndexabilityService(
-                trackedGameRepository,
+                gameRepository,
                 gameTelemetryRepository,
                 properties
         );
@@ -41,7 +41,7 @@ class IndexabilityServiceTest {
 
     @Test
     void rejectsCatalogGames() {
-        TrackedGame game = monitoredGame("valorant");
+        Game game = monitoredGame("valorant");
         game.setLifecycleState(LifecycleState.CATALOG);
 
         assertThat(indexabilityService.evaluateIndexability(game, Optional.empty())).isFalse();
@@ -49,7 +49,7 @@ class IndexabilityServiceTest {
 
     @Test
     void rejectsGamesYoungerThanMonitoringAge() {
-        TrackedGame game = monitoredGame("valorant");
+        Game game = monitoredGame("valorant");
         game.setFirstMonitoredAt(LocalDateTime.now().minusHours(12));
         game.setLastTelemetryAt(LocalDateTime.now().minusMinutes(5));
         game.setLivePlayers(100_000L);
@@ -59,7 +59,7 @@ class IndexabilityServiceTest {
 
     @Test
     void acceptsMatureGamesWithFreshTelemetryAndMetrics() {
-        TrackedGame game = monitoredGame("valorant");
+        Game game = monitoredGame("valorant");
         game.setFirstMonitoredAt(LocalDateTime.now().minusHours(72));
         game.setLastTelemetryAt(LocalDateTime.now().minusMinutes(10));
         game.setTwitchViewers(50_000L);
@@ -77,7 +77,7 @@ class IndexabilityServiceTest {
 
     @Test
     void allowsApiOutageGraceWithoutBlockingOtherCriteria() {
-        TrackedGame game = monitoredGame("valorant");
+        Game game = monitoredGame("valorant");
         game.setStaleReason(IndexabilityProperties.STALE_REASON_API_OUTAGE);
         game.setFirstMonitoredAt(LocalDateTime.now().minusHours(72));
         game.setLastTelemetryAt(LocalDateTime.now().minusMinutes(10));
@@ -88,7 +88,7 @@ class IndexabilityServiceTest {
 
     @Test
     void blocksStaleTelemetryReason() {
-        TrackedGame game = monitoredGame("valorant");
+        Game game = monitoredGame("valorant");
         game.setStaleReason(IndexabilityProperties.STALE_REASON_STALE_TELEMETRY);
         game.setFirstMonitoredAt(LocalDateTime.now().minusHours(72));
         game.setLastTelemetryAt(LocalDateTime.now().minusMinutes(10));
@@ -97,8 +97,8 @@ class IndexabilityServiceTest {
         assertThat(indexabilityService.evaluateIndexability(game, Optional.empty())).isFalse();
     }
 
-    private TrackedGame monitoredGame(String slug) {
-        return TrackedGame.builder()
+    private Game monitoredGame(String slug) {
+        return Game.builder()
                 .slug(slug)
                 .gameName("Valorant")
                 .lifecycleState(LifecycleState.MONITORED)

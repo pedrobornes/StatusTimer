@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import GamingStatusSection from "@/components/dashboard/GamingStatusSection";
-import SocialPlatformsSection from "@/components/dashboard/SocialPlatformsSection";
 import IncidentLog from "@/components/dashboard/telemetry/IncidentLog";
 import GameTelemetrySortSelect from "@/components/ui/GameTelemetrySortSelect";
 import { TRACKED_GAME_SLUGS } from "@/config/routes";
@@ -11,12 +10,15 @@ import { getUserFacingErrorMessage } from "@/services/api";
 import { searchGameTelemetry } from "@/services/telemetryService";
 import {
   collectTelemetryGenres,
-  collectTelemetryThemes,
   filterTelemetryByGenre,
   filterTelemetryByMinRating,
-  filterTelemetryByTheme,
 } from "@/lib/telemetryFilters";
 import type { PlatformDetail, ServerStatus } from "@/types/api";
+import type {
+  GameTelemetry,
+  TelemetryHistorySnapshot,
+  TelemetryIncident,
+} from "@/types/telemetry";
 import {
   sortTelemetryEntries,
   type TelemetrySortMode,
@@ -48,7 +50,6 @@ export default function TelemetryStatusHub({
   const [sortMode, setSortMode] = useState<TelemetrySortMode>("trending");
   const [currentPage, setCurrentPage] = useState(1);
   const [genreFilter, setGenreFilter] = useState<string | "All">("All");
-  const [themeFilter, setThemeFilter] = useState<string | "All">("All");
   const [minRating, setMinRating] = useState<number | null>(null);
 
   const normalizedQuery = query.trim();
@@ -91,26 +92,20 @@ export default function TelemetryStatusHub({
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [normalizedQuery, sortMode, genreFilter, themeFilter, minRating]);
+  }, [normalizedQuery, sortMode, genreFilter, minRating]);
 
   const availableGenres = useMemo(
     () => collectTelemetryGenres(gameTelemetry),
     [gameTelemetry],
   );
-  const availableThemes = useMemo(
-    () => collectTelemetryThemes(gameTelemetry),
-    [gameTelemetry],
-  );
-
   const displayedTelemetry = normalizedQuery
     ? (searchResults ?? [])
     : gameTelemetry;
 
   const filteredTelemetry = useMemo(() => {
     const byGenre = filterTelemetryByGenre(displayedTelemetry, genreFilter);
-    const byTheme = filterTelemetryByTheme(byGenre, themeFilter);
-    return filterTelemetryByMinRating(byTheme, minRating);
-  }, [displayedTelemetry, genreFilter, themeFilter, minRating]);
+    return filterTelemetryByMinRating(byGenre, minRating);
+  }, [displayedTelemetry, genreFilter, minRating]);
 
   const sortedTelemetry = useMemo(
     () => sortTelemetryEntries(filteredTelemetry, sortMode, TRACKED_GAME_SLUGS),
@@ -124,6 +119,13 @@ export default function TelemetryStatusHub({
         ? searchError
         : `No games found matching "${normalizedQuery}".`
     : undefined;
+  const socialPlatformAlerts = useMemo(
+    () =>
+      statuses.filter(
+        (status) => status.category === "SOCIAL" && status.isUp === false,
+      ),
+    [statuses],
+  );
 
   return (
     <div className="space-y-8">
@@ -155,7 +157,7 @@ export default function TelemetryStatusHub({
           />
         </div>
 
-        {!normalizedQuery && (availableGenres.length > 0 || availableThemes.length > 0) ? (
+        {!normalizedQuery && availableGenres.length > 0 ? (
           <div className="mt-4 space-y-3">
             {availableGenres.length > 0 ? (
               <div className="flex flex-wrap gap-2">
@@ -182,36 +184,6 @@ export default function TelemetryStatusHub({
                     }`}
                   >
                     {genre}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-
-            {availableThemes.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setThemeFilter("All")}
-                  className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition ${
-                    themeFilter === "All"
-                      ? "border-violet-400/35 bg-violet-500/20 text-violet-50"
-                      : "border-white/12 bg-white/[0.04] text-slate-300 hover:border-violet-400/25 hover:text-white"
-                  }`}
-                >
-                  All themes
-                </button>
-                {availableThemes.map((theme) => (
-                  <button
-                    key={theme}
-                    type="button"
-                    onClick={() => setThemeFilter(theme)}
-                    className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition ${
-                      themeFilter === theme
-                        ? "border-violet-400/35 bg-violet-500/20 text-violet-50"
-                        : "border-white/12 bg-white/[0.04] text-slate-300 hover:border-violet-400/25 hover:text-white"
-                    }`}
-                  >
-                    {theme}
                   </button>
                 ))}
               </div>
@@ -255,10 +227,9 @@ export default function TelemetryStatusHub({
         onPageChange={setCurrentPage}
       />
 
-      <SocialPlatformsSection statuses={statuses} />
-
       <IncidentLog
         incidents={incidents}
+        platformAlerts={socialPlatformAlerts}
         sectionTitle="Recent Problems"
         eyebrow="Down & Maintenance"
       />

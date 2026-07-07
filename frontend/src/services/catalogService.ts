@@ -9,7 +9,6 @@ export interface GameCatalogSearchResult {
   userRating?: number | null;
   criticRating?: number | null;
   genreName?: string | null;
-  themes?: string[];
 }
 
 export interface GameIndexableSlug {

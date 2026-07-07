@@ -3,11 +3,9 @@ package com.statustimer.dto.response;
 import com.statustimer.entity.Game;
 import com.statustimer.entity.GameTelemetry;
 import com.statustimer.entity.TelemetryStatus;
-import com.statustimer.entity.TrackedGame;
 import com.statustimer.service.GameCatalogService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 public record GameTelemetryResponse(
@@ -33,8 +31,7 @@ public record GameTelemetryResponse(
         String lifecycleState,
         Integer userRating,
         Integer criticRating,
-        String genreName,
-        List<String> themes
+        String genreName
 ) {
 
     public static GameTelemetryResponse fromEntity(
@@ -42,7 +39,7 @@ public record GameTelemetryResponse(
             Optional<Game> game,
             GameCatalogService catalogService
     ) {
-        String slug = entity.getGameSlug();
+        String slug = entity.getGame().getSlug();
 
         String gameName = game.map(Game::getGameName)
                 .orElseGet(() -> catalogService.resolveGameName(slug));
@@ -59,7 +56,6 @@ public record GameTelemetryResponse(
 
         LocalDate releaseDate = game
                 .flatMap(TrackedGameCatalogHelper::resolveEarliestReleaseDate)
-                .or(() -> TrackedGameCatalogHelper.resolveCatalogReleaseDate(slug))
                 .orElse(null);
         boolean isUpcoming = entity.getStatus() == TelemetryStatus.UPCOMING
                 || (releaseDate != null && releaseDate.isAfter(LocalDate.now()));
@@ -75,13 +71,10 @@ public record GameTelemetryResponse(
         String lifecycleState = catalogService.findBySlug(slug)
                 .map(trackedGame -> trackedGame.getLifecycleState().name())
                 .orElse("CATALOG");
-        Optional<TrackedGame> trackedGame = catalogService.findBySlug(slug);
-        Integer userRating = trackedGame.map(TrackedGame::getUserRating).orElse(null);
-        Integer criticRating = trackedGame.map(TrackedGame::getCriticRating).orElse(null);
-        String genreName = trackedGame.map(TrackedGame::getGenreName).orElse(null);
-        List<String> themes = trackedGame
-                .map(gameEntry -> List.copyOf(gameEntry.getThemes()))
-                .orElse(List.of());
+        Optional<Game> trackedGame = catalogService.findBySlug(slug);
+        Integer userRating = trackedGame.map(Game::getUserRating).orElse(null);
+        Integer criticRating = trackedGame.map(Game::getCriticRating).orElse(null);
+        String genreName = trackedGame.map(Game::getGenreName).orElse(null);
 
         return new GameTelemetryResponse(
                 entity.getId(),
@@ -106,8 +99,7 @@ public record GameTelemetryResponse(
                 lifecycleState,
                 userRating,
                 criticRating,
-                genreName,
-                themes
+                genreName
         );
     }
 
@@ -120,10 +112,6 @@ public record GameTelemetryResponse(
                     .map(platform -> platform.getReleaseDate())
                     .filter(date -> date != null)
                     .min(LocalDate::compareTo);
-        }
-
-        private static Optional<LocalDate> resolveCatalogReleaseDate(String slug) {
-            return Optional.empty();
         }
     }
 }

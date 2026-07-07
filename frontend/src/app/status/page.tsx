@@ -8,7 +8,7 @@ import { fetchIndexableSlugs } from "@/services/catalogService";
 export const metadata: Metadata = {
   title: "Live Game Server Status Index",
   description:
-    "Browse indexable live server status pages for multiplayer games tracked by StatusTimer.",
+    "Browse live server status pages for multiplayer games tracked by StatusTimer.",
   alternates: {
     canonical: "/status",
   },
@@ -23,12 +23,11 @@ export default async function StatusIndexPage() {
     <PageShell
       badge="Server Status Index"
       title="Live Game Server Status"
-      subtitle="Money pages with fresh telemetry and live outage data. Only games with real monitoring signals appear here."
+      subtitle="Live service checks and recent outages for games we actively monitor."
     >
       {slugs.length === 0 ? (
         <p className="text-sm leading-7 text-slate-400">
-          No indexable status pages are available yet. Check back after telemetry
-          sync completes.
+          No game status pages are available yet. Check back soon.
         </p>
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

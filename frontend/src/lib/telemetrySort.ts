@@ -1,6 +1,6 @@
 import type { GameTelemetry } from "@/types/telemetry";
 
-export type TelemetrySortMode = "trending" | "new-releases";
+export type TelemetrySortMode = "trending" | "top-rated";
 
 const NEW_RELEASE_WINDOW_DAYS = 180;
 
@@ -61,7 +61,17 @@ function isRecentSteamRelease(entry: GameTelemetry): boolean {
   return releaseTimestamp >= cutoff;
 }
 
-function compareNewReleases(
+function resolveRatingScore(entry: GameTelemetry | undefined): number {
+  if (!entry) {
+    return -1;
+  }
+
+  const user = entry.userRating ?? -1;
+  const critic = entry.criticRating ?? -1;
+  return Math.max(user, critic);
+}
+
+function compareTopRated(
   entryA: GameTelemetry | undefined,
   entryB: GameTelemetry | undefined,
 ): number {
@@ -77,20 +87,18 @@ function compareNewReleases(
     return -1;
   }
 
-  const recentA = isRecentSteamRelease(entryA);
-  const recentB = isRecentSteamRelease(entryB);
-
-  if (recentA !== recentB) {
-    return recentA ? -1 : 1;
+  const scoreA = resolveRatingScore(entryA);
+  const scoreB = resolveRatingScore(entryB);
+  if (scoreA !== scoreB) {
+    return scoreB - scoreA;
   }
 
-  if (!recentA) {
-    return 0;
+  const rankCompare = compareTwitchRank(entryA.twitchRank, entryB.twitchRank);
+  if (rankCompare !== 0) {
+    return rankCompare;
   }
 
-  const dateA = parseIsoDate(entryA.steamReleaseDate ?? null) ?? 0;
-  const dateB = parseIsoDate(entryB.steamReleaseDate ?? null) ?? 0;
-  return dateB - dateA;
+  return 0;
 }
 
 export function sortTelemetrySlugs(
@@ -101,15 +109,15 @@ export function sortTelemetrySlugs(
 ): string[] {
   const ordered = [...slugs];
 
-  if (mode === "new-releases") {
+  if (mode === "top-rated") {
     return ordered.sort((slugA, slugB) => {
-      const byRelease = compareNewReleases(
+      const byTopRating = compareTopRated(
         telemetryBySlug[slugA],
         telemetryBySlug[slugB],
       );
 
-      if (byRelease !== 0) {
-        return byRelease;
+      if (byTopRating !== 0) {
+        return byTopRating;
       }
 
       return compareDefaultOrder(slugA, slugB, defaultOrder);
@@ -137,12 +145,12 @@ export function sortTelemetryEntries(
 ): GameTelemetry[] {
   const ordered = [...entries];
 
-  if (mode === "new-releases") {
+  if (mode === "top-rated") {
     return ordered.sort((entryA, entryB) => {
-      const byRelease = compareNewReleases(entryA, entryB);
+      const byTopRating = compareTopRated(entryA, entryB);
 
-      if (byRelease !== 0) {
-        return byRelease;
+      if (byTopRating !== 0) {
+        return byTopRating;
       }
 
       return compareDefaultOrder(entryA.gameSlug, entryB.gameSlug, defaultOrder);

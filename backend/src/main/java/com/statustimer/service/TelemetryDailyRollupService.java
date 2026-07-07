@@ -3,10 +3,12 @@ package com.statustimer.service;
 import com.statustimer.config.TelemetryHistoryProperties;
 import com.statustimer.config.TelemetryRollupProperties;
 import com.statustimer.dto.response.TelemetryUptimeSummaryResponse;
+import com.statustimer.entity.Game;
 import com.statustimer.entity.GameTelemetryHistory;
 import com.statustimer.entity.TelemetryDailyRollup;
 import com.statustimer.entity.TelemetryStatus;
 import com.statustimer.repository.GameTelemetryHistoryRepository;
+import com.statustimer.repository.GameRepository;
 import com.statustimer.repository.TelemetryDailyRollupRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -25,6 +27,7 @@ public class TelemetryDailyRollupService {
 
     private final TelemetryDailyRollupRepository telemetryDailyRollupRepository;
     private final GameTelemetryHistoryRepository gameTelemetryHistoryRepository;
+    private final GameRepository gameRepository;
     private final TelemetryHistoryProperties telemetryHistoryProperties;
     private final TelemetryRollupProperties telemetryRollupProperties;
 
@@ -35,10 +38,14 @@ public class TelemetryDailyRollupService {
             LocalDateTime checkedAt
     ) {
         LocalDate rollupDate = checkedAt.toLocalDate();
+        Game game = gameRepository.findBySlug(gameSlug).orElse(null);
+        if (game == null) {
+            return;
+        }
         TelemetryDailyRollup rollup = telemetryDailyRollupRepository
-                .findByGameSlugAndRollupDate(gameSlug, rollupDate)
+                .findByGame_SlugAndRollupDate(gameSlug, rollupDate)
                 .orElseGet(() -> TelemetryDailyRollup.builder()
-                        .gameSlug(gameSlug)
+                        .game(game)
                         .rollupDate(rollupDate)
                         .sampleCount(0)
                         .onlineSamples(0)
@@ -65,7 +72,7 @@ public class TelemetryDailyRollupService {
         LocalDateTime since = LocalDateTime.now()
                 .minusHours(telemetryHistoryProperties.retentionHours());
         List<GameTelemetryHistory> snapshots =
-                gameTelemetryHistoryRepository.findByGameSlugAndCheckedAtAfterOrderByCheckedAtAsc(
+                gameTelemetryHistoryRepository.findByGame_SlugAndCheckedAtAfterOrderByCheckedAtAsc(
                         gameSlug,
                         since
                 );
@@ -81,7 +88,7 @@ public class TelemetryDailyRollupService {
             TelemetryDailyRollup rollup = rollupsByDate.computeIfAbsent(
                     rollupDate,
                     date -> TelemetryDailyRollup.builder()
-                            .gameSlug(gameSlug)
+                            .game(snapshot.getGame())
                             .rollupDate(date)
                             .sampleCount(0)
                             .onlineSamples(0)
@@ -97,7 +104,7 @@ public class TelemetryDailyRollupService {
         int upserted = 0;
         for (TelemetryDailyRollup rollup : rollupsByDate.values()) {
             TelemetryDailyRollup existing = telemetryDailyRollupRepository
-                    .findByGameSlugAndRollupDate(gameSlug, rollup.getRollupDate())
+                    .findByGame_SlugAndRollupDate(gameSlug, rollup.getRollupDate())
                     .orElse(null);
 
             if (existing == null) {
@@ -130,7 +137,7 @@ public class TelemetryDailyRollupService {
     private Integer calculateUptimePercent(String gameSlug, int days) {
         LocalDate windowStart = LocalDate.now().minusDays(days - 1L);
         List<TelemetryDailyRollup> rollups = telemetryDailyRollupRepository
-                .findByGameSlugAndRollupDateGreaterThanEqual(gameSlug, windowStart);
+                .findByGame_SlugAndRollupDateGreaterThanEqual(gameSlug, windowStart);
 
         int onlineSamples = 0;
         int totalSamples = 0;

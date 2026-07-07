@@ -83,17 +83,6 @@ export function filterReleasesByGenre(
   return releases.filter((release) => release.genre === genre);
 }
 
-export function filterReleasesByTheme(
-  releases: UpcomingRelease[],
-  theme: string | "All",
-): UpcomingRelease[] {
-  if (theme === "All") {
-    return releases;
-  }
-
-  return releases.filter((release) => release.themes?.includes(theme));
-}
-
 export function filterReleasesByMinRating(
   releases: UpcomingRelease[],
   minRating: number | null,
@@ -106,18 +95,6 @@ export function filterReleasesByMinRating(
     const best = Math.max(release.criticRating ?? 0, release.userRating ?? 0);
     return best >= minRating;
   });
-}
-
-export function collectReleaseThemes(releases: UpcomingRelease[]): string[] {
-  const themes = new Set<string>();
-
-  for (const release of releases) {
-    for (const theme of release.themes ?? []) {
-      themes.add(theme);
-    }
-  }
-
-  return [...themes].sort((left, right) => left.localeCompare(right));
 }
 
 export function buildPlatformsBySlug(

@@ -11,8 +11,8 @@ interface GameTelemetrySortSelectProps {
 }
 
 const SORT_OPTIONS: { value: TelemetrySortMode; label: string }[] = [
-  { value: "trending", label: "Trending" },
-  { value: "new-releases", label: "New releases" },
+  { value: "trending", label: "Most watched" },
+  { value: "top-rated", label: "Top rated" },
 ];
 
 export default function GameTelemetrySortSelect({

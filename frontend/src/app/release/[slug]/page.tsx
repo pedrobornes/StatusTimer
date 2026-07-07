@@ -2,25 +2,25 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import {
-  Activity,
   FileText,
-  Radio,
 } from "lucide-react";
-import GameTelemetryCard from "@/components/dashboard/GameTelemetryCard";
 import HypeCounterButton from "@/components/HypeCounterButton";
 import ReleaseMediaGallery from "@/components/ReleaseMediaGallery";
 import PageShell from "@/components/PageShell";
 import PlatformBadge from "@/components/ui/PlatformBadge";
 import PlatformReleaseSchedule from "@/components/PlatformReleaseSchedule";
 import DashboardError from "@/components/dashboard/DashboardError";
-import { formatIgdbRating, resolveGameCoverUrl } from "@/lib/gameAssets";
+import {
+  formatIgdbRating,
+  resolveCatalogImageUrl,
+  resolveGameCoverUrl,
+} from "@/lib/gameAssets";
 import { getConfirmedPlatforms } from "@/lib/releases";
 import { toSlug } from "@/lib/slug";
 import { getGamingNews } from "@/services/newsService";
 import { getUpcomingReleases } from "@/services/releasesService";
-import { getServerStatuses } from "@/services/statusService";
-import { getGameTelemetry, getTelemetryHistory } from "@/services/telemetryService";
-import type { GamingNews, ServerStatus, UpcomingRelease } from "@/types/api";
+import type { GamingNews, UpcomingRelease } from "@/types/api";
+import GameAssetImage from "@/components/ui/GameAssetImage";
 
 export const revalidate = 60;
 
@@ -33,17 +33,6 @@ function findReleaseBySlug(
   slug: string,
 ): UpcomingRelease | undefined {
   return releases.find((release) => release.slug === slug);
-}
-
-function filterStatusesForGame(
-  statuses: ServerStatus[],
-  gameName: string,
-): ServerStatus[] {
-  const normalizedGame = gameName.toLowerCase();
-
-  return statuses.filter((status) =>
-    status.serviceName.toLowerCase().includes(normalizedGame),
-  );
 }
 
 function filterNewsForGame(news: GamingNews[], slug: string): GamingNews[] {
@@ -87,13 +76,10 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
   const { slug } = await params;
 
   try {
-    const [releases, statuses, news, gameTelemetry, telemetryHistory] =
+    const [releases, news] =
       await Promise.all([
       getUpcomingReleases(),
-      getServerStatuses(),
       getGamingNews(),
-      getGameTelemetry().catch(() => []),
-      getTelemetryHistory(slug).catch(() => []),
     ]);
 
     const release = findReleaseBySlug(releases, slug);
@@ -102,10 +88,6 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
       notFound();
     }
 
-    const gameTelemetryEntry = gameTelemetry.find(
-      (entry) => entry.gameSlug === slug,
-    );
-    const gameStatuses = filterStatusesForGame(statuses, release.gameName);
     const gameNews = filterNewsForGame(news, slug);
     const coverUrl = resolveGameCoverUrl(slug, {
       coverUrl: release.imageUrl ?? undefined,
@@ -118,7 +100,7 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
       <PageShell
         badge="Release Profile"
         title={release.gameName}
-        subtitle={`${release.genre} · tracked launch windows and live server status`}
+        subtitle={`${release.genre} · launch windows and latest game updates`}
         coverUrl={coverUrl}
         coverAlt={release.gameName}
       >
@@ -137,7 +119,7 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
             <PlatformReleaseSchedule platforms={release.platforms} />
           </div>
 
-          {(userRating || criticRating || (release.themes?.length ?? 0) > 0) && (
+          {(userRating || criticRating) && (
             <div className="mt-6 flex flex-wrap gap-2">
               {userRating ? (
                 <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-xs text-cyan-100">
@@ -149,14 +131,6 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
                   Critic score {criticRating}
                 </span>
               ) : null}
-              {release.themes?.map((theme) => (
-                <span
-                  key={theme}
-                  className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300"
-                >
-                  {theme}
-                </span>
-              ))}
             </div>
           )}
 
@@ -175,66 +149,6 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
           </section>
         ) : null}
 
-        <section className="glass-panel mb-8 rounded-3xl p-6 md:p-8">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="rounded-2xl border border-violet-400/20 bg-violet-500/10 p-3">
-              <Activity className="h-5 w-5 text-violet-300" />
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.35em] text-violet-300/70">
-                Server Status
-              </p>
-              <h2 className="heading-section text-2xl uppercase text-white">
-                LIVE SERVERS
-              </h2>
-            </div>
-          </div>
-
-          {gameTelemetryEntry ? (
-            <GameTelemetryCard
-              telemetry={gameTelemetryEntry}
-              linkToProfile={false}
-              linkToStatusPage
-              history={telemetryHistory}
-              platforms={confirmedPlatforms}
-            />
-          ) : gameStatuses.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-violet-400/20 px-4 py-6 text-sm text-slate-400">
-              No server data linked to this game yet. Check back closer to launch.
-            </p>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {gameStatuses.map((status) => (
-                <article
-                  key={status.id}
-                  className="rounded-2xl border border-white/5 bg-white/[0.03] p-5"
-                >
-                  <div className="mb-3 flex items-start justify-between gap-3">
-                    <h3 className="text-base font-semibold text-white">
-                      {status.serviceName}
-                    </h3>
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-medium ${
-                        status.isUp
-                          ? "bg-emerald-500/10 text-emerald-300 ring-1 ring-emerald-400/20"
-                          : "bg-rose-500/10 text-rose-300 ring-1 ring-rose-400/20"
-                      }`}
-                    >
-                      {status.isUp ? "Online" : "Offline"}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-slate-400">
-                    <Radio className="h-3.5 w-3.5" />
-                    <time dateTime={status.lastChecked}>
-                      Last checked {formatTimestamp(status.lastChecked)}
-                    </time>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
-
         <section className="glass-panel rounded-3xl p-6 md:p-8">
           <div className="mb-6 flex items-center gap-3">
             <div className="rounded-2xl border border-fuchsia-400/20 bg-fuchsia-500/10 p-3">
@@ -242,10 +156,10 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
             </div>
             <div>
               <p className="text-xs uppercase tracking-[0.35em] text-fuchsia-300/70">
-                Patch Log
+                Latest updates
               </p>
               <h2 className="heading-section text-2xl uppercase text-white">
-                PATCH NOTES
+                NEWS & PATCH NOTES
               </h2>
             </div>
           </div>
@@ -257,26 +171,43 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
           ) : (
             <div className="space-y-4">
               {gameNews.map((article) => (
-                <article
+                <Link
                   key={article.id}
-                  className="rounded-2xl border border-white/5 bg-white/[0.03] p-5"
+                  href={`/news/${article.slug}`}
+                  className="block"
                 >
-                  <p className="mb-2 text-xs uppercase tracking-[0.2em] text-fuchsia-200/70">
-                    {article.gameTag}
-                  </p>
-                  <h3 className="mb-3 text-lg font-semibold text-white">
-                    {article.title}
-                  </h3>
-                  <p className="text-sm leading-7 text-slate-300">
-                    {article.content}
-                  </p>
-                  <time
-                    dateTime={article.createdAt}
-                    className="mt-4 block text-xs text-slate-400"
-                  >
-                    {formatTimestamp(article.createdAt)}
-                  </time>
-                </article>
+                  <article className="rounded-2xl border border-white/5 bg-white/[0.03] p-5 transition hover:bg-white/[0.06]">
+                    <div className="mb-3 flex items-start gap-4">
+                      <GameAssetImage
+                        name={article.gameTag}
+                        src={resolveCatalogImageUrl(
+                          article.gameCoverUrl ?? null,
+                          null,
+                        )}
+                        className="h-16 w-14"
+                        imageClassName="object-cover"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="mb-2 text-xs uppercase tracking-[0.2em] text-fuchsia-200/70">
+                          {article.gameTag}
+                        </p>
+                        <h3 className="mb-3 text-lg font-semibold text-white">
+                          {article.title}
+                        </h3>
+                      </div>
+                    </div>
+
+                    <p className="text-sm leading-7 text-slate-300">
+                      {article.content}
+                    </p>
+                    <time
+                      dateTime={article.createdAt}
+                      className="mt-4 block text-xs text-slate-400"
+                    >
+                      {formatTimestamp(article.createdAt)}
+                    </time>
+                  </article>
+                </Link>
               ))}
             </div>
           )}

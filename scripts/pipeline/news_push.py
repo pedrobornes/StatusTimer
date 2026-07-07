@@ -9,7 +9,7 @@ from pathlib import Path
 
 from clients.backend_client import BackendClient
 from config.settings import settings
-from models.feed_events import FeedEventKind, ScrapedFeedEvent
+from models.feed_events import FeedEventKind, FeedSource, ScrapedFeedEvent
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +74,9 @@ def push_news_events(
 
     for event in sorted(events, key=lambda item: item.published_at, reverse=True):
         if event.kind != FeedEventKind.NEWS:
+            continue
+        if event.source != FeedSource.STEAM:
+            # Non-Steam sources must go through skill rewriting before persistence.
             continue
         if store.is_pushed(event):
             continue
