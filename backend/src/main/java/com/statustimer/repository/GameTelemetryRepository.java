@@ -16,6 +16,9 @@ public interface GameTelemetryRepository extends JpaRepository<GameTelemetry, Lo
 
     Optional<GameTelemetry> findByGame_Slug(String gameSlug);
 
+    @Query("SELECT t FROM GameTelemetry t WHERE t.game.slug IN :slugs")
+    List<GameTelemetry> findByGame_SlugIn(@Param("slugs") Collection<String> slugs);
+
     @Query("""
             SELECT h FROM GameTelemetryHistory h
             WHERE h.game.slug = :gameSlug

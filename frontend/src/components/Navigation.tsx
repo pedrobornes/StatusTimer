@@ -4,11 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Activity,
+  CircleHelp,
   Home,
-  Newspaper,
   Rocket,
 } from "lucide-react";
 import StatusTimerSonarLogo from "@/components/ui/StatusTimerSonarLogo";
+import { APP_ROUTES } from "@/config/routes";
 
 interface NavItem {
   href: string;
@@ -19,30 +20,32 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   {
-    href: "/",
+    href: APP_ROUTES.home,
     label: "Monitor",
     icon: Home,
-    isActive: (pathname) => pathname === "/",
+    isActive: (pathname) => pathname === APP_ROUTES.home,
   },
   {
-    href: "/telemetry",
+    href: APP_ROUTES.telemetry,
     label: "Servers",
     icon: Activity,
     isActive: (pathname) =>
-      pathname.startsWith("/telemetry") || pathname.startsWith("/status/"),
+      pathname.startsWith(APP_ROUTES.telemetry) ||
+      pathname.startsWith("/status/"),
   },
   {
-    href: "/releases",
-    label: "Releases",
+    href: APP_ROUTES.releases,
+    label: "Game Releases",
     icon: Rocket,
     isActive: (pathname) =>
-      pathname.startsWith("/releases") || pathname.startsWith("/release/"),
+      pathname.startsWith(APP_ROUTES.releases) ||
+      pathname.startsWith("/release/"),
   },
   {
-    href: "/intel",
-    label: "News",
-    icon: Newspaper,
-    isActive: (pathname) => pathname.startsWith("/intel"),
+    href: APP_ROUTES.howItWorks,
+    label: "How it works",
+    icon: CircleHelp,
+    isActive: (pathname) => pathname.startsWith(APP_ROUTES.howItWorks),
   },
 ];
 
@@ -53,7 +56,7 @@ export default function Navigation() {
     <nav className="sticky top-0 z-50 border-b border-violet-400/15 bg-mystic-950/95">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8">
         <Link
-          href="/"
+          href={APP_ROUTES.home}
           className="inline-flex items-center gap-3 rounded-full border border-violet-400/25 bg-violet-500/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.3em] text-slate-200 transition-colors hover:border-violet-400/40 hover:text-white"
         >
           <StatusTimerSonarLogo className="h-8 w-8 shrink-0" />

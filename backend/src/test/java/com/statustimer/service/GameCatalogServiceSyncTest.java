@@ -63,6 +63,8 @@ class GameCatalogServiceSyncTest {
                         null,
                         null,
                         null,
+                        null,
+                        null,
                         null
                 ))
         ));
@@ -108,6 +110,8 @@ class GameCatalogServiceSyncTest {
                         null,
                         null,
                         null,
+                        null,
+                        null,
                         null
                 ))
         ));
@@ -116,6 +120,63 @@ class GameCatalogServiceSyncTest {
         assertEquals(existing.getId(), updated.getId());
         assertEquals(62_172L, updated.getTwitchViewers());
         assertNotNull(updated.getTwitchGameId());
+    }
+
+    @Test
+    void syncCatalogUpdatesManualProtectedSteamLivePlayers() {
+        Game existing = gameRepository.findBySlug("counter-strike-2").orElseThrow();
+        existing.setSteamAppId(10);
+        existing.setSteamBlacklisted(true);
+        existing.setSteamConsecutive404Count(3);
+        gameRepository.save(existing);
+
+        var response = gameCatalogService.syncCatalog(new SyncGameCatalogRequest(
+                List.of(new GameCatalogEntryPayload(
+                        "counter-strike-2",
+                        "Counter-Strike 2",
+                        730,
+                        null,
+                        null,
+                        null,
+                        null,
+                        842_113L,
+                        null,
+                        false,
+                        null,
+                        null,
+                        null,
+                        null,
+                        List.of(),
+                        List.of(),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                ))
+        ));
+
+        assertEquals(1, response.updated());
+
+        Game updated = gameRepository.findBySlug("counter-strike-2").orElseThrow();
+        assertEquals(730, updated.getSteamAppId());
+        assertEquals(842_113L, updated.getLivePlayers());
+        assertEquals(false, updated.getSteamBlacklisted());
+        assertEquals(0, updated.getSteamConsecutive404Count());
+    }
+
+    @Test
+    void resolveAppIdPrefersPinnedSteamAppOverStaleDatabaseValue() {
+        Game existing = gameRepository.findBySlug("counter-strike-2").orElseThrow();
+        existing.setSteamAppId(10);
+        gameRepository.save(existing);
+
+        assertEquals(730, gameCatalogService.resolveAppId("counter-strike-2"));
+        assertEquals(730, gameCatalogService.resolveAppId("counter-strike"));
     }
 
     private void ensureGame(String slug, String gameName, boolean featured) {

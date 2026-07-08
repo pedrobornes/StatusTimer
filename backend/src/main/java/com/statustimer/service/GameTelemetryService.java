@@ -3,6 +3,8 @@ package com.statustimer.service;
 import com.statustimer.config.GameSlugMapper;
 import com.statustimer.dto.request.GameTelemetryPayload;
 import com.statustimer.dto.request.SyncTelemetryRequest;
+import com.statustimer.dto.response.CatalogGameListItemResponse;
+import com.statustimer.dto.response.GameCatalogPageResponse;
 import com.statustimer.dto.response.GameCatalogSearchResponse;
 import com.statustimer.dto.response.GameTelemetryResponse;
 import com.statustimer.dto.response.SyncTelemetryResponse;
@@ -19,13 +21,17 @@ import com.statustimer.repository.GameTelemetryRepository;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,6 +71,65 @@ public class GameTelemetryService {
                 .filter(entity -> gameCatalogService.isFeatured(entity.getGame().getSlug()))
                 .map(this::toResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public GameCatalogPageResponse findCatalogPage(int page, int size, String genre, String query) {
+        int safePage = Math.max(0, page);
+        int safeSize = Math.max(1, Math.min(size, 200));
+        String normalizedGenre = normalizeCatalogGenre(genre);
+        String normalizedQuery = normalizeCatalogQuery(query);
+
+        Pageable pageable = PageRequest.of(
+                safePage,
+                safeSize,
+                Sort.by(
+                        Sort.Order.asc("twitchRank").nullsLast(),
+                        Sort.Order.asc("gameName")
+                )
+        );
+
+        Page<Game> gamesPage = gameRepository.findCatalogPage(
+                normalizedGenre,
+                normalizedQuery,
+                pageable
+        );
+
+        List<String> slugs = gamesPage.getContent().stream()
+                .map(Game::getSlug)
+                .toList();
+
+        Map<String, GameTelemetry> telemetryBySlug = slugs.isEmpty()
+                ? Map.of()
+                : gameTelemetryRepository.findByGame_SlugIn(slugs).stream()
+                        .collect(Collectors.toMap(
+                                telemetry -> telemetry.getGame().getSlug(),
+                                Function.identity(),
+                                (left, right) -> left
+                        ));
+
+        List<CatalogGameListItemResponse> items = gamesPage.getContent().stream()
+                .map(game -> {
+                    GameTelemetry telemetry = telemetryBySlug.get(game.getSlug());
+                    GameTelemetryResponse response = telemetry != null
+                            ? GameTelemetryResponse.fromEntity(
+                                    telemetry,
+                                    Optional.of(game),
+                                    gameCatalogService
+                            )
+                            : GameTelemetryResponse.fromGameCatalog(game, gameCatalogService);
+
+                    return CatalogGameListItemResponse.fromTelemetryResponse(response);
+                })
+                .toList();
+
+        return new GameCatalogPageResponse(
+                items,
+                safePage,
+                safeSize,
+                gamesPage.getTotalElements(),
+                gamesPage.getTotalPages()
+        );
     }
 
     @Transactional(readOnly = true)
@@ -378,5 +443,27 @@ public class GameTelemetryService {
         }
 
         return TelemetrySource.NETWORK_PROBE;
+    }
+
+    private String normalizeCatalogGenre(String genre) {
+        if (genre == null) {
+            return null;
+        }
+
+        String trimmed = genre.trim();
+        if (trimmed.isEmpty() || "all".equalsIgnoreCase(trimmed)) {
+            return null;
+        }
+
+        return trimmed;
+    }
+
+    private String normalizeCatalogQuery(String query) {
+        if (query == null) {
+            return null;
+        }
+
+        String trimmed = query.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

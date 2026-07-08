@@ -1,13 +1,14 @@
 import Link from "next/link";
 import HypeCounterButton from "@/components/HypeCounterButton";
-import GameAssetImage from "@/components/ui/GameAssetImage";
+import GameBoxArtImage from "@/components/ui/GameBoxArtImage";
 import GameCoverFrame from "@/components/ui/GameCoverFrame";
 import PlatformReleaseSchedule from "@/components/PlatformReleaseSchedule";
+import { formatIgdbRating } from "@/lib/gameAssets";
+import { APP_ROUTES } from "@/config/routes";
 import {
-  formatIgdbRating,
-  resolveGameCoverUrl,
-  resolveGameLogoUrl,
-} from "@/lib/gameAssets";
+  resolveReleaseBoxArtUrl,
+  resolveReleaseHeroUrl,
+} from "@/lib/releases";
 import type { UpcomingRelease } from "@/types/api";
 
 interface ReleaseCardProps {
@@ -19,45 +20,46 @@ export default function ReleaseCard({
   release,
   showCover = false,
 }: ReleaseCardProps) {
-  const logoUrl = resolveGameLogoUrl(release.slug, {
-    logoUrl: release.logoUrl ?? undefined,
-  });
-  const coverUrl = showCover
-    ? resolveGameCoverUrl(release.slug, {
-        coverUrl: release.imageUrl ?? undefined,
-      })
-    : null;
+  const boxArtUrl = resolveReleaseBoxArtUrl(release.slug, release);
+  const heroUrl = showCover ? resolveReleaseHeroUrl(release.slug, release) : null;
   const userRating = formatIgdbRating(release.userRating ?? null);
   const criticRating = formatIgdbRating(release.criticRating ?? null);
 
+  const releaseHref = APP_ROUTES.release(release.slug);
+
   return (
-    <article className="overflow-hidden rounded-2xl border border-white/8 bg-white/[0.04] transition hover:border-cyan-400/25 hover:bg-white/[0.06]">
-      {coverUrl ? (
+    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-white/8 bg-white/[0.04] transition hover:border-cyan-400/25 hover:bg-white/[0.06]">
+      {heroUrl ? (
         <Link
-          href={`/release/${release.slug}`}
-          className="group block w-full overflow-hidden"
+          href={releaseHref}
+          className="group block w-full shrink-0 overflow-hidden"
         >
           <GameCoverFrame
-            src={coverUrl}
+            src={heroUrl}
             alt={release.gameName}
             className="aspect-[16/7] min-h-[200px] max-h-[280px] sm:max-h-[320px] transition duration-300 group-hover:brightness-110"
           />
         </Link>
       ) : null}
 
-      <div className="p-5 pb-7">
+      <div className="flex flex-1 flex-col p-5 pb-7">
         <div className="mb-4 flex items-start gap-3">
-          <GameAssetImage
-            name={release.gameName}
-            src={logoUrl}
-            className="h-11 w-24 shrink-0"
-            imageClassName="object-contain p-1"
-          />
+          <Link
+            href={releaseHref}
+            className="shrink-0 transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300"
+            aria-label={`View ${release.gameName} release profile`}
+          >
+            <GameBoxArtImage
+              title={release.gameName}
+              src={boxArtUrl}
+              size="card"
+            />
+          </Link>
 
           <div className="min-w-0 flex-1">
             <h3 className="text-lg font-semibold leading-snug text-white">
               <Link
-                href={`/release/${release.slug}`}
+                href={releaseHref}
                 className="transition hover:text-cyan-200"
               >
                 {release.gameName}
@@ -85,13 +87,14 @@ export default function ReleaseCard({
           </div>
         </div>
 
-        <div className="mb-6">
+        <div className="mb-6 flex-1">
           <PlatformReleaseSchedule platforms={release.platforms} />
         </div>
 
         <HypeCounterButton
           releaseId={release.id}
           initialHypeCount={release.hypeCount}
+          className="mt-auto"
         />
       </div>
     </article>

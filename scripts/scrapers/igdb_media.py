@@ -7,7 +7,27 @@ from datetime import date, datetime, timezone
 from typing import Any
 
 IGDB_IMAGE_BASE = "https://images.igdb.com/igdb/image/upload"
+import re
+
 STEAM_EXTERNAL_CATEGORY = 1
+STEAM_STORE_URL_PATTERN = re.compile(
+    r"store\.steampowered\.com/app/(\d+)",
+    re.IGNORECASE,
+)
+YOUTUBE_VIDEO_ID_PATTERN = re.compile(
+    r"(?:youtube\.com/(?:watch\?v=|embed/|shorts/)|youtu\.be/)([\w-]{11})",
+    re.IGNORECASE,
+)
+YOUTUBE_CHANNEL_MARKERS = ("/channel/", "/@", "/c/", "/user/")
+EPIC_EXTERNAL_CATEGORY = 13
+OFFICIAL_WEBSITE_CATEGORY = 1
+YOUTUBE_WEBSITE_CATEGORY = 9
+STEAM_WEBSITE_CATEGORY = 13
+REDDIT_WEBSITE_CATEGORY = 14
+EPIC_WEBSITE_CATEGORY = 16
+EXTERNAL_LINK_KEYS = frozenset({"steam", "epic", "youtube", "reddit", "official"})
+EPIC_STORE_URL_PATTERN = re.compile(r"epicgames\.com/(?:store|en-US)", re.IGNORECASE)
+REDDIT_SUBREDDIT_PATTERN = re.compile(r"reddit\.com/r/([\w_]+)", re.IGNORECASE)
 MAIN_GAME_CATEGORY = 0
 MAIN_GAME_TYPE = 0
 
@@ -15,7 +35,8 @@ IGDB_GAME_FIELDS = (
     "id, name, slug, category, game_type, first_release_date, platforms, genres.name, "
     "cover.image_id, artworks.image_id, screenshots.image_id, "
     "hypes, rating, aggregated_rating, "
-    "videos.video_id, external_games.uid, external_games.category"
+    "videos.video_id, websites.url, websites.category, "
+    "external_games.uid, external_games.category, external_games.url"
 )
 
 
@@ -32,6 +53,8 @@ class IgdbGameMetadata:
     genre_names: list[str] = field(default_factory=list)
     screenshot_urls: list[str] = field(default_factory=list)
     trailer_video_ids: list[str] = field(default_factory=list)
+    youtube_channel_url: str | None = None
+    external_links: dict[str, str] = field(default_factory=dict)
     hype_count: int = 0
     steam_app_id: int | None = None
     release_date: date | None = None
@@ -69,6 +92,17 @@ def parse_igdb_game_metadata(raw_game: dict[str, Any]) -> IgdbGameMetadata:
     logo_url = _resolve_logo_url(raw_game.get("cover"))
     background_url = _resolve_background_url(raw_game.get("artworks"))
 
+    youtube_channel_url, website_video_ids = _resolve_youtube_from_websites(
+        raw_game.get("websites")
+    )
+    steam_app_id = _resolve_steam_app_id(raw_game.get("external_games"))
+    external_links = _resolve_external_links(
+        raw_game.get("websites"),
+        raw_game.get("external_games"),
+        steam_app_id,
+        youtube_channel_url,
+    )
+
     return IgdbGameMetadata(
         igdb_game_id=parsed_id,
         name=game_name,
@@ -80,9 +114,14 @@ def parse_igdb_game_metadata(raw_game: dict[str, Any]) -> IgdbGameMetadata:
         critic_rating=_normalize_rating(raw_game.get("aggregated_rating")),
         genre_names=_resolve_genre_names(raw_game.get("genres")),
         screenshot_urls=_resolve_screenshot_urls(raw_game.get("screenshots")),
-        trailer_video_ids=_resolve_trailer_ids(raw_game.get("videos")),
+        trailer_video_ids=_merge_unique_strings(
+            _resolve_trailer_ids(raw_game.get("videos")),
+            website_video_ids,
+        ),
+        youtube_channel_url=youtube_channel_url,
+        external_links=external_links,
         hype_count=_resolve_hype_count(raw_game.get("hypes")),
-        steam_app_id=_resolve_steam_app_id(raw_game.get("external_games")),
+        steam_app_id=steam_app_id,
         release_date=_parse_release_date(raw_game.get("first_release_date")),
     )
 
@@ -124,6 +163,166 @@ def _resolve_screenshot_urls(raw_screenshots: Any) -> list[str]:
         urls.append(igdb_image_url(image_id, "t_screenshot_huge"))
 
     return urls
+
+
+def _merge_unique_strings(existing: list[str], extra: list[str]) -> list[str]:
+    seen = set(existing)
+    merged = list(existing)
+
+    for value in extra:
+        if value not in seen:
+            seen.add(value)
+            merged.append(value)
+
+    return merged
+
+
+def _resolve_youtube_from_websites(raw_websites: Any) -> tuple[str | None, list[str]]:
+    websites = raw_websites if isinstance(raw_websites, list) else []
+    channel_url: str | None = None
+    video_ids: list[str] = []
+
+    for website in websites:
+        if not isinstance(website, dict):
+            continue
+
+        url = website.get("url")
+        if not isinstance(url, str):
+            continue
+
+        normalized_url = url.strip()
+        if not normalized_url:
+            continue
+
+        lowered = normalized_url.lower()
+        if "youtube.com" not in lowered and "youtu.be" not in lowered:
+            continue
+
+        video_id = _parse_youtube_video_id(normalized_url)
+        if video_id is not None:
+            video_ids.append(video_id)
+            continue
+
+        if _is_youtube_channel_url(normalized_url):
+            channel_url = channel_url or normalized_url
+
+    return channel_url, video_ids
+
+
+def _parse_youtube_video_id(url: str) -> str | None:
+    match = YOUTUBE_VIDEO_ID_PATTERN.search(url)
+    if match is None:
+        return None
+
+    video_id = match.group(1).strip()
+    return video_id or None
+
+
+def _is_youtube_channel_url(url: str) -> bool:
+    lowered = url.lower()
+    if "youtube.com" not in lowered:
+        return False
+
+    return any(marker in lowered for marker in YOUTUBE_CHANNEL_MARKERS)
+
+
+def _resolve_external_links(
+    raw_websites: Any,
+    raw_external_games: Any,
+    steam_app_id: int | None,
+    youtube_channel_url: str | None,
+) -> dict[str, str]:
+    links: dict[str, str] = {}
+
+    websites = raw_websites if isinstance(raw_websites, list) else []
+    for website in websites:
+        if not isinstance(website, dict):
+            continue
+
+        url = website.get("url")
+        if not isinstance(url, str):
+            continue
+
+        normalized_url = url.strip()
+        if not normalized_url:
+            continue
+
+        category = website.get("category")
+        if category == OFFICIAL_WEBSITE_CATEGORY:
+            links["official"] = normalized_url
+            continue
+
+        if category == REDDIT_WEBSITE_CATEGORY:
+            reddit_url = _normalize_reddit_url(normalized_url)
+            if reddit_url is not None:
+                links["reddit"] = reddit_url
+            continue
+
+        if category == EPIC_WEBSITE_CATEGORY or _is_epic_store_url(normalized_url):
+            links["epic"] = normalized_url
+            continue
+
+        if category == STEAM_WEBSITE_CATEGORY or _parse_steam_app_id_from_url(normalized_url):
+            links["steam"] = normalized_url
+            continue
+
+        if category == YOUTUBE_WEBSITE_CATEGORY and _is_youtube_channel_url(normalized_url):
+            links["youtube"] = normalized_url
+            continue
+
+        lowered = normalized_url.lower()
+        if "reddit.com/r/" in lowered:
+            reddit_url = _normalize_reddit_url(normalized_url)
+            if reddit_url is not None:
+                links["reddit"] = reddit_url
+        elif _is_epic_store_url(normalized_url):
+            links["epic"] = normalized_url
+        elif _parse_steam_app_id_from_url(normalized_url):
+            links["steam"] = normalized_url
+        elif "youtube.com" in lowered and _is_youtube_channel_url(normalized_url):
+            links["youtube"] = normalized_url
+
+    external_games = raw_external_games if isinstance(raw_external_games, list) else []
+    for entry in external_games:
+        if not isinstance(entry, dict):
+            continue
+
+        url = entry.get("url")
+        normalized_url = url.strip() if isinstance(url, str) else ""
+        category = entry.get("category")
+
+        if category == STEAM_EXTERNAL_CATEGORY or _parse_steam_app_id_from_url(normalized_url):
+            if normalized_url:
+                links["steam"] = normalized_url
+            continue
+
+        if category == EPIC_EXTERNAL_CATEGORY or _is_epic_store_url(normalized_url):
+            if normalized_url:
+                links["epic"] = normalized_url
+
+    if steam_app_id is not None and steam_app_id > 0 and "steam" not in links:
+        links["steam"] = f"https://store.steampowered.com/app/{steam_app_id}/"
+
+    if youtube_channel_url and "youtube" not in links:
+        links["youtube"] = youtube_channel_url
+
+    return {key: links[key] for key in EXTERNAL_LINK_KEYS if key in links and links[key]}
+
+
+def _is_epic_store_url(url: str) -> bool:
+    return EPIC_STORE_URL_PATTERN.search(url) is not None
+
+
+def _normalize_reddit_url(url: str) -> str | None:
+    match = REDDIT_SUBREDDIT_PATTERN.search(url)
+    if match is None:
+        return None
+
+    subreddit = match.group(1).strip()
+    if not subreddit:
+        return None
+
+    return f"https://www.reddit.com/r/{subreddit}/"
 
 
 def _resolve_trailer_ids(raw_videos: Any) -> list[str]:
@@ -169,21 +368,43 @@ def _extract_image_id(raw_value: Any) -> str | None:
     return None
 
 
+def _parse_steam_uid(raw_uid: Any) -> int | None:
+    if isinstance(raw_uid, str) and raw_uid.isdigit():
+        return int(raw_uid)
+    if isinstance(raw_uid, int) and raw_uid > 0:
+        return raw_uid
+    return None
+
+
+def _parse_steam_app_id_from_url(url: str) -> int | None:
+    match = STEAM_STORE_URL_PATTERN.search(url)
+    if match is None:
+        return None
+
+    app_id = int(match.group(1))
+    return app_id if app_id > 0 else None
+
+
 def _resolve_steam_app_id(raw_external_games: Any) -> int | None:
     entries = raw_external_games if isinstance(raw_external_games, list) else []
+    fallback_from_url: int | None = None
+
     for entry in entries:
         if not isinstance(entry, dict):
             continue
-        if entry.get("category") != STEAM_EXTERNAL_CATEGORY:
-            continue
 
-        uid = entry.get("uid")
-        if isinstance(uid, str) and uid.isdigit():
-            return int(uid)
-        if isinstance(uid, int) and uid > 0:
-            return uid
+        if entry.get("category") == STEAM_EXTERNAL_CATEGORY:
+            parsed_uid = _parse_steam_uid(entry.get("uid"))
+            if parsed_uid is not None:
+                return parsed_uid
 
-    return None
+        url = entry.get("url")
+        if isinstance(url, str):
+            parsed_url = _parse_steam_app_id_from_url(url)
+            if parsed_url is not None:
+                fallback_from_url = parsed_url
+
+    return fallback_from_url
 
 
 def _resolve_hype_count(raw_hype: Any) -> int:

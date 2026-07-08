@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Dashboard from "@/components/dashboard/Dashboard";
 import DashboardError from "@/components/dashboard/DashboardError";
 import type { ApiRequestOptions } from "@/services/api";
-import { getGamingNews } from "@/services/newsService";
 import { getUpcomingReleases } from "@/services/releasesService";
 import { getServerStatuses } from "@/services/statusService";
 import {
@@ -14,9 +13,9 @@ import {
 import type { GameTelemetry, TelemetryHistorySnapshot } from "@/types/telemetry";
 
 export const metadata: Metadata = {
-  title: "StatusTimer | Live Gaming Server Status & Game News",
+  title: "StatusTimer | Live Gaming Server Status Monitor",
   description:
-    "Track live multiplayer server status, outages, and release countdowns for top games. Real-time telemetry, incident logs, and gaming news in one dashboard.",
+    "Track live multiplayer server status, outages, and release countdowns for top games. Real-time telemetry and incident logs in one dashboard.",
   alternates: {
     canonical: "/",
   },
@@ -72,9 +71,8 @@ async function loadTelemetryHistoryBySlug(
 
 export default async function HomePage() {
   try {
-    const [gameTelemetry, news, releases, incidents, statuses] = await Promise.all([
+    const [gameTelemetry, releases, incidents, statuses] = await Promise.all([
       loadDashboardTelemetry(DASHBOARD_TELEMETRY_LIMIT),
-      getGamingNews(),
       getUpcomingReleases(),
       getTelemetryIncidents().catch(() => []),
       getServerStatuses().catch(() => []),
@@ -88,7 +86,6 @@ export default async function HomePage() {
       <Dashboard
         gameTelemetry={gameTelemetry}
         historyBySlug={historyBySlug}
-        news={news.slice(0, 12)}
         releases={releases.slice(0, 4)}
         incidents={incidents}
         statuses={statuses}

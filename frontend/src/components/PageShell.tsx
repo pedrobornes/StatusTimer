@@ -1,5 +1,6 @@
 import { Sparkles } from "lucide-react";
 import GameStatusCover from "@/components/ui/GameStatusCover";
+import ReleaseHeroCover from "@/components/ui/ReleaseHeroCover";
 
 interface PageShellProps {
   children: React.ReactNode;
@@ -8,6 +9,7 @@ interface PageShellProps {
   badge?: string;
   coverUrl?: string | null;
   coverAlt?: string;
+  heroEmphasis?: boolean;
 }
 
 export default function PageShell({
@@ -17,12 +19,17 @@ export default function PageShell({
   badge = "StatusTimer",
   coverUrl,
   coverAlt,
+  heroEmphasis = false,
 }: PageShellProps) {
   return (
     <div className="mystery-grid min-h-screen">
       {coverUrl ? (
         <div className="relative mx-auto w-full max-w-[1400px] px-4 pt-6 md:px-8 md:pt-8">
-          <GameStatusCover src={coverUrl} alt={coverAlt ?? title} />
+          {heroEmphasis ? (
+            <ReleaseHeroCover src={coverUrl} alt={coverAlt ?? title} />
+          ) : (
+            <GameStatusCover src={coverUrl} alt={coverAlt ?? title} />
+          )}
         </div>
       ) : null}
 

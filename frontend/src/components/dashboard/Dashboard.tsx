@@ -1,19 +1,17 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import NewsFeedPanel from "@/components/dashboard/NewsFeedPanel";
 import TelemetryGrid from "@/components/dashboard/TelemetryGrid";
 import IncidentLog from "@/components/dashboard/telemetry/IncidentLog";
 import UpcomingReleasesPanel from "@/components/dashboard/UpcomingReleasesPanel";
 import GameSearchBar from "@/components/ui/GameSearchBar";
 import StatusTimerSonarLogo from "@/components/ui/StatusTimerSonarLogo";
 import { APP_ROUTES } from "@/config/routes";
-import type { GamingNews, ServerStatus, UpcomingRelease } from "@/types/api";
+import type { ServerStatus, UpcomingRelease } from "@/types/api";
 import type { GameTelemetry, TelemetryHistorySnapshot, TelemetryIncident } from "@/types/telemetry";
 
 interface DashboardProps {
   gameTelemetry: GameTelemetry[];
   historyBySlug: Record<string, TelemetryHistorySnapshot[]>;
-  news: GamingNews[];
   releases: UpcomingRelease[];
   incidents: TelemetryIncident[];
   statuses: ServerStatus[];
@@ -22,7 +20,6 @@ interface DashboardProps {
 export default function Dashboard({
   gameTelemetry,
   historyBySlug,
-  news,
   releases,
   incidents,
   statuses,
@@ -76,11 +73,6 @@ export default function Dashboard({
               incidents={incidents}
               platformAlerts={socialPlatformAlerts}
               sidebar
-            />
-            <NewsFeedPanel
-              news={news}
-              sidebar
-              emptyMessage="All servers are up and running. Time to game!"
             />
           </aside>
         </div>

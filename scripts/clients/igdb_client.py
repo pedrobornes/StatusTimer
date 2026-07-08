@@ -92,6 +92,37 @@ class IgdbClient:
 
         return collected[:limit]
 
+    def lookup_game_metadata_by_slug(self, slug: str) -> IgdbGameMetadata | None:
+        if not is_igdb_configured():
+            return None
+
+        normalized_slug = slug.strip()
+        if not normalized_slug:
+            return None
+
+        escaped_slug = normalized_slug.replace('"', '\\"')
+        query = (
+            f"fields {IGDB_GAME_FIELDS}; "
+            f'where slug = "{escaped_slug}"; '
+            "limit 1;"
+        )
+
+        rows = self._fetch_games(query)
+        for row in rows:
+            if not is_main_game(row):
+                continue
+
+            try:
+                return parse_igdb_game_metadata(row)
+            except ValueError as error:
+                logger.warning(
+                    "IGDB metadata parse failed for slug %s: %s",
+                    normalized_slug,
+                    error,
+                )
+
+        return None
+
     def lookup_game_metadata(self, game_name: str) -> IgdbGameMetadata | None:
         if not is_igdb_configured():
             return None

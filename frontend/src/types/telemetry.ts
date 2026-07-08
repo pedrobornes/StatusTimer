@@ -28,6 +28,9 @@ export interface GameTelemetry {
   userRating?: number | null;
   criticRating?: number | null;
   genreName?: string | null;
+  screenshotUrls?: string[];
+  trailerVideoIds?: string[];
+  youtubeChannelUrl?: string | null;
 }
 
 export interface TelemetryHistorySnapshot {
@@ -62,12 +65,18 @@ export interface SteamStoreListing {
 }
 
 export interface GameStatusDetail {
+  gameName?: string;
   telemetry: GameTelemetry | null;
   history: TelemetryHistorySnapshot[];
   incidents: TelemetryIncident[];
   news: GamingNews[];
   telemetryReady: boolean;
+  catalogOnly?: boolean;
   firstMonitoredAt?: string | null;
   uptime?: TelemetryUptimeSummary | null;
   steamStore?: SteamStoreListing | null;
+  screenshotUrls?: string[];
+  trailerVideoIds?: string[];
+  youtubeChannelUrl?: string | null;
+  externalLinks?: Record<string, string>;
 }

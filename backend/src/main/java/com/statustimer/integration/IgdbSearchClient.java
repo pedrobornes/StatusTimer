@@ -2,8 +2,12 @@ package com.statustimer.integration;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.statustimer.config.IgdbProperties;
+import com.statustimer.util.IgdbExternalLinksSupport;
+import com.statustimer.util.IgdbYoutubeSupport;
+import com.statustimer.util.IgdbYoutubeSupport.YoutubeWebsiteData;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,8 +20,9 @@ public class IgdbSearchClient {
 
     private static final int STEAM_EXTERNAL_CATEGORY = 1;
     private static final String GAME_FIELDS =
-            "id,name,slug,category,game_type,cover.image_id,artworks.image_id,hypes,rating,aggregated_rating,"
-                    + "genres.name,external_games.uid,external_games.category";
+            "id,name,slug,category,game_type,cover.image_id,artworks.image_id,screenshots.image_id,"
+                    + "hypes,rating,aggregated_rating,genres.name,videos.video_id,websites.url,websites.category,"
+                    + "external_games.uid,external_games.category,external_games.url";
 
     private final IgdbApiClient apiClient;
     private final IgdbProperties properties;
@@ -112,6 +117,18 @@ public class IgdbSearchClient {
         String coverImageId = row.path("cover").path("image_id").asText(null);
         String logoUrl = resolveLogoUrl(row, coverImageId);
         String coverUrl = IgdbImageUrls.coverBig(coverImageId);
+        List<String> screenshotUrls = resolveScreenshotUrls(row.path("screenshots"));
+        List<String> trailerVideoIds = resolveTrailerVideoIds(
+                row.path("videos"),
+                row.path("websites")
+        );
+        YoutubeWebsiteData youtubeData = IgdbYoutubeSupport.resolveFromWebsites(row.path("websites"));
+        Map<String, String> externalLinks = IgdbExternalLinksSupport.resolveExternalLinks(
+                row.path("websites"),
+                row.path("external_games"),
+                resolveSteamAppId(row.path("external_games")),
+                youtubeData.channelUrl()
+        );
 
         return Optional.of(new IgdbGameMatch(
                 igdbId,
@@ -123,7 +140,11 @@ public class IgdbSearchClient {
                 normalizeRating(row.path("rating")),
                 normalizeRating(row.path("aggregated_rating")),
                 parseNames(row.path("genres")),
-                row.path("hypes").asInt(0)
+                row.path("hypes").asInt(0),
+                screenshotUrls,
+                trailerVideoIds,
+                youtubeData.channelUrl(),
+                externalLinks
         ));
     }
 
@@ -147,31 +168,93 @@ public class IgdbSearchClient {
             return null;
         }
 
+        Integer fallbackFromUrl = null;
+
         for (JsonNode entry : externalGames) {
-            if (!entry.has("category")) {
-                continue;
-            }
-
-            int category = entry.path("category").asInt(-1);
-            if (category != STEAM_EXTERNAL_CATEGORY) {
-                continue;
-            }
-
-            JsonNode uidNode = entry.path("uid");
-            if (uidNode.canConvertToInt()) {
-                int uid = uidNode.asInt(-1);
-                if (uid > 0) {
-                    return uid;
+            if (entry.has("category")
+                    && entry.path("category").asInt(-1) == STEAM_EXTERNAL_CATEGORY) {
+                Integer fromUid = parseSteamUid(entry.path("uid"));
+                if (fromUid != null) {
+                    return fromUid;
                 }
             }
 
-            String uidText = uidNode.asText("").trim();
-            if (uidText.matches("\\d+")) {
-                return Integer.valueOf(uidText);
+            Integer fromUrl = parseSteamAppIdFromUrl(entry.path("url").asText(""));
+            if (fromUrl != null) {
+                fallbackFromUrl = fromUrl;
             }
         }
 
+        return fallbackFromUrl;
+    }
+
+    private Integer parseSteamUid(JsonNode uidNode) {
+        if (uidNode.canConvertToInt()) {
+            int uid = uidNode.asInt(-1);
+            if (uid > 0) {
+                return uid;
+            }
+        }
+
+        String uidText = uidNode.asText("").trim();
+        if (uidText.matches("\\d+")) {
+            return Integer.valueOf(uidText);
+        }
+
         return null;
+    }
+
+    private Integer parseSteamAppIdFromUrl(String url) {
+        if (url == null || url.isBlank()) {
+            return null;
+        }
+
+        java.util.regex.Matcher matcher = java.util.regex.Pattern
+                .compile("store\\.steampowered\\.com/app/(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE)
+                .matcher(url);
+        if (!matcher.find()) {
+            return null;
+        }
+
+        try {
+            int appId = Integer.parseInt(matcher.group(1));
+            return appId > 0 ? appId : null;
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    private List<String> resolveScreenshotUrls(JsonNode screenshots) {
+        if (!screenshots.isArray()) {
+            return List.of();
+        }
+
+        List<String> urls = new ArrayList<>();
+        for (JsonNode screenshot : screenshots) {
+            String imageId = screenshot.path("image_id").asText(null);
+            String url = IgdbImageUrls.screenshotHuge(imageId);
+            if (url != null) {
+                urls.add(url);
+            }
+        }
+
+        return List.copyOf(urls);
+    }
+
+    private List<String> resolveTrailerVideoIds(JsonNode videos, JsonNode websites) {
+        List<String> trailerIds = new ArrayList<>();
+
+        if (videos.isArray()) {
+            for (JsonNode video : videos) {
+                String videoId = video.path("video_id").asText("").trim();
+                if (!videoId.isEmpty()) {
+                    trailerIds.add(videoId);
+                }
+            }
+        }
+
+        YoutubeWebsiteData youtubeData = IgdbYoutubeSupport.resolveFromWebsites(websites);
+        return IgdbYoutubeSupport.mergeVideoIds(trailerIds, youtubeData.videoIds());
     }
 
     private List<String> parseNames(JsonNode values) {
@@ -221,7 +304,11 @@ public class IgdbSearchClient {
             Integer userRating,
             Integer criticRating,
             List<String> genreNames,
-            int hypeCount
+            int hypeCount,
+            List<String> screenshotUrls,
+            List<String> trailerVideoIds,
+            String youtubeChannelUrl,
+            Map<String, String> externalLinks
     ) {
     }
 }

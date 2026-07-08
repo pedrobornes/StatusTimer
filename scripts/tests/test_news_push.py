@@ -46,6 +46,48 @@ def test_push_news_events_skips_already_pushed(tmp_path: Path) -> None:
     client.push_patch_note.assert_called_once()
 
 
+def test_push_news_events_skips_low_signal_items(tmp_path: Path) -> None:
+    store = NewsPushStore(tmp_path / "pushed_news.json")
+    client = Mock(spec=BackendClient)
+    client.push_patch_note.return_value = PushResult(success=True, status_code=201)
+
+    survey_event = ScrapedFeedEvent(
+        source=FeedSource.STEAM,
+        kind=FeedEventKind.NEWS,
+        external_id="survey-1",
+        game_tag="battlefield-6",
+        title="Battlefield 6 Steam Discussions Survey",
+        plain_text="Please take this 9-question survey about the community space.",
+        published_at=datetime(2026, 7, 6, tzinfo=timezone.utc),
+    )
+
+    pushed = push_news_events(client, [survey_event], store)
+
+    assert pushed == 0
+    client.push_patch_note.assert_not_called()
+
+
+def test_push_news_events_accepts_reddit_sources(tmp_path: Path) -> None:
+    store = NewsPushStore(tmp_path / "pushed_news.json")
+    client = Mock(spec=BackendClient)
+    client.push_patch_note.return_value = PushResult(success=True, status_code=201)
+
+    reddit_event = ScrapedFeedEvent(
+        source=FeedSource.REDDIT,
+        kind=FeedEventKind.NEWS,
+        external_id="reddit-1",
+        game_tag="infinity-nikki",
+        title="Patch 1.2.0 is live",
+        plain_text="This update includes balance changes, bug fixes, and new seasonal content.",
+        published_at=datetime(2026, 7, 6, tzinfo=timezone.utc),
+    )
+
+    pushed = push_news_events(client, [reddit_event], store)
+
+    assert pushed == 1
+    client.push_patch_note.assert_called_once()
+
+
 def test_push_news_events_skips_non_steam_sources(tmp_path: Path) -> None:
     store = NewsPushStore(tmp_path / "pushed_news.json")
     client = Mock(spec=BackendClient)

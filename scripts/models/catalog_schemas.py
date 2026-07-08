@@ -20,6 +20,10 @@ class GameCatalogEntryPayload(BaseModel):
     critic_rating: int | None = Field(default=None, alias="criticRating", ge=0, le=100)
     screenshot_urls: list[str] = Field(default_factory=list, alias="screenshotUrls")
     trailer_video_ids: list[str] = Field(default_factory=list, alias="trailerVideoIds")
+    youtube_channel_url: str | None = Field(
+        default=None, alias="youtubeChannelUrl", max_length=2048
+    )
+    external_links: dict[str, str] = Field(default_factory=dict, alias="externalLinks")
     steam_short_description: str | None = Field(
         default=None, alias="steamShortDescription"
     )

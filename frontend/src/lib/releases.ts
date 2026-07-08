@@ -1,4 +1,28 @@
 import type { GameGenre, PlatformDetail, UpcomingRelease } from "@/types/api";
+import {
+  resolveGameBoxArtUrl,
+  resolveGameCoverUrl,
+} from "@/lib/gameAssets";
+
+export function resolveReleaseHeroUrl(
+  slug: string,
+  release: Pick<UpcomingRelease, "logoUrl" | "imageUrl">,
+): string | null {
+  return resolveGameCoverUrl(slug, {
+    logoUrl: release.logoUrl ?? undefined,
+    coverUrl: release.imageUrl ?? undefined,
+  });
+}
+
+export function resolveReleaseBoxArtUrl(
+  slug: string,
+  release: Pick<UpcomingRelease, "logoUrl" | "imageUrl">,
+): string | null {
+  return resolveGameBoxArtUrl(slug, {
+    coverUrl: release.imageUrl ?? undefined,
+    logoUrl: release.logoUrl ?? undefined,
+  });
+}
 
 export const OFFICIAL_GAME_GENRES = [
   "Shooter",

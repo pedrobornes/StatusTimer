@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
+import GameLiveMetricsRow from "@/components/dashboard/GameLiveMetricsRow";
 import GameAssetImage from "@/components/ui/GameAssetImage";
 import { APP_ROUTES } from "@/config/routes";
 import { resolveCatalogImageUrl } from "@/lib/gameAssets";
@@ -201,7 +202,7 @@ export default function GameSearchBar() {
         >
           {isSearching ? (
             <p className="px-4 py-6 text-center text-sm text-slate-400">
-              Searching via IGDB...
+              Searching games...
             </p>
           ) : searchError ? (
             <p className="px-4 py-6 text-center text-sm text-rose-300/90">
@@ -246,6 +247,13 @@ export default function GameSearchBar() {
                           <span className="mt-0.5 block text-[11px] uppercase tracking-[0.12em] text-slate-400">
                             {game.genreName}
                           </span>
+                        ) : null}
+                        {game.livePlayers != null || game.twitchViewers != null ? (
+                          <GameLiveMetricsRow
+                            livePlayers={game.livePlayers}
+                            twitchViewers={game.twitchViewers}
+                            className="mt-1"
+                          />
                         ) : null}
                       </div>
                     </button>

@@ -1,6 +1,7 @@
 package com.statustimer.controller;
 
 import com.statustimer.dto.response.GameActivationResponse;
+import com.statustimer.dto.response.GameCatalogPageResponse;
 import com.statustimer.dto.response.GameCatalogSearchResponse;
 import com.statustimer.dto.response.GameIndexableSlugResponse;
 import com.statustimer.dto.response.GameStatusDetailResponse;
@@ -57,6 +58,16 @@ public class PublicApiController {
         return featured ? gameTelemetryService.findAllFeatured() : gameTelemetryService.findAll();
     }
 
+    @GetMapping("/catalog/games")
+    public GameCatalogPageResponse getCatalogGames(
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "100") int size,
+            @RequestParam(name = "genre", required = false) String genre,
+            @RequestParam(name = "q", required = false) String query
+    ) {
+        return gameTelemetryService.findCatalogPage(page, size, genre, query);
+    }
+
     @GetMapping("/telemetry/dashboard")
     public List<GameTelemetryResponse> getDashboardTelemetry(
             @RequestParam(name = "limit", defaultValue = "6") int limit
@@ -105,6 +116,14 @@ public class PublicApiController {
     @GetMapping("/news")
     public List<GamingNewsResponse> getGamingNews() {
         return gamingNewsService.findLatest();
+    }
+
+    @GetMapping("/news/game/{gameSlug}")
+    public List<GamingNewsResponse> getGamingNewsByGame(
+            @PathVariable String gameSlug,
+            @RequestParam(name = "limit", defaultValue = "24") int limit
+    ) {
+        return gamingNewsService.findByGameTag(gameSlug, limit);
     }
 
     @GetMapping("/news/{id}")

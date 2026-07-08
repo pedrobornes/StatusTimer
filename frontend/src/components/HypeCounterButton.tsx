@@ -7,11 +7,13 @@ import { incrementReleaseHype } from "@/services/releasesClientService";
 interface HypeCounterButtonProps {
   releaseId: number;
   initialHypeCount: number;
+  className?: string;
 }
 
 export default function HypeCounterButton({
   releaseId,
   initialHypeCount,
+  className = "",
 }: HypeCounterButtonProps) {
   const [hypeCount, setHypeCount] = useState(initialHypeCount);
   const [errorMessage, setErrorMessage] = useState<string>("");
@@ -36,7 +38,7 @@ export default function HypeCounterButton({
   };
 
   return (
-    <div className="space-y-2">
+    <div className={`space-y-2 ${className}`.trim()}>
       <button
         type="button"
         onClick={handleHypeClick}

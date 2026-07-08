@@ -4,6 +4,7 @@ import com.statustimer.entity.LifecycleState;
 import com.statustimer.entity.Game;
 import com.statustimer.repository.GameRepository;
 import com.statustimer.repository.GameTelemetryRepository;
+import com.statustimer.service.GameCatalogService;
 import com.statustimer.service.HarvestScheduleService;
 import com.statustimer.service.IndexabilityService;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class CatalogLifecycleMigrationRunner implements CommandLineRunner {
 
     private final GameRepository gameRepository;
     private final GameTelemetryRepository gameTelemetryRepository;
+    private final GameCatalogService gameCatalogService;
     private final IndexabilityService indexabilityService;
     private final HarvestScheduleService harvestScheduleService;
 
@@ -38,6 +40,7 @@ public class CatalogLifecycleMigrationRunner implements CommandLineRunner {
         }
 
         indexabilityService.recalculateAll();
+        gameCatalogService.enforceAllPinnedGamePolicies();
 
         if (migrated > 0) {
             log.info("Backfilled lifecycle fields for {} tracked games", migrated);

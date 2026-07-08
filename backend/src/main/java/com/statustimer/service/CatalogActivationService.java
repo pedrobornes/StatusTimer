@@ -1,5 +1,6 @@
 package com.statustimer.service;
 
+import com.statustimer.config.CatalogMonitoringPolicy;
 import com.statustimer.config.GameSlugMapper;
 import com.statustimer.dto.response.GameActivationResponse;
 import com.statustimer.entity.Game;
@@ -18,6 +19,7 @@ public class CatalogActivationService {
     private final GameSlugMapper gameSlugMapper;
     private final ScrapeJobService scrapeJobService;
     private final HarvestScheduleService harvestScheduleService;
+    private final GameCatalogService gameCatalogService;
 
     @Transactional
     public GameActivationResponse activateOnDemand(String slug) {
@@ -26,11 +28,21 @@ public class CatalogActivationService {
                 .orElseGet(this::createPersistedGameIfKnown);
 
         if (game == null) {
-            return new GameActivationResponse(canonicalSlug, false, false, false);
+            return new GameActivationResponse(canonicalSlug, false, false, false, false);
         }
 
-        boolean promoted = promoteToMonitoredIfNeeded(game);
-        boolean jobQueued = scrapeJobService.enqueueFullJob(canonicalSlug);
+        gameCatalogService.enrichCatalogProfileOnDemand(canonicalSlug);
+        game = gameRepository.findBySlug(canonicalSlug).orElse(game);
+
+        boolean catalogOnly = CatalogMonitoringPolicy.isCatalogOnlyProfile(game);
+        boolean promoted = promoteToMonitoredIfNeeded(game, catalogOnly);
+        boolean jobQueued = catalogOnly ? false : scrapeJobService.enqueueFullJob(canonicalSlug);
+
+        if (catalogOnly) {
+            game.setInitialTelemetryReady(true);
+        } else if (jobQueued) {
+            game.setInitialTelemetryReady(false);
+        }
 
         gameRepository.save(game);
         harvestScheduleService.ensureScheduleInitialized(game);
@@ -39,7 +51,8 @@ public class CatalogActivationService {
                 canonicalSlug,
                 promoted,
                 Boolean.TRUE.equals(game.getInitialTelemetryReady()),
-                jobQueued
+                jobQueued,
+                catalogOnly
         );
     }
 
@@ -59,7 +72,12 @@ public class CatalogActivationService {
         });
     }
 
-    private boolean promoteToMonitoredIfNeeded(Game game) {
+    private boolean promoteToMonitoredIfNeeded(Game game, boolean catalogOnly) {
+        if (catalogOnly) {
+            scheduleDueChecks(game);
+            return false;
+        }
+
         if (game.getLifecycleState() != LifecycleState.CATALOG) {
             scheduleDueChecks(game);
             return false;

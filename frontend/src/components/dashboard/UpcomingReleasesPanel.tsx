@@ -1,15 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { Rocket } from "lucide-react";
-import GenreFilterBar from "@/components/GenreFilterBar";
 import ReleasesGrid from "@/components/ReleasesGrid";
-import {
-  filterReleasesByGenre,
-  type ReleaseGenreFilter,
-} from "@/lib/releases";
+import { sortReleasesByHype } from "@/lib/releases";
 import type { UpcomingRelease } from "@/types/api";
+
+const DASHBOARD_RELEASE_PREVIEW_COUNT = 4;
 
 interface UpcomingReleasesPanelProps {
   releases: UpcomingRelease[];
@@ -18,11 +15,13 @@ interface UpcomingReleasesPanelProps {
 export default function UpcomingReleasesPanel({
   releases,
 }: UpcomingReleasesPanelProps) {
-  const [currentGenre, setCurrentGenre] = useState<ReleaseGenreFilter>("All");
-  const filteredReleases = filterReleasesByGenre(releases, currentGenre);
+  const previewReleases = sortReleasesByHype(releases).slice(
+    0,
+    DASHBOARD_RELEASE_PREVIEW_COUNT,
+  );
 
   const emptyMessage =
-    "No upcoming games found in this category right now. Check back soon for new reveals!";
+    "No upcoming games found right now. Check back soon for new reveals!";
 
   return (
     <section className="glass-panel rounded-3xl p-6 md:p-8">
@@ -49,13 +48,8 @@ export default function UpcomingReleasesPanel({
         </Link>
       </div>
 
-      <GenreFilterBar
-        currentGenre={currentGenre}
-        onGenreChange={setCurrentGenre}
-      />
-
       <ReleasesGrid
-        releases={filteredReleases}
+        releases={previewReleases}
         emptyMessage={emptyMessage}
         columns="home"
       />

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 
+from config.game_slug_registry import resolve_harvest_steam_app_id
 from clients.backend_client import BackendClient
 from clients.http_result import PushResult
 from models.catalog_schemas import SyncGameCatalogRequest
@@ -14,6 +15,7 @@ from scrapers.live_metrics import (
     fetch_scheduled_steam_metrics,
     fetch_scheduled_twitch_metrics,
 )
+from scrapers.reddit_news import RedditNewsScraper, RedditNewsTarget, parse_subreddit_from_url
 from scrapers.steam_news import SteamNewsScraper, SteamNewsTarget
 from scrapers.status import fetch_telemetry_for_slug
 
@@ -113,6 +115,7 @@ def _run_news_due(
         return 0, PushResult(success=True, status_code=204)
 
     scraper = SteamNewsScraper()
+    reddit_scraper = RedditNewsScraper()
     completions: list[dict[str, object]] = []
     collected_events: list[ScrapedFeedEvent] = []
     news_store = NewsPushStore.from_settings()
@@ -122,31 +125,74 @@ def _run_news_due(
         if not slug:
             continue
 
-        steam_app_id = target.get("steamAppId")
-        if not isinstance(steam_app_id, int) or steam_app_id <= 0:
+        news_success = True
+
+        steam_app_id = resolve_harvest_steam_app_id(
+            slug,
+            target.get("steamAppId") if isinstance(target.get("steamAppId"), int) else None,
+        )
+        if steam_app_id is not None and steam_app_id > 0:
+            try:
+                events = scraper.fetch_for_app(
+                    SteamNewsTarget(
+                        app_id=steam_app_id,
+                        game_tag=slug,
+                        game_name=str(target.get("gameName") or slug),
+                    )
+                )
+                collected_events.extend(events)
+                logger.info("Scheduled Steam news fetch for %s returned %s events", slug, len(events))
+            except Exception:
+                logger.exception("Scheduled Steam news fetch failed for slug=%s", slug)
+                news_success = False
+
+        reddit_url = _resolve_reddit_url_from_target(target)
+        subreddit = parse_subreddit_from_url(reddit_url) if reddit_url else None
+        if subreddit:
+            try:
+                reddit_events = reddit_scraper.fetch_for_subreddit(
+                    RedditNewsTarget(
+                        subreddit=subreddit,
+                        game_tag=slug,
+                        game_name=str(target.get("gameName") or slug),
+                        reddit_url=reddit_url or f"https://www.reddit.com/r/{subreddit}/",
+                    )
+                )
+                collected_events.extend(reddit_events)
+                logger.info(
+                    "Scheduled Reddit news fetch for %s returned %s events",
+                    slug,
+                    len(reddit_events),
+                )
+            except Exception:
+                logger.exception("Scheduled Reddit news fetch failed for slug=%s", slug)
+                news_success = False
+
+        if steam_app_id is None and subreddit is None:
             completions.append(_work_result(slug, "NEWS", True))
             continue
 
-        try:
-            events = scraper.fetch_for_app(
-                SteamNewsTarget(
-                    app_id=steam_app_id,
-                    game_tag=slug,
-                    game_name=str(target.get("gameName") or slug),
-                )
-            )
-            collected_events.extend(events)
-            completions.append(_work_result(slug, "NEWS", True))
-            logger.info("Scheduled news fetch for %s returned %s events", slug, len(events))
-        except Exception:
-            logger.exception("Scheduled news fetch failed for slug=%s", slug)
-            completions.append(_work_result(slug, "NEWS", False))
+        completions.append(_work_result(slug, "NEWS", news_success))
 
     if collected_events:
         push_news_events(client, collected_events, news_store)
 
     client.complete_harvest_work(completions)
     return len(targets), PushResult(success=True, status_code=200)
+
+
+def _resolve_reddit_url_from_target(target: dict[str, object]) -> str | None:
+    external_links = target.get("externalLinks")
+    if isinstance(external_links, dict):
+        value = external_links.get("reddit")
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+
+    reddit_url = target.get("redditUrl")
+    if isinstance(reddit_url, str) and reddit_url.strip():
+        return reddit_url.strip()
+
+    return None
 
 
 def run_scheduled_harvest_workload(client: BackendClient) -> tuple[int, PushResult]:

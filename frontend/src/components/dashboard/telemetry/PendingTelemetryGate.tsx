@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { getTelemetryReady } from "@/services/telemetryService";
 
@@ -12,6 +12,10 @@ const MAX_ATTEMPTS = 20;
 /** Show the "still working" copy after ~2 minutes. */
 const SLOW_MESSAGE_AFTER_ATTEMPTS = 4;
 
+function refreshSessionKey(gameSlug: string): string {
+  return `telemetry-ready-refresh:${gameSlug}`;
+}
+
 interface PendingTelemetryGateProps {
   gameSlug: string;
 }
@@ -19,7 +23,8 @@ interface PendingTelemetryGateProps {
 export default function PendingTelemetryGate({
   gameSlug,
 }: PendingTelemetryGateProps) {
-  const pathname = usePathname();
+  const router = useRouter();
+  const refreshedRef = useRef(false);
   const [attempts, setAttempts] = useState(0);
   const [timedOut, setTimedOut] = useState(false);
 
@@ -42,8 +47,12 @@ export default function PendingTelemetryGate({
       try {
         const ready = await checkReady();
         if (ready) {
-          // Hard navigation avoids stale RSC cache (revalidate=60 on the status page).
-          window.location.assign(pathname);
+          const refreshKey = refreshSessionKey(gameSlug);
+          if (!refreshedRef.current && !sessionStorage.getItem(refreshKey)) {
+            refreshedRef.current = true;
+            sessionStorage.setItem(refreshKey, "1");
+            router.refresh();
+          }
           return;
         }
       } catch {
@@ -68,7 +77,7 @@ export default function PendingTelemetryGate({
         window.clearTimeout(timeoutId);
       }
     };
-  }, [gameSlug, pathname]);
+  }, [gameSlug, router]);
 
   const showSlowMessage =
     attempts >= SLOW_MESSAGE_AFTER_ATTEMPTS && !timedOut;

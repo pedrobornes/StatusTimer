@@ -15,6 +15,7 @@ export interface GamingNews {
   title: string;
   content: string;
   gameTag: string;
+  gameName?: string;
   gameCoverUrl?: string | null;
   createdAt: string;
   publishedAt?: string;
@@ -50,6 +51,7 @@ export interface UpcomingRelease {
   screenshotUrls?: string[];
   trailerVideoIds?: string[];
   platforms: PlatformDetail[];
+  steamAppId?: number | null;
 }
 
 export interface CountdownParts {

@@ -10,6 +10,7 @@ from pathlib import Path
 from clients.backend_client import BackendClient
 from config.settings import settings
 from models.feed_events import FeedEventKind, FeedSource, ScrapedFeedEvent
+from scrapers.text_utils import is_relevant_gaming_news
 
 logger = logging.getLogger(__name__)
 
@@ -75,10 +76,18 @@ def push_news_events(
     for event in sorted(events, key=lambda item: item.published_at, reverse=True):
         if event.kind != FeedEventKind.NEWS:
             continue
-        if event.source != FeedSource.STEAM:
-            # Non-Steam sources must go through skill rewriting before persistence.
+        if event.source not in (FeedSource.STEAM, FeedSource.REDDIT):
+            # Other sources must go through skill rewriting before persistence.
             continue
         if store.is_pushed(event):
+            continue
+
+        if not is_relevant_gaming_news(event.title, event.plain_text):
+            logger.info(
+                "Skipping low-signal news for %s: %s",
+                event.game_tag,
+                event.title,
+            )
             continue
 
         result = client.push_patch_note(event.to_patch_note_payload())

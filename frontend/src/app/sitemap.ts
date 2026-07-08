@@ -43,10 +43,40 @@ function buildStaticSitemapEntries(): MetadataRoute.Sitemap {
       priority: 0.7,
     },
     {
-      url: `${siteUrl}${APP_ROUTES.intel}`,
+      url: `${siteUrl}${APP_ROUTES.howItWorks}`,
       lastModified: now,
-      changeFrequency: "hourly",
-      priority: 0.7,
+      changeFrequency: "monthly",
+      priority: 0.5,
+    },
+    {
+      url: `${siteUrl}${APP_ROUTES.faq}`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.4,
+    },
+    {
+      url: `${siteUrl}${APP_ROUTES.privacy}`,
+      lastModified: now,
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${siteUrl}${APP_ROUTES.terms}`,
+      lastModified: now,
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${siteUrl}${APP_ROUTES.cookies}`,
+      lastModified: now,
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${siteUrl}${APP_ROUTES.contact}`,
+      lastModified: now,
+      changeFrequency: "yearly",
+      priority: 0.3,
     },
   ];
 }

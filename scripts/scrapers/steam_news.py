@@ -15,8 +15,14 @@ from config.twitch_game_registry import MONITORED_TWITCH_GAME_NAMES
 from models.feed_events import FeedEventKind, FeedSource, ScrapedFeedEvent
 from models.normalization import to_slug
 from scrapers.http_client import build_http_session, fetch_text
-from scrapers.text_utils import plain_text_from_html
+from scrapers.text_utils import (
+    clean_news_title,
+    is_relevant_gaming_news,
+    is_usable_news_content,
+    markdown_from_html,
+)
 from scrapers.twitch_top_games import fetch_twitch_top_games
+from pipeline.news_coverage import fetch_games_without_news
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +59,20 @@ def build_steam_news_targets(limit: int | None = None) -> tuple[SteamNewsTarget,
 
     targets: list[SteamNewsTarget] = []
     seen_app_ids: set[int] = set()
+
+    uncovered_cap = min(12, cap)
+    for uncovered in fetch_games_without_news(limit=uncovered_cap):
+        if uncovered.steam_app_id in seen_app_ids:
+            continue
+
+        targets.append(
+            SteamNewsTarget(
+                app_id=uncovered.steam_app_id,
+                game_tag=uncovered.slug,
+                game_name=uncovered.game_name,
+            )
+        )
+        seen_app_ids.add(uncovered.steam_app_id)
 
     twitch_entries = fetch_twitch_top_games(limit=max(cap * 3, 30))
     for entry in twitch_entries:
@@ -157,18 +177,38 @@ class SteamNewsScraper:
             return []
 
         events: list[ScrapedFeedEvent] = []
+        min_chars = settings.steam_news_min_content_chars
+
         for index, item in enumerate(channel.findall("item")):
             if index >= settings.steam_news_max_items:
                 break
 
-            title = (item.findtext("title") or "").strip()
-            raw_body = item.findtext("description") or item.findtext("contents") or ""
-            plain_text = plain_text_from_html(raw_body)
+            raw_title = (item.findtext("title") or "").strip()
+            raw_body = item.findtext("contents") or item.findtext("description") or ""
+            formatted_content = markdown_from_html(raw_body)
             link = (item.findtext("link") or "").strip() or None
-            guid = (item.findtext("guid") or link or f"{app_id}:{title}").strip()
+            guid = (item.findtext("guid") or link or f"{app_id}:{raw_title}").strip()
             published_at = _parse_pub_date(item.findtext("pubDate"))
+            title = clean_news_title(raw_title, game_name)
 
-            if not title or not plain_text:
+            if not title or not formatted_content:
+                continue
+
+            if not is_usable_news_content(formatted_content, min_chars=min_chars):
+                logger.debug(
+                    "Skipping thin Steam news item for %s (%s): %s chars",
+                    game_name,
+                    title,
+                    len(formatted_content),
+                )
+                continue
+
+            if not is_relevant_gaming_news(title, formatted_content):
+                logger.info(
+                    "Skipping low-signal Steam news for %s: %s",
+                    game_name,
+                    title,
+                )
                 continue
 
             events.append(
@@ -177,8 +217,8 @@ class SteamNewsScraper:
                     kind=FeedEventKind.NEWS,
                     external_id=guid,
                     game_tag=game_tag,
-                    title=f"[STEAM NEWS] {game_name}: {title}",
-                    plain_text=plain_text,
+                    title=title,
+                    plain_text=formatted_content,
                     published_at=published_at,
                     source_url=link,
                 )

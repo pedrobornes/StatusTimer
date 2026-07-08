@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { memo } from "react";
 import { CalendarDays, Gauge } from "lucide-react";
 import StatusTimeline from "@/components/dashboard/telemetry/StatusTimeline";
 import GameLiveMetricsRow from "@/components/dashboard/GameLiveMetricsRow";
@@ -26,14 +27,20 @@ interface GameTelemetryCardProps {
   linkToStatusPage?: boolean;
   history?: TelemetryHistorySnapshot[];
   platforms?: PlatformDetail[];
+  /** Hides live server status until the first probe completes. */
+  serverStatusPending?: boolean;
+  /** Catalog-only titles show Twitch/IGDB data without server uptime. */
+  catalogOnly?: boolean;
 }
 
-export default function GameTelemetryCard({
+export default memo(function GameTelemetryCard({
   telemetry,
   linkToProfile = true,
   linkToStatusPage = true,
   history = [],
   platforms = [],
+  serverStatusPending = false,
+  catalogOnly = false,
 }: GameTelemetryCardProps) {
   const title = resolveGameDisplayName(telemetry.gameSlug, telemetry);
   const statusHref = APP_ROUTES.status(telemetry.gameSlug);
@@ -69,7 +76,18 @@ export default function GameTelemetryCard({
         </div>
 
         <div className="shrink-0 self-start">
-          <StatusBadge status={upcoming ? "UPCOMING" : telemetry.status} />
+          {catalogOnly ? (
+            <div className="rounded-full border border-cyan-400/25 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-100">
+              Live profile
+            </div>
+          ) : serverStatusPending ? (
+            <div className="flex items-center gap-2 rounded-full border border-violet-400/25 bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-100">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-violet-300" />
+              Checking servers
+            </div>
+          ) : (
+            <StatusBadge status={upcoming ? "UPCOMING" : telemetry.status} />
+          )}
         </div>
       </div>
 
@@ -112,7 +130,12 @@ export default function GameTelemetryCard({
         )}
       </header>
 
-      {upcoming ? (
+      {serverStatusPending ? (
+        <p className="mb-4 rounded-xl border border-violet-400/15 bg-violet-500/[0.04] px-4 py-3 text-sm leading-6 text-slate-300">
+          Player and Twitch numbers in this card come from our catalog. Live
+          server status will appear here once the first check finishes.
+        </p>
+      ) : upcoming ? (
         <div className="mb-4 flex flex-1 flex-col items-center justify-center gap-4 rounded-xl border border-amber-400/15 bg-amber-500/[0.04] px-4 py-8 text-center">
           <span className="inline-flex items-center gap-2 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-amber-500">
             <CalendarDays className="h-3.5 w-3.5" aria-hidden />
@@ -144,16 +167,20 @@ export default function GameTelemetryCard({
         <StatusTimeline snapshots={history} />
       )}
 
-      <hr className="mt-4 border-white/5" />
+      {!serverStatusPending ? (
+        <>
+          <hr className="mt-4 border-white/5" />
 
-      <footer className="mt-3 flex items-center gap-1.5 text-xs text-zinc-400">
-        <Gauge className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />
-        <span>{formatProbeSource(telemetry.gameSlug, telemetry.dataSource)}</span>
-        <span aria-hidden>•</span>
-        <time dateTime={telemetry.lastChecked}>
-          Updated {formatRelativeTime(telemetry.lastChecked)}
-        </time>
-      </footer>
+          <footer className="mt-3 flex items-center gap-1.5 text-xs text-zinc-400">
+            <Gauge className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />
+            <span>{formatProbeSource(telemetry.gameSlug, telemetry.dataSource)}</span>
+            <span aria-hidden>•</span>
+            <time dateTime={telemetry.lastChecked}>
+              Updated {formatRelativeTime(telemetry.lastChecked)}
+            </time>
+          </footer>
+        </>
+      ) : null}
     </article>
   );
-}
+});

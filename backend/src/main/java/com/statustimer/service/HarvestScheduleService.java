@@ -10,6 +10,7 @@ import com.statustimer.entity.LifecycleState;
 import com.statustimer.repository.GameRepository;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -26,6 +27,7 @@ public class HarvestScheduleService {
     );
 
     private final GameRepository gameRepository;
+    private final GameCatalogService gameCatalogService;
     private final HarvestScheduleProperties harvestScheduleProperties;
 
     @Transactional(readOnly = true)
@@ -175,12 +177,17 @@ public class HarvestScheduleService {
     }
 
     private HarvestWorkTargetResponse toTargetResponse(Game game) {
+        Map<String, String> externalLinks = game.getExternalLinks() != null
+                ? Map.copyOf(game.getExternalLinks())
+                : Map.of();
+
         return new HarvestWorkTargetResponse(
                 game.getSlug(),
                 game.getGameName(),
-                game.getSteamAppId(),
+                gameCatalogService.resolveAppId(game.getSlug()),
                 game.getTwitchGameId(),
-                game.getScrapeTier()
+                game.getScrapeTier(),
+                externalLinks
         );
     }
 

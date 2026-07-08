@@ -8,6 +8,7 @@ from dataclasses import dataclass
 import requests
 
 from config.settings import settings
+from config.game_slug_registry import canonical_catalog_slug
 from models.catalog_schemas import GameCatalogEntryPayload
 from scrapers.igdb_catalog_enrichment import enrich_catalog_entries_with_igdb
 from models.normalization import to_slug
@@ -86,8 +87,9 @@ def build_catalog_entry(
     *,
     featured: bool = False,
 ) -> GameCatalogEntryPayload:
+    canonical_slug = canonical_catalog_slug(entry.slug)
     return GameCatalogEntryPayload(
-        slug=entry.slug,
+        slug=canonical_slug,
         game_name=entry.game_name,
         logo_url=None,
         cover_url=None,

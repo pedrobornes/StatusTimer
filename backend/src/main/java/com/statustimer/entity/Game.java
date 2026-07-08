@@ -1,6 +1,7 @@
 package com.statustimer.entity;
 
 import com.statustimer.util.StringListJsonConverter;
+import com.statustimer.util.StringMapJsonConverter;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Column;
@@ -17,7 +18,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -183,6 +186,14 @@ public class Game {
     @Column(name = "trailer_video_ids_json", columnDefinition = "TEXT")
     @Builder.Default
     private List<String> trailerVideoIds = new ArrayList<>();
+
+    @Column(name = "youtube_channel_url", length = 2048)
+    private String youtubeChannelUrl;
+
+    @Convert(converter = StringMapJsonConverter.class)
+    @Column(name = "external_links_json", columnDefinition = "TEXT")
+    @Builder.Default
+    private Map<String, String> externalLinks = new HashMap<>();
 
     @Column(name = "steam_consecutive_404_count", nullable = false)
     @Builder.Default

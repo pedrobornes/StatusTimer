@@ -364,6 +364,7 @@ def fetch_monitored_steam_live_metrics() -> list:
 
 def fetch_scheduled_steam_metrics(targets: list[dict[str, object]]) -> list:
     """Build Steam live-player patches for scheduler-selected targets."""
+    from config.game_slug_registry import get_pinned_game
     from scrapers.status import MONITORED_GAME_TARGETS, MonitoredGameTarget, ProbeStrategy
 
     if not targets:
@@ -380,6 +381,22 @@ def fetch_scheduled_steam_metrics(targets: list[dict[str, object]]) -> list:
         known = monitored_by_slug.get(slug)
         if known is not None and known.steam_app_id is not None:
             resolved_targets.append(known)
+            continue
+
+        pinned = get_pinned_game(slug)
+        if pinned is not None:
+            resolved_targets.append(
+                MonitoredGameTarget(
+                    slug=slug,
+                    display_name=str(entry.get("gameName") or slug),
+                    strategy=ProbeStrategy.STEAM,
+                    steam_app_id=pinned["steam_app_id"],
+                    scrape_tier=resolve_effective_scrape_tier(
+                        slug,
+                        db_tier=parse_scrape_tier(entry.get("scrapeTier")),
+                    ),
+                )
+            )
             continue
 
         steam_app_id = entry.get("steamAppId")

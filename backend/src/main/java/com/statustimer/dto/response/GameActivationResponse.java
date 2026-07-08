@@ -4,5 +4,6 @@ public record GameActivationResponse(
         String slug,
         boolean promoted,
         boolean telemetryReady,
-        boolean jobQueued
+        boolean jobQueued,
+        boolean catalogOnly
 ) {}

@@ -6,6 +6,7 @@ import com.statustimer.entity.TelemetryStatus;
 import com.statustimer.service.GameCatalogService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public record GameTelemetryResponse(
@@ -31,7 +32,9 @@ public record GameTelemetryResponse(
         String lifecycleState,
         Integer userRating,
         Integer criticRating,
-        String genreName
+        String genreName,
+        List<String> screenshotUrls,
+        List<String> trailerVideoIds
 ) {
 
     public static GameTelemetryResponse fromEntity(
@@ -75,6 +78,14 @@ public record GameTelemetryResponse(
         Integer userRating = trackedGame.map(Game::getUserRating).orElse(null);
         Integer criticRating = trackedGame.map(Game::getCriticRating).orElse(null);
         String genreName = trackedGame.map(Game::getGenreName).orElse(null);
+        List<String> screenshotUrls = trackedGame
+                .map(Game::getScreenshotUrls)
+                .filter(urls -> urls != null && !urls.isEmpty())
+                .orElse(List.of());
+        List<String> trailerVideoIds = trackedGame
+                .map(Game::getTrailerVideoIds)
+                .filter(ids -> ids != null && !ids.isEmpty())
+                .orElse(List.of());
 
         return new GameTelemetryResponse(
                 entity.getId(),
@@ -99,7 +110,58 @@ public record GameTelemetryResponse(
                 lifecycleState,
                 userRating,
                 criticRating,
-                genreName
+                genreName,
+                screenshotUrls,
+                trailerVideoIds
+        );
+    }
+
+    public static GameTelemetryResponse fromGameCatalog(Game game, GameCatalogService catalogService) {
+        String slug = game.getSlug();
+        String logoUrl = catalogService.resolveLogoUrl(slug, game.getLogoUrl());
+        String coverUrl = catalogService.resolveCoverUrl(slug, game.getImageUrl());
+        LocalDate releaseDate = game.getPlatforms().stream()
+                .map(platform -> platform.getReleaseDate())
+                .filter(date -> date != null)
+                .min(LocalDate::compareTo)
+                .orElse(null);
+        boolean isUpcoming = releaseDate != null && releaseDate.isAfter(LocalDate.now());
+        Integer appId = game.getSteamAppId() != null
+                ? game.getSteamAppId()
+                : catalogService.resolveAppId(slug);
+        List<String> screenshotUrls = game.getScreenshotUrls() != null && !game.getScreenshotUrls().isEmpty()
+                ? game.getScreenshotUrls()
+                : List.of();
+        List<String> trailerVideoIds = game.getTrailerVideoIds() != null && !game.getTrailerVideoIds().isEmpty()
+                ? game.getTrailerVideoIds()
+                : List.of();
+
+        return new GameTelemetryResponse(
+                game.getId(),
+                slug,
+                game.getGameName(),
+                isUpcoming ? TelemetryStatus.UPCOMING.name() : TelemetryStatus.ONLINE.name(),
+                0,
+                com.statustimer.entity.TelemetrySource.NETWORK_PROBE.name(),
+                game.getLastTelemetryAt(),
+                appId,
+                logoUrl,
+                coverUrl,
+                isUpcoming,
+                releaseDate,
+                game.getTwitchRank(),
+                game.getTwitchGameId(),
+                game.getSteamReleaseDate(),
+                Boolean.TRUE.equals(game.getSteamAdultContent()),
+                game.getLivePlayers(),
+                game.getTwitchViewers(),
+                Boolean.TRUE.equals(game.getIsIndexable()),
+                game.getLifecycleState().name(),
+                game.getUserRating(),
+                game.getCriticRating(),
+                game.getGenreName(),
+                screenshotUrls,
+                trailerVideoIds
         );
     }
 

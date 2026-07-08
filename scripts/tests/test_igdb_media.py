@@ -69,6 +69,85 @@ class IgdbMediaImageTests(unittest.TestCase):
         hero_url, _ = resolve_catalog_image_urls(metadata)
         self.assertIn("t_cover_small/co2", hero_url or "")
 
+    def test_resolve_steam_app_id_from_store_url_when_category_missing(self) -> None:
+        metadata = parse_igdb_game_metadata(
+            {
+                "id": 228349,
+                "name": "Infinity Nikki",
+                "slug": "infinity-nikki",
+                "game_type": 0,
+                "cover": {"image_id": "co1"},
+                "external_games": [
+                    {
+                        "uid": "3164330",
+                        "url": "https://store.steampowered.com/app/3164330",
+                    }
+                ],
+            }
+        )
+
+        self.assertEqual(3164330, metadata.steam_app_id)
+
+    def test_resolve_youtube_from_websites_extracts_channel_and_video_ids(self) -> None:
+        metadata = parse_igdb_game_metadata(
+            {
+                "id": 228349,
+                "name": "Infinity Nikki",
+                "slug": "infinity-nikki",
+                "game_type": 0,
+                "cover": {"image_id": "co1"},
+                "videos": [{"video_id": "abc123video01"}],
+                "websites": [
+                    {"url": "https://www.youtube.com/@InfinityNikkiEN"},
+                    {"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"},
+                ],
+            }
+        )
+
+        self.assertEqual(
+            "https://www.youtube.com/@InfinityNikkiEN",
+            metadata.youtube_channel_url,
+        )
+        self.assertEqual(
+            ["abc123video01", "dQw4w9WgXcQ"],
+            metadata.trailer_video_ids,
+        )
+
+    def test_resolve_external_links_from_igdb_websites(self) -> None:
+        metadata = parse_igdb_game_metadata(
+            {
+                "id": 228349,
+                "name": "Infinity Nikki",
+                "slug": "infinity-nikki",
+                "game_type": 0,
+                "cover": {"image_id": "co1"},
+                "websites": [
+                    {"url": "https://infinitynikki.infoldgames.com/en/home", "category": 1},
+                    {"url": "https://www.reddit.com/r/InfinityNikkiofficial", "category": 14},
+                    {"url": "https://www.youtube.com/@InfinityNikkiEN", "category": 9},
+                    {"url": "https://store.epicgames.com/en-US/p/infinity-nikki", "category": 16},
+                ],
+                "external_games": [
+                    {
+                        "uid": "3164330",
+                        "url": "https://store.steampowered.com/app/3164330",
+                    }
+                ],
+            }
+        )
+
+        self.assertEqual(
+            "https://infinitynikki.infoldgames.com/en/home",
+            metadata.external_links.get("official"),
+        )
+        self.assertEqual(
+            "https://www.reddit.com/r/InfinityNikkiofficial/",
+            metadata.external_links.get("reddit"),
+        )
+        self.assertIn("youtube", metadata.external_links)
+        self.assertIn("epic", metadata.external_links)
+        self.assertIn("steam", metadata.external_links)
+
 
 if __name__ == "__main__":
     unittest.main()

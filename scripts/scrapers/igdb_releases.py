@@ -101,6 +101,7 @@ def map_igdb_metadata_to_release(
         criticRating=metadata.critic_rating,
         screenshotUrls=metadata.screenshot_urls,
         trailerVideoIds=metadata.trailer_video_ids,
+        steamAppId=metadata.steam_app_id,
     )
 
 

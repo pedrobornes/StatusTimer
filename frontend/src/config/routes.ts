@@ -32,9 +32,20 @@ export const APP_ROUTES = {
   home: "/",
   telemetry: "/telemetry",
   releases: "/releases",
+  howItWorks: "/how-it-works",
+  faq: "/faq",
+  contact: "/contact",
+  privacy: "/privacy",
+  terms: "/terms",
+  cookies: "/cookies",
+  /** @deprecated Global news feed removed — redirects to home */
   intel: "/intel",
   release: (slug: string) => `/release/${slug}`,
   status: (slug: string) => `/status/${slug}`,
+  gameNews: (gameSlug: string) => `/status/${gameSlug}/news`,
+  gameNewsArticle: (gameSlug: string, newsSlug: string) =>
+    `/status/${gameSlug}/news/${newsSlug}`,
+  gameMedia: (gameSlug: string) => `/status/${gameSlug}/media`,
 } as const;
 
 export function buildStatusPath(slug: string): string {
@@ -46,19 +57,22 @@ export function isTrackedGameSlug(slug: string): slug is TrackedGameSlug {
 }
 
 export function buildGameStatusTitle(gameName: string): string {
-  return `Is ${gameName} Down Right Now? Live Server Status & Outages`;
+  const safeName = gameName?.trim() || "this game";
+  return `Is ${safeName} Down Right Now? Live Server Status & Outages`;
 }
 
 export function buildGameStatusDescription(gameName: string): string {
-  return `Check if ${gameName} servers are down or having problems. Live status, recent outages, and real-time updates.`;
+  const safeName = gameName?.trim() || "this game";
+  return `Check if ${safeName} servers are down or having problems. Live status, recent outages, and real-time updates.`;
 }
 
 export function buildGameStatusKeywords(gameName: string, gameSlug: string): string[] {
+  const safeName = gameName?.trim() || gameSlug;
   return [
-    `${gameName} server status`,
-    `is ${gameName.toLowerCase()} down`,
-    `${gameName} outage`,
-    `${gameName} servers down`,
+    `${safeName} server status`,
+    `is ${safeName.toLowerCase()} down`,
+    `${safeName} outage`,
+    `${safeName} servers down`,
     `${gameSlug} status`,
     "live server status",
     "multiplayer outage tracker",

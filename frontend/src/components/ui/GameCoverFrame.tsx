@@ -10,6 +10,7 @@ interface GameCoverFrameProps {
   alt: string;
   className?: string;
   imageLoading?: "eager" | "lazy";
+  emphasized?: boolean;
 }
 
 function resolveCoverLayout(width: number, height: number): CoverLayout {
@@ -21,6 +22,7 @@ export default function GameCoverFrame({
   alt,
   className = "",
   imageLoading = "lazy",
+  emphasized = false,
 }: GameCoverFrameProps) {
   const [hasError, setHasError] = useState(false);
   const [layout, setLayout] = useState<CoverLayout | null>(null);
@@ -64,6 +66,33 @@ export default function GameCoverFrame({
   }
 
   if (layout === "landscape") {
+    if (emphasized) {
+      return (
+        <div className={`relative overflow-hidden bg-zinc-950 ${className}`} aria-hidden>
+          <img
+            src={src}
+            alt=""
+            aria-hidden
+            loading={imageLoading}
+            decoding="async"
+            className="absolute inset-0 h-full w-full scale-[1.35] object-cover object-center blur-2xl saturate-[1.2]"
+          />
+          <div className="pointer-events-none absolute inset-0 bg-zinc-950/45" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-zinc-950/60 via-transparent to-zinc-950/60" />
+          <img
+            src={src}
+            alt=""
+            loading={imageLoading}
+            decoding="async"
+            className="absolute inset-0 h-full w-full scale-[1.12] object-cover object-center transition duration-300"
+          />
+          <div className="pointer-events-none absolute inset-0 bg-zinc-950/10" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-zinc-950/55 to-transparent" />
+          <div className="pointer-events-none absolute bottom-0 h-24 w-full bg-gradient-to-b from-transparent to-zinc-950/95" />
+        </div>
+      );
+    }
+
     return (
       <div className={`relative overflow-hidden bg-zinc-950 ${className}`} aria-hidden>
         <img

@@ -4,10 +4,11 @@ import {
   buildGameStatusKeywords,
   buildGameStatusTitle,
 } from "@/config/routes";
+import { resolveGameDisplayName } from "@/lib/gameAssets";
 import { buildRobotsDirective, isIndexableTelemetry } from "@/lib/seo/indexability";
 import { formatSlugLabel } from "@/lib/telemetry";
-import { getGameTelemetryBySlug } from "@/services/telemetryService";
-import type { TelemetryStatus } from "@/types/telemetry";
+import { getGameStatusDetail } from "@/services/telemetryService";
+import type { GameStatusDetail, TelemetryStatus } from "@/types/telemetry";
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -33,9 +34,29 @@ function buildStatusAwareDescription(
   return base;
 }
 
+function resolveStatusPageGameName(
+  gameSlug: string,
+  detail: GameStatusDetail | null,
+): string {
+  const fromTelemetry = detail?.telemetry?.gameName?.trim();
+  if (fromTelemetry) {
+    return fromTelemetry;
+  }
+
+  const fromCatalog = detail?.gameName?.trim();
+  if (fromCatalog) {
+    return fromCatalog;
+  }
+
+  if (detail?.telemetry) {
+    return resolveGameDisplayName(gameSlug, detail.telemetry);
+  }
+
+  return formatSlugLabel(gameSlug);
+}
+
 export async function buildStatusPageMetadata(gameSlug: string): Promise<Metadata> {
-  const gameName = formatSlugLabel(gameSlug);
-  const title = buildGameStatusTitle(gameName);
+  let gameName = formatSlugLabel(gameSlug);
   const canonicalPath = `/status/${gameSlug}`;
   const canonicalUrl = `${siteUrl}${canonicalPath}`;
 
@@ -43,14 +64,18 @@ export async function buildStatusPageMetadata(gameSlug: string): Promise<Metadat
   let indexable = false;
 
   try {
-    const telemetry = await getGameTelemetryBySlug(gameSlug);
-    liveStatus = telemetry.status;
-    indexable = isIndexableTelemetry(telemetry);
+    const detail = await getGameStatusDetail(gameSlug);
+    gameName = resolveStatusPageGameName(gameSlug, detail);
+    if (detail.telemetry) {
+      liveStatus = detail.telemetry.status;
+      indexable = isIndexableTelemetry(detail.telemetry);
+    }
   } catch {
     liveStatus = null;
     indexable = false;
   }
 
+  const title = buildGameStatusTitle(gameName);
   const description = buildStatusAwareDescription(gameName, liveStatus);
 
   return {

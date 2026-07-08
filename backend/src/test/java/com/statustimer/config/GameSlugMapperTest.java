@@ -11,6 +11,7 @@ class GameSlugMapperTest {
     @Test
     void resolvesCanonicalSlugAliases() {
         assertEquals("meccha-chameleon", mapper.resolveCanonicalSlug("mecha-chameleon"));
+        assertEquals("counter-strike-2", mapper.resolveCanonicalSlug("counter-strike"));
         assertEquals("minecraft", mapper.resolveCanonicalSlug("minecraft"));
     }
 

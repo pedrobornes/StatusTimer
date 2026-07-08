@@ -1,33 +1,112 @@
+import Link from "next/link";
 import { Scale } from "lucide-react";
+import { APP_ROUTES } from "@/config/routes";
+import { CONTACT_EMAIL, SITE_NAME } from "@/config/site";
+
+const PRODUCT_LINKS = [
+  { href: APP_ROUTES.home, label: "Monitor" },
+  { href: APP_ROUTES.telemetry, label: "Servers" },
+  { href: APP_ROUTES.releases, label: "Game Releases" },
+  { href: APP_ROUTES.howItWorks, label: "How it works" },
+] as const;
+
+const SUPPORT_LINKS = [
+  { href: APP_ROUTES.faq, label: "FAQ" },
+  { href: APP_ROUTES.contact, label: "Contact" },
+] as const;
+
+const LEGAL_LINKS = [
+  { href: APP_ROUTES.privacy, label: "Privacy Policy" },
+  { href: APP_ROUTES.terms, label: "Terms of Service" },
+  { href: APP_ROUTES.cookies, label: "Cookie Policy" },
+] as const;
+
+function FooterLinkGroup({
+  title,
+  links,
+}: {
+  title: string;
+  links: ReadonlyArray<{ href: string; label: string }>;
+}) {
+  return (
+    <div>
+      <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.22em] text-violet-200/70">
+        {title}
+      </p>
+      <ul className="space-y-2">
+        {links.map((link) => (
+          <li key={link.href}>
+            <Link
+              href={link.href}
+              className="text-sm text-slate-400 transition hover:text-white"
+            >
+              {link.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
     <footer className="mt-auto border-t border-violet-400/10 bg-black/20 backdrop-blur-sm">
-      <div className="mx-auto max-w-7xl px-4 py-8 md:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-10 md:px-8">
         <div className="glass-panel rounded-2xl p-6 md:p-8">
-          <div className="mb-4 flex items-center gap-2">
-            <Scale className="h-4 w-4 shrink-0 text-violet-300/80" />
-            <p className="text-xs font-medium uppercase tracking-[0.25em] text-violet-200/70">
-              Legal Disclaimer
-            </p>
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+            <div className="lg:col-span-1">
+              <p className="text-sm font-bold tracking-wide text-white">
+                {SITE_NAME}
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-slate-400">
+                Independent live server monitoring, release tracking, and
+                game-specific updates.
+              </p>
+            </div>
+
+            <FooterLinkGroup title="Product" links={PRODUCT_LINKS} />
+            <FooterLinkGroup title="Support" links={SUPPORT_LINKS} />
+            <FooterLinkGroup title="Legal" links={LEGAL_LINKS} />
           </div>
 
-          <p className="text-sm leading-relaxed text-slate-300">
-            StatusTimer is an independent tracking platform. It is not
-            affiliated, associated, authorized, or endorsed by any company,
-            brand, or trademark listed on this site. All product names, logos,
-            and trademarks are the property of their respective owners and are
-            used solely for identification and informational purposes.
-          </p>
+          <div className="mt-8 border-t border-white/5 pt-6">
+            <div className="mb-4 flex items-center gap-2">
+              <Scale className="h-4 w-4 shrink-0 text-violet-300/80" />
+              <p className="text-xs font-medium uppercase tracking-[0.25em] text-violet-200/70">
+                Trademark notice
+              </p>
+            </div>
+
+            <p className="text-sm leading-relaxed text-slate-400">
+              {SITE_NAME} is an independent tracking platform. It is not
+              affiliated, associated, authorized, or endorsed by any company,
+              brand, or trademark listed on this site. All product names, logos,
+              and trademarks are the property of their respective owners and are
+              used solely for identification and informational purposes.
+            </p>
+
+            {CONTACT_EMAIL ? (
+              <p className="mt-4 text-sm text-slate-400">
+                Contact:{" "}
+                <a
+                  href={`mailto:${CONTACT_EMAIL}`}
+                  className="text-violet-200/90 transition hover:text-white"
+                >
+                  {CONTACT_EMAIL}
+                </a>
+              </p>
+            ) : null}
+          </div>
 
           <div className="mt-6 flex flex-col gap-2 border-t border-white/5 pt-6 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-bold tracking-wide text-white">
-              StatusTimer
+            <p className="text-xs text-slate-500">
+              &copy; {currentYear} {SITE_NAME}. All rights reserved.
             </p>
-            <p className="text-xs text-slate-400">
-              &copy; {currentYear} StatusTimer. All rights reserved.
+            <p className="text-xs text-slate-500">
+              Informational purposes only. Not official outage confirmation.
             </p>
           </div>
         </div>

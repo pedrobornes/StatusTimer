@@ -11,6 +11,7 @@ from models.feed_events import ScrapedFeedEvent
 from models.schemas import PatchNotePayload
 from models.telemetry import GameTelemetryPayload, SyncTelemetryRequest, TelemetrySource, TelemetryStatus
 from pipeline.skill_models import SkillExecutionResult, SkillType
+from scrapers.text_utils import clean_news_title, is_relevant_gaming_news
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +76,7 @@ def _dispatch_incident_skill(
     )
 
     news_payload = PatchNotePayload(
-        title=f"[INCIDENT BRIEF] {event.title}",
+        title=clean_news_title(event.title),
         content=output.summary,
         gameTag=event.game_tag,
         publishedAt=event.published_at,
@@ -98,11 +99,19 @@ def _dispatch_patch_note_skill(
         return SkillDispatchReport(skipped=True, skip_reason="missing_patch_note_output")
 
     news_payload = PatchNotePayload(
-        title=output.title,
+        title=clean_news_title(output.title),
         content=output.summary_markdown,
         gameTag=output.game_tag,
         publishedAt=event.published_at,
     )
+    if not is_relevant_gaming_news(news_payload.title, news_payload.content):
+        logger.info(
+            "Skipping low-signal patch note for %s: %s",
+            output.game_tag,
+            news_payload.title,
+        )
+        return SkillDispatchReport(skipped=True, skip_reason="low_signal_news")
+
     return SkillDispatchReport(news_push=client.push_patch_note(news_payload))
 
 
@@ -132,11 +141,19 @@ def _dispatch_release_skill(
     )
 
     news_payload = PatchNotePayload(
-        title=f"[RELEASE INTEL] {output.title}",
+        title=clean_news_title(output.title),
         content=content,
         gameTag=output.game_tag,
         publishedAt=event.published_at,
     )
+    if not is_relevant_gaming_news(news_payload.title, news_payload.content):
+        logger.info(
+            "Skipping low-signal release news for %s: %s",
+            output.game_tag,
+            news_payload.title,
+        )
+        return SkillDispatchReport(skipped=True, skip_reason="low_signal_news")
+
     return SkillDispatchReport(news_push=client.push_patch_note(news_payload))
 
 

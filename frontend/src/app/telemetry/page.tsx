@@ -3,14 +3,10 @@ import PageShell from "@/components/PageShell";
 import TelemetryStatusHub from "@/components/dashboard/TelemetryStatusHub";
 import DashboardError from "@/components/dashboard/DashboardError";
 import { buildPlatformsBySlug } from "@/lib/releases";
+import { getCatalogGames } from "@/services/catalogService";
 import { getUpcomingReleases } from "@/services/releasesService";
 import { getServerStatuses } from "@/services/statusService";
-import {
-  getGameTelemetry,
-  getTelemetryHistory,
-  getTelemetryIncidents,
-} from "@/services/telemetryService";
-import type { TelemetryHistorySnapshot } from "@/types/telemetry";
+import { getTelemetryIncidents } from "@/services/telemetryService";
 
 export const metadata: Metadata = {
   title: "Server Live Status",
@@ -18,35 +14,24 @@ export const metadata: Metadata = {
     "Browse gaming server status, social platform connectivity, and recent outages in one place.",
 };
 
-export const revalidate = 60;
-
-async function loadTelemetryHistoryBySlug(
-  gameSlugs: string[],
-): Promise<Record<string, TelemetryHistorySnapshot[]>> {
-  const entries = await Promise.all(
-    gameSlugs.map(async (slug) => {
-      const history = await getTelemetryHistory(slug).catch(() => []);
-      return [slug, history] as const;
-    }),
-  );
-
-  return Object.fromEntries(entries);
-}
+export const revalidate = 120;
 
 export default async function TelemetryPage() {
   try {
-    const [statuses, gameTelemetry, incidents, releases] = await Promise.all([
+    const [statuses, catalogPage, incidents, releases] = await Promise.all([
       getServerStatuses(),
-      getGameTelemetry().catch(() => []),
+      getCatalogGames({ page: 0, size: 48 }).catch(() => ({
+        items: [],
+        page: 0,
+        size: 48,
+        totalElements: 0,
+        totalPages: 0,
+      })),
       getTelemetryIncidents().catch(() => []),
       getUpcomingReleases().catch(() => []),
     ]);
 
     const platformsBySlug = buildPlatformsBySlug(releases);
-
-    const telemetryHistoryBySlug = await loadTelemetryHistoryBySlug(
-      gameTelemetry.map((entry) => entry.gameSlug),
-    );
 
     return (
       <PageShell
@@ -56,10 +41,11 @@ export default async function TelemetryPage() {
       >
         <TelemetryStatusHub
           statuses={statuses}
-          gameTelemetry={gameTelemetry}
-          telemetryHistoryBySlug={telemetryHistoryBySlug}
+          gameTelemetry={catalogPage.items}
+          telemetryHistoryBySlug={{}}
           platformsBySlug={platformsBySlug}
           incidents={incidents}
+          catalogTotal={catalogPage.totalElements}
         />
       </PageShell>
     );

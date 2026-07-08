@@ -10,6 +10,7 @@ public record GamingNewsResponse(
         String title,
         String content,
         String gameTag,
+        String gameName,
         String gameCoverUrl,
         LocalDateTime createdAt,
         LocalDateTime publishedAt
@@ -22,14 +23,16 @@ public record GamingNewsResponse(
         LocalDateTime publishedAt = entity.getPublishedAt() != null
                 ? entity.getPublishedAt()
                 : entity.getCreatedAt();
+        String gameTag = resolveGameTag(entity);
 
         return new GamingNewsResponse(
                 entity.getId(),
                 resolveSlug(entity),
                 entity.getTitle(),
                 entity.getContent(),
-                resolveGameTag(entity),
-                catalogService.resolveCoverUrl(resolveGameTag(entity), null),
+                gameTag,
+                catalogService.resolveGameName(gameTag),
+                catalogService.resolveCoverUrl(gameTag, null),
                 entity.getCreatedAt(),
                 publishedAt
         );

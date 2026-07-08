@@ -43,6 +43,7 @@ class GameReleasePayload(BaseModel):
     critic_rating: int | None = Field(default=None, alias="criticRating", ge=0, le=100)
     screenshot_urls: list[str] = Field(default_factory=list, alias="screenshotUrls")
     trailer_video_ids: list[str] = Field(default_factory=list, alias="trailerVideoIds")
+    steam_app_id: int | None = Field(default=None, alias="steamAppId", ge=1)
 
     model_config = {"populate_by_name": True}
 

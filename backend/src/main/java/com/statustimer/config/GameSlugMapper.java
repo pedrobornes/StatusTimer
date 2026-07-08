@@ -13,7 +13,8 @@ public class GameSlugMapper {
     );
 
     private static final Map<String, String> SLUG_ALIASES = Map.of(
-            "mecha-chameleon", "meccha-chameleon"
+            "mecha-chameleon", "meccha-chameleon",
+            "counter-strike", "counter-strike-2"
     );
 
     public String resolveCanonicalSlug(String slug) {

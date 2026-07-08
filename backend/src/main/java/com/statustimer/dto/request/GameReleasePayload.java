@@ -15,6 +15,7 @@ public record GameReleasePayload(
         Integer userRating,
         Integer criticRating,
         List<String> screenshotUrls,
-        List<String> trailerVideoIds
+        List<String> trailerVideoIds,
+        Integer steamAppId
 ) {
 }

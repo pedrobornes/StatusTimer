@@ -72,7 +72,7 @@ class EpicStatusScraper:
             kind=FeedEventKind.INCIDENT,
             external_id=incident_id,
             game_tag=game_tag,
-            title=f"[EPIC INCIDENT] {name}",
+            title=name,
             plain_text=plain_text,
             published_at=published_at,
             source_url="https://status.epicgames.com/",

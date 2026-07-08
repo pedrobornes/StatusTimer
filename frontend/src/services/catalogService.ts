@@ -1,6 +1,47 @@
+import type { ApiRequestOptions } from "@/services/api";
 import { fetchJson, postJson } from "@/services/api";
+import type { GameTelemetry } from "@/types/telemetry";
+
+export interface GameCatalogPage {
+  items: GameTelemetry[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface CatalogGamesOptions {
+  page?: number;
+  size?: number;
+  genre?: string;
+  q?: string;
+}
+
+export function getCatalogGames(
+  options: CatalogGamesOptions & ApiRequestOptions = {},
+): Promise<GameCatalogPage> {
+  const { page = 0, size = 100, genre, q, ...fetchOptions } = options;
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  });
+
+  if (genre && genre !== "All") {
+    params.set("genre", genre);
+  }
+
+  if (q?.trim()) {
+    params.set("q", q.trim());
+  }
+
+  return fetchJson<GameCatalogPage>(
+    `/api/v1/catalog/games?${params.toString()}`,
+    fetchOptions,
+  );
+}
 
 export interface GameCatalogSearchResult {
+  id: number;
   slug: string;
   gameName: string;
   logoUrl: string | null;
@@ -9,6 +50,8 @@ export interface GameCatalogSearchResult {
   userRating?: number | null;
   criticRating?: number | null;
   genreName?: string | null;
+  livePlayers?: number | null;
+  twitchViewers?: number | null;
 }
 
 export interface GameIndexableSlug {

@@ -67,6 +67,10 @@ public class GameSyncService {
         game.setImageUrl(sanitizeIgdbUrl(payload.imageUrl(), "imageUrl"));
         game.setLogoUrl(sanitizeIgdbUrl(payload.logoUrl(), "logoUrl"));
 
+        if (payload.steamAppId() != null && payload.steamAppId() > 0) {
+            game.setSteamAppId(payload.steamAppId());
+        }
+
         if (payload.hypeCount() != null && payload.hypeCount() >= 0) {
             game.setHypeCount(payload.hypeCount());
         } else if (isNew) {

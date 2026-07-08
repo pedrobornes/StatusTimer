@@ -1,5 +1,6 @@
 import type { ApiRequestOptions } from "@/services/api";
 import { fetchJson } from "@/services/api";
+import { mapCatalogSearchToTelemetry } from "@/lib/catalogTelemetry";
 import { searchGames } from "@/services/catalogService";
 import type {
   GameStatusDetail,
@@ -33,21 +34,7 @@ export function getDashboardTelemetry(
 
 export async function searchGameTelemetry(query: string): Promise<GameTelemetry[]> {
   const catalog = await searchGames(query);
-  if (catalog.length === 0) {
-    return [];
-  }
-
-  const telemetry = await Promise.all(
-    catalog.map(async (game) => {
-      try {
-        return await getGameTelemetryBySlug(game.slug);
-      } catch {
-        return null;
-      }
-    }),
-  );
-
-  return telemetry.filter((entry): entry is GameTelemetry => entry !== null);
+  return catalog.map(mapCatalogSearchToTelemetry);
 }
 
 export function getTelemetryReady(slug: string): Promise<{ slug: string; ready: boolean }> {

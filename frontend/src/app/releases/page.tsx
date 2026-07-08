@@ -19,7 +19,7 @@ export default async function ReleasesPage() {
     return (
       <PageShell
         title="GAME COUNTDOWNS"
-        subtitle="Every tracked launch window, sorted by release date."
+        subtitle="Upcoming launches with hype counters, release windows, and genre filters."
         badge="Releases"
       >
         <div className="glass-panel rounded-3xl p-6 md:p-8">

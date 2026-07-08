@@ -1,4 +1,5 @@
 import type { GameTelemetry } from "@/types/telemetry";
+import { formatSlugLabel } from "@/lib/telemetry";
 
 
 
@@ -240,7 +241,7 @@ export function resolveGameDisplayName(
 
 
 
-  return TRACKED_GAME_ASSETS[slug]?.gameName ?? slug;
+  return TRACKED_GAME_ASSETS[slug]?.gameName ?? formatSlugLabel(slug);
 
 }
 
@@ -292,6 +293,14 @@ export function isIgdbImageUrl(url: string | null | undefined): boolean {
 
 }
 
+export function resolveIgdbFullHdUrl(url: string): string {
+  if (!isIgdbImageUrl(url)) {
+    return url;
+  }
+
+  return url.replace(/\/t_[^/]+\//i, "/t_1080p/");
+}
+
 
 
 export function isRenderableLogoUrl(
@@ -330,44 +339,29 @@ export function resolveGameLogoUrl(
 
 
 
+export function isVerticalCoverAsset(url: string | null | undefined): boolean {
+  if (!url?.trim()) {
+    return false;
+  }
+
+  const normalized = url.toLowerCase();
+  return normalized.includes("/t_cover") || normalized.includes("/t_thumb");
+}
+
 export function resolveGameCoverUrl(
-
   _slug: string,
-
   telemetry?: Pick<GameTelemetry, "coverUrl" | "logoUrl">,
-
 ): string | null {
+  const candidates = [telemetry?.logoUrl, telemetry?.coverUrl]
+    .map((url) => url?.trim())
+    .filter((url): url is string => Boolean(url && isRenderableLogoUrl(url)));
 
-  const heroUrl = telemetry?.logoUrl?.trim();
-
-  if (heroUrl && isRenderableLogoUrl(heroUrl) && !shouldUseCoverFit(heroUrl)) {
-
-    return heroUrl;
-
+  const horizontalHero = candidates.find((url) => !isVerticalCoverAsset(url));
+  if (horizontalHero) {
+    return horizontalHero;
   }
 
-
-
-  const coverUrl = telemetry?.coverUrl?.trim();
-
-  if (coverUrl && isRenderableLogoUrl(coverUrl)) {
-
-    return coverUrl;
-
-  }
-
-
-
-  if (heroUrl && isRenderableLogoUrl(heroUrl)) {
-
-    return heroUrl;
-
-  }
-
-
-
-  return null;
-
+  return candidates[0] ?? null;
 }
 
 
@@ -376,16 +370,23 @@ export function resolveCatalogImageUrl(
   coverUrl?: string | null,
   logoUrl?: string | null,
 ): string | null {
-  if (isIgdbImageUrl(coverUrl)) {
-    return coverUrl!.trim();
+  const normalizedCover = coverUrl ?? null;
+  const normalizedLogo = logoUrl ?? null;
+
+  if (isIgdbImageUrl(normalizedCover)) {
+    return normalizedCover!.trim();
   }
 
-  if (isIgdbImageUrl(logoUrl) && shouldUseCoverFit(logoUrl)) {
-    return logoUrl!.trim();
+  if (isIgdbImageUrl(normalizedLogo) && !isVerticalCoverAsset(normalizedLogo)) {
+    return normalizedLogo!.trim();
   }
 
-  if (isIgdbImageUrl(logoUrl)) {
-    return logoUrl!.trim();
+  if (isIgdbImageUrl(normalizedLogo) && shouldUseCoverFit(normalizedLogo)) {
+    return normalizedLogo!.trim();
+  }
+
+  if (isIgdbImageUrl(normalizedLogo)) {
+    return normalizedLogo!.trim();
   }
 
   return null;

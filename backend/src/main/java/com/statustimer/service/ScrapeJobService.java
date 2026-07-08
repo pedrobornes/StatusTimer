@@ -21,6 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class ScrapeJobService {
 
     public static final int ON_DEMAND_PRIORITY = 100;
+    public static final String FAILURE_NO_PROBE = "NO_PROBE";
 
     private final ScrapeJobRepository scrapeJobRepository;
     private final GameRepository gameRepository;
@@ -68,6 +69,11 @@ public class ScrapeJobService {
 
     @Transactional
     public void completeJob(Long jobId, ScrapeJobStatus status) {
+        completeJob(jobId, status, null);
+    }
+
+    @Transactional
+    public void completeJob(Long jobId, ScrapeJobStatus status, String failureReason) {
         ScrapeJob job = scrapeJobRepository.findById(jobId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
@@ -83,6 +89,13 @@ public class ScrapeJobService {
 
         job.setStatus(status);
         scrapeJobRepository.save(job);
+
+        if (status == ScrapeJobStatus.FAILED && FAILURE_NO_PROBE.equals(failureReason)) {
+            gameRepository.findBySlug(job.getSlug()).ifPresent(game -> {
+                game.setInitialTelemetryReady(true);
+                gameRepository.save(game);
+            });
+        }
     }
 
     @Transactional
@@ -97,6 +110,14 @@ public class ScrapeJobService {
         if (existing.getStatus() == ScrapeJobStatus.PENDING
                 || existing.getStatus() == ScrapeJobStatus.RUNNING) {
             return false;
+        }
+
+        if (existing.getStatus() == ScrapeJobStatus.FAILED) {
+            Game game = gameRepository.findBySlug(existing.getSlug()).orElse(null);
+            Integer steamAppId = game != null ? game.getSteamAppId() : null;
+            if (!CatalogMonitoringPolicy.supportsServerProbe(existing.getSlug(), steamAppId)) {
+                return false;
+            }
         }
 
         existing.setStatus(ScrapeJobStatus.PENDING);

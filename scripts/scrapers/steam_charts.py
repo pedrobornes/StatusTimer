@@ -20,7 +20,7 @@ STEAM_CHARTS_URL = (
     "https://api.steampowered.com/ISteamChartsService/GetMostPlayedGames/v1/"
 )
 STEAM_APP_DETAILS_URL = "https://store.steampowered.com/api/appdetails"
-MANUAL_PROTECTED_SLUGS = frozenset({"valorant", "fortnite"})
+from config.game_slug_registry import MANUAL_PROTECTED_SLUGS
 
 
 @dataclass(frozen=True)

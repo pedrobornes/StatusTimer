@@ -12,3 +12,13 @@ export function getGamingNewsById(id: number): Promise<GamingNews> {
 export function getGamingNewsBySlug(slug: string): Promise<GamingNews> {
   return fetchJson<GamingNews>(`/api/v1/news/slug/${slug}`);
 }
+
+export function getGamingNewsByGame(
+  gameSlug: string,
+  limit = 24,
+): Promise<GamingNews[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  return fetchJson<GamingNews[]>(
+    `/api/v1/news/game/${gameSlug}?${params.toString()}`,
+  );
+}

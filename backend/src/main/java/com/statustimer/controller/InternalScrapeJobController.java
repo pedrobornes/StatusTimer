@@ -32,6 +32,6 @@ public class InternalScrapeJobController {
             @PathVariable Long id,
             @RequestBody CompleteScrapeJobRequest request
     ) {
-        scrapeJobService.completeJob(id, request.status());
+        scrapeJobService.completeJob(id, request.status(), request.failureReason());
     }
 }

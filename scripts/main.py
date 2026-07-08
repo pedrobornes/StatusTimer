@@ -640,6 +640,15 @@ def run_harvest_cycle(client: BackendClient) -> HarvestCycleReport:
     if scheduled_items > 0:
         _log_push_result("Scheduled harvest workload", scheduled_sync)
 
+    monitored_steam_items, monitored_steam_sync = run_phase_safe(
+        "monitored_steam_metrics",
+        lambda: run_monitored_steam_metrics_sync(client),
+        (0, PushResult(success=False, error_message="phase failed")),
+        **resilience,
+    )
+    if monitored_steam_items > 0:
+        _log_push_result("Monitored Steam metrics sync", monitored_steam_sync)
+
     # Phase 2: parallel fetch, ordered sync (same functional behavior)
     fetch_started_ms = _now_ms()
     with ThreadPoolExecutor(max_workers=4) as executor:

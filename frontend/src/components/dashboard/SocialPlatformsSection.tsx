@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Users } from "lucide-react";
 import SocialStatusCard from "@/components/dashboard/SocialStatusCard";
 import type { ServerStatus } from "@/types/api";
@@ -6,7 +7,7 @@ interface SocialPlatformsSectionProps {
   statuses: ServerStatus[];
 }
 
-export default function SocialPlatformsSection({
+export default memo(function SocialPlatformsSection({
   statuses,
 }: SocialPlatformsSectionProps) {
   const socialStatuses = statuses.filter((status) => status.category === "SOCIAL");
@@ -38,4 +39,4 @@ export default function SocialPlatformsSection({
       )}
     </section>
   );
-}
+});

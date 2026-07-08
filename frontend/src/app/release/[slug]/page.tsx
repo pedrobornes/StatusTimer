@@ -1,26 +1,23 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import {
-  FileText,
-} from "lucide-react";
+import { CalendarClock } from "lucide-react";
+import { APP_ROUTES } from "@/config/routes";
 import HypeCounterButton from "@/components/HypeCounterButton";
-import ReleaseMediaGallery from "@/components/ReleaseMediaGallery";
+import GameMediaSidebar from "@/components/GameMediaSidebar";
+import ReleaseNewsPanel from "@/components/ReleaseNewsPanel";
+import SteamStoreWidget from "@/components/dashboard/SteamStoreWidget";
 import PageShell from "@/components/PageShell";
-import PlatformBadge from "@/components/ui/PlatformBadge";
 import PlatformReleaseSchedule from "@/components/PlatformReleaseSchedule";
 import DashboardError from "@/components/dashboard/DashboardError";
-import {
-  formatIgdbRating,
-  resolveCatalogImageUrl,
-  resolveGameCoverUrl,
-} from "@/lib/gameAssets";
-import { getConfirmedPlatforms } from "@/lib/releases";
+import { formatIgdbRating } from "@/lib/gameAssets";
+import { resolveGameMedia } from "@/lib/gameMedia";
+import { resolveReleaseHeroUrl } from "@/lib/releases";
 import { toSlug } from "@/lib/slug";
 import { getGamingNews } from "@/services/newsService";
 import { getUpcomingReleases } from "@/services/releasesService";
+import { getGameTelemetryBySlug } from "@/services/telemetryService";
 import type { GamingNews, UpcomingRelease } from "@/types/api";
-import GameAssetImage from "@/components/ui/GameAssetImage";
 
 export const revalidate = 60;
 
@@ -43,11 +40,19 @@ function filterNewsForGame(news: GamingNews[], slug: string): GamingNews[] {
   );
 }
 
-function formatTimestamp(value: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+function resolveSteamAppId(
+  release: UpcomingRelease,
+  telemetryAppId?: number | null,
+): number | null {
+  if (release.steamAppId && release.steamAppId > 0) {
+    return release.steamAppId;
+  }
+
+  if (telemetryAppId && telemetryAppId > 0) {
+    return telemetryAppId;
+  }
+
+  return null;
 }
 
 export async function generateMetadata({
@@ -76,10 +81,10 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
   const { slug } = await params;
 
   try {
-    const [releases, news] =
-      await Promise.all([
+    const [releases, news, telemetry] = await Promise.all([
       getUpcomingReleases(),
       getGamingNews(),
+      getGameTelemetryBySlug(slug).catch(() => null),
     ]);
 
     const release = findReleaseBySlug(releases, slug);
@@ -89,12 +94,11 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
     }
 
     const gameNews = filterNewsForGame(news, slug);
-    const coverUrl = resolveGameCoverUrl(slug, {
-      coverUrl: release.imageUrl ?? undefined,
-    });
-    const confirmedPlatforms = getConfirmedPlatforms(release.platforms);
+    const coverUrl = resolveReleaseHeroUrl(slug, release);
     const userRating = formatIgdbRating(release.userRating ?? null);
     const criticRating = formatIgdbRating(release.criticRating ?? null);
+    const steamAppId = resolveSteamAppId(release, telemetry?.appId);
+    const gameMedia = resolveGameMedia(release, telemetry);
 
     return (
       <PageShell
@@ -103,115 +107,71 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
         subtitle={`${release.genre} · launch windows and latest game updates`}
         coverUrl={coverUrl}
         coverAlt={release.gameName}
+        heroEmphasis
       >
-        <section className="glass-panel glow-ring mb-8 rounded-3xl p-6 md:p-8">
-          <div className="flex flex-wrap gap-2">
-            {confirmedPlatforms.map((entry) => (
-              <PlatformBadge
-                key={entry.platform}
-                platform={entry.platform}
-                releaseDate={entry.releaseDate}
+        <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="space-y-8">
+            <section className="glass-panel glow-ring max-w-4xl rounded-3xl p-5 md:p-6">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-2.5">
+                  <CalendarClock className="h-4 w-4 text-cyan-300" />
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-200/70">
+                    Launch windows
+                  </p>
+                  <h2 className="text-lg font-semibold text-white">
+                    Release Countdown
+                  </h2>
+                </div>
+              </div>
+
+              <PlatformReleaseSchedule
+                platforms={release.platforms}
+                layout="grid"
               />
-            ))}
-          </div>
 
-          <div className="mt-8 max-w-2xl">
-            <PlatformReleaseSchedule platforms={release.platforms} />
-          </div>
+              {(userRating || criticRating) && (
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {userRating ? (
+                    <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-xs text-cyan-100">
+                      Player score {userRating}
+                    </span>
+                  ) : null}
+                  {criticRating ? (
+                    <span className="rounded-full border border-violet-400/20 bg-violet-500/10 px-3 py-1 text-xs text-violet-100">
+                      Critic score {criticRating}
+                    </span>
+                  ) : null}
+                </div>
+              )}
+            </section>
 
-          {(userRating || criticRating) && (
-            <div className="mt-6 flex flex-wrap gap-2">
-              {userRating ? (
-                <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-xs text-cyan-100">
-                  Player score {userRating}
-                </span>
-              ) : null}
-              {criticRating ? (
-                <span className="rounded-full border border-violet-400/20 bg-violet-500/10 px-3 py-1 text-xs text-violet-100">
-                  Critic score {criticRating}
-                </span>
-              ) : null}
-            </div>
-          )}
-
-          <div className="mt-6 max-w-sm">
-            <HypeCounterButton
-              releaseId={release.id}
-              initialHypeCount={release.hypeCount}
+            <ReleaseNewsPanel
+              news={gameNews}
+              gameName={release.gameName}
+              gameSlug={slug}
             />
           </div>
-        </section>
 
-        {(release.trailerVideoIds?.length ?? 0) > 0 ||
-        (release.screenshotUrls?.length ?? 0) > 0 ? (
-          <section className="glass-panel mb-8 rounded-3xl p-6 md:p-8">
-            <ReleaseMediaGallery release={release} />
-          </section>
-        ) : null}
+          <aside className="space-y-6 xl:sticky xl:top-24 xl:self-start">
+            {steamAppId ? (
+              <SteamStoreWidget
+                steamAppId={steamAppId}
+                gameName={release.gameName}
+              />
+            ) : null}
 
-        <section className="glass-panel rounded-3xl p-6 md:p-8">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="rounded-2xl border border-fuchsia-400/20 bg-fuchsia-500/10 p-3">
-              <FileText className="h-5 w-5 text-fuchsia-300" />
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.35em] text-fuchsia-300/70">
-                Latest updates
-              </p>
-              <h2 className="heading-section text-2xl uppercase text-white">
-                NEWS & PATCH NOTES
-              </h2>
-            </div>
-          </div>
+            <section className="glass-panel rounded-3xl p-5">
+              <HypeCounterButton
+                releaseId={release.id}
+                initialHypeCount={release.hypeCount}
+              />
+            </section>
 
-          {gameNews.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-fuchsia-400/20 px-4 py-10 text-center text-sm text-slate-400">
-              No new patches detected for this game yet. Check back soon for updates.
-            </p>
-          ) : (
-            <div className="space-y-4">
-              {gameNews.map((article) => (
-                <Link
-                  key={article.id}
-                  href={`/news/${article.slug}`}
-                  className="block"
-                >
-                  <article className="rounded-2xl border border-white/5 bg-white/[0.03] p-5 transition hover:bg-white/[0.06]">
-                    <div className="mb-3 flex items-start gap-4">
-                      <GameAssetImage
-                        name={article.gameTag}
-                        src={resolveCatalogImageUrl(
-                          article.gameCoverUrl ?? null,
-                          null,
-                        )}
-                        className="h-16 w-14"
-                        imageClassName="object-cover"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="mb-2 text-xs uppercase tracking-[0.2em] text-fuchsia-200/70">
-                          {article.gameTag}
-                        </p>
-                        <h3 className="mb-3 text-lg font-semibold text-white">
-                          {article.title}
-                        </h3>
-                      </div>
-                    </div>
-
-                    <p className="text-sm leading-7 text-slate-300">
-                      {article.content}
-                    </p>
-                    <time
-                      dateTime={article.createdAt}
-                      className="mt-4 block text-xs text-slate-400"
-                    >
-                      {formatTimestamp(article.createdAt)}
-                    </time>
-                  </article>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
+            <GameMediaSidebar gameName={release.gameName} media={gameMedia} />
+          </aside>
+        </div>
 
         <p className="mt-8 text-center text-xs text-slate-400">
           <Link href="/" className="transition hover:text-violet-200/70">
@@ -219,10 +179,10 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
           </Link>
           {" · "}
           <Link
-            href="/intel"
+            href={APP_ROUTES.gameNews(slug)}
             className="transition hover:text-violet-200/70"
           >
-            View all news & patches
+            View all {release.gameName} news & patches
           </Link>
         </p>
       </PageShell>

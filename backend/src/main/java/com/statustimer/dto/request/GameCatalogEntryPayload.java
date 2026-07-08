@@ -1,6 +1,7 @@
 package com.statustimer.dto.request;
 
 import java.util.List;
+import java.util.Map;
 
 public record GameCatalogEntryPayload(
         String slug,
@@ -19,6 +20,8 @@ public record GameCatalogEntryPayload(
         Integer criticRating,
         List<String> screenshotUrls,
         List<String> trailerVideoIds,
+        String youtubeChannelUrl,
+        Map<String, String> externalLinks,
         String steamShortDescription,
         Integer steamPriceFinal,
         String steamCurrency,

@@ -78,10 +78,19 @@ class BackendClient:
             return []
         return [entry for entry in payload if isinstance(entry, dict)]
 
-    def complete_scrape_job(self, job_id: int, status: str) -> PushResult:
+    def complete_scrape_job(
+        self,
+        job_id: int,
+        status: str,
+        *,
+        failure_reason: str | None = None,
+    ) -> PushResult:
         """Mark a claimed scrape job as DONE or FAILED."""
         path = f"/api/v1/internal/scrape-jobs/{job_id}/complete"
-        return self._post(path, {"status": status}, f"scrape job {job_id} complete")
+        body: dict[str, str] = {"status": status}
+        if failure_reason:
+            body["failureReason"] = failure_reason
+        return self._post(path, body, f"scrape job {job_id} complete")
 
     def fetch_harvest_workload(self) -> dict[str, object] | None:
         """Fetch telemetry/metrics/news work queues based on backend timestamps."""

@@ -62,6 +62,10 @@ class Settings(BaseSettings):
     feed_lookback_days: int = 7
     steam_news_max_items: int = 10
     steam_news_top_n: int = 15
+    steam_news_min_content_chars: int = 120
+    reddit_news_max_items: int = 8
+    reddit_news_top_n: int = 12
+    reddit_news_min_content_chars: int = 80
     context_store_dir: str = ".harvest_state/context"
     context_chunk_max_chars: int = 480
     context_chunk_overlap_chars: int = 80

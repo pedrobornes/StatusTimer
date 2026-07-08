@@ -14,10 +14,10 @@ from dotenv import load_dotenv
 
 from clients.backend_client import BackendClient
 from config.settings import settings
+from config.game_slug_registry import MANUAL_PROTECTED_SLUGS
 from models.catalog_schemas import GameCatalogEntryPayload, SyncGameCatalogRequest
 from models.normalization import to_slug
 from scrapers.steam_charts import (
-    MANUAL_PROTECTED_SLUGS,
     build_catalog_entry,
     fetch_steam_app_name,
     fetch_steam_charts_ranks,

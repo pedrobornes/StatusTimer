@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Gamepad2 } from "lucide-react";
 import GameTelemetryCard from "@/components/dashboard/GameTelemetryCard";
 import PaginationControls from "@/components/ui/PaginationControls";
@@ -14,7 +15,7 @@ interface GamingStatusSectionProps {
   onPageChange: (page: number) => void;
 }
 
-export default function GamingStatusSection({
+export default memo(function GamingStatusSection({
   games,
   telemetryHistoryBySlug,
   platformsBySlug,
@@ -70,4 +71,4 @@ export default function GamingStatusSection({
       )}
     </section>
   );
-}
+});

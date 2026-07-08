@@ -5,9 +5,13 @@ import SidebarPanelHeader, {
   SidebarEmptyState,
 } from "@/components/dashboard/SidebarPanelHeader";
 import GameAssetImage from "@/components/ui/GameAssetImage";
+import { APP_ROUTES } from "@/config/routes";
 import {
+  buildNewsExcerpt,
   classifyIntelArticle,
+  cleanNewsDisplayTitle,
   getIntelArticleAccent,
+  resolveNewsGameName,
 } from "@/lib/intelFeed";
 import { resolveCatalogImageUrl } from "@/lib/gameAssets";
 import { formatRelativeTime, resolveRecordDate } from "@/utils/dateFormatter";
@@ -22,6 +26,9 @@ interface NewsFeedPanelProps {
   eyebrow?: string;
   description?: string;
   emptyMessage?: string;
+  /** When set, article and "view more" links stay scoped to this game. */
+  gameSlug?: string;
+  viewMoreHref?: string;
 }
 
 function resolveNewsDateIso(article: GamingNews): string | null {
@@ -38,7 +45,16 @@ export default function NewsFeedPanel({
   eyebrow = sidebar ? "Status Feed" : "Latest Alerts",
   description = "Quick summaries of recent game crashes, server maintenance, and developer updates.",
   emptyMessage = "No new alerts right now. Everything looks good!",
+  gameSlug,
+  viewMoreHref,
 }: NewsFeedPanelProps) {
+  const resolvedViewMoreHref = viewMoreHref ?? (gameSlug ? APP_ROUTES.gameNews(gameSlug) : null);
+  const showViewMore = Boolean(resolvedViewMoreHref);
+
+  const resolveArticleHref = (article: GamingNews) => {
+    const articleGameSlug = gameSlug ?? article.gameTag;
+    return APP_ROUTES.gameNewsArticle(articleGameSlug, article.slug);
+  };
   const panelClass = fillHeight
     ? "glass-panel flex h-full min-h-0 flex-col rounded-3xl p-6 md:p-8 xl:sticky xl:top-24 xl:max-h-[calc(100vh-7rem)]"
     : sidebar
@@ -51,6 +67,7 @@ export default function NewsFeedPanel({
 
   const showDescription = !sidebar && !compact;
   const visibleNews = sidebar ? news.slice(0, 3) : news;
+  const isGameScoped = Boolean(gameSlug);
 
   return (
     <section className={panelClass}>
@@ -61,13 +78,15 @@ export default function NewsFeedPanel({
           eyebrow={eyebrow}
           title={sectionTitle}
           action={
-            <Link
-              href="/intel"
-              className="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.12em] text-fuchsia-200/75 transition hover:text-fuchsia-100"
-            >
-              View more
-              <ArrowRight className="h-3 w-3" aria-hidden />
-            </Link>
+            showViewMore ? (
+              <Link
+                href={resolvedViewMoreHref!}
+                className="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.12em] text-fuchsia-200/75 transition hover:text-fuchsia-100"
+              >
+                View more
+                <ArrowRight className="h-3 w-3" aria-hidden />
+              </Link>
+            ) : undefined
           }
         />
       ) : (
@@ -85,9 +104,9 @@ export default function NewsFeedPanel({
               </h2>
             </div>
           </div>
-          {!compact ? (
+          {!compact && showViewMore ? (
             <Link
-              href="/intel"
+              href={resolvedViewMoreHref!}
               className="text-[10px] font-medium uppercase tracking-[0.16em] text-fuchsia-200/80 transition hover:text-fuchsia-100"
             >
               Full feed →
@@ -115,16 +134,21 @@ export default function NewsFeedPanel({
               const publishedIso = resolveNewsDateIso(article);
               const kind = classifyIntelArticle(article.title);
               const accent = getIntelArticleAccent(kind);
-                const coverSrc = resolveCatalogImageUrl(
-                  article.gameCoverUrl ?? null,
-                  null,
-                );
+              const displayTitle = cleanNewsDisplayTitle(
+                article.title,
+                article.gameTag,
+              );
+              const gameLabel = resolveNewsGameName(article);
+              const coverSrc = resolveCatalogImageUrl(
+                article.gameCoverUrl ?? null,
+                null,
+              );
 
               if (sidebar) {
                 return (
                     <Link
                       key={article.id}
-                      href={`/news/${article.slug}`}
+                      href={resolveArticleHref(article)}
                       className="block"
                     >
                       <article
@@ -132,7 +156,7 @@ export default function NewsFeedPanel({
                       >
                         <div className="mb-3 flex items-start gap-3">
                           <GameAssetImage
-                            name={article.gameTag}
+                            name={gameLabel}
                             src={coverSrc}
                             className="h-10 w-8"
                             imageClassName="object-cover"
@@ -156,7 +180,7 @@ export default function NewsFeedPanel({
                             </div>
 
                             <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-white">
-                              {article.title}
+                              {displayTitle}
                             </h3>
                           </div>
                         </div>
@@ -168,32 +192,20 @@ export default function NewsFeedPanel({
                 return (
                   <Link
                     key={article.id}
-                    href={`/news/${article.slug}`}
+                    href={resolveArticleHref(article)}
                     className="block"
                   >
                     <article
                       className={`rounded-2xl border border-white/8 bg-white/[0.04] p-5 transition hover:bg-white/[0.06] ${accent.borderClass}`}
                     >
-                      <div className="mb-4 flex flex-wrap items-start gap-4">
-                        <div className="flex w-20 shrink-0 items-center justify-center">
-                          <GameAssetImage
-                            name={article.gameTag}
-                            src={coverSrc}
-                            className="h-16 w-16"
-                            imageClassName="object-cover"
-                          />
-                        </div>
-
-                        <div className="min-w-0 flex-1">
+                      {isGameScoped ? (
+                        <>
                           <div className="mb-3 flex flex-wrap items-center gap-2">
                             <span
                               className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${accent.badgeClass}`}
                             >
                               <Sparkles className="h-3 w-3" />
                               {accent.label}
-                            </span>
-                            <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-slate-300">
-                              {article.gameTag}
                             </span>
                             <span className="inline-flex items-center gap-1 text-xs text-slate-400">
                               <CalendarDays className="h-3.5 w-3.5" />
@@ -205,13 +217,56 @@ export default function NewsFeedPanel({
                             </span>
                           </div>
 
-                          <h3 className="mb-3 text-base font-bold leading-snug text-white">
-                            {article.title}
+                          <h3 className="text-lg font-bold leading-snug text-white">
+                            {displayTitle}
                           </h3>
-                        </div>
-                      </div>
 
-                      <IntelFeedContent content={article.content} />
+                          <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-400">
+                            {buildNewsExcerpt(article.content)}
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <div className="mb-4 flex flex-wrap items-start gap-4">
+                            <div className="flex w-20 shrink-0 items-center justify-center">
+                              <GameAssetImage
+                                name={gameLabel}
+                                src={coverSrc}
+                                className="h-16 w-16"
+                                imageClassName="object-cover"
+                              />
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <div className="mb-3 flex flex-wrap items-center gap-2">
+                                <span
+                                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${accent.badgeClass}`}
+                                >
+                                  <Sparkles className="h-3 w-3" />
+                                  {accent.label}
+                                </span>
+                                <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-slate-300">
+                                  {gameLabel}
+                                </span>
+                                <span className="inline-flex items-center gap-1 text-xs text-slate-400">
+                                  <CalendarDays className="h-3.5 w-3.5" />
+                                  <time dateTime={publishedIso ?? undefined}>
+                                    {formatRelativeTime(
+                                      article.publishedAt ?? article.createdAt,
+                                    )}
+                                  </time>
+                                </span>
+                              </div>
+
+                              <h3 className="mb-3 text-base font-bold leading-snug text-white">
+                                {displayTitle}
+                              </h3>
+                            </div>
+                          </div>
+
+                          <IntelFeedContent content={article.content} />
+                        </>
+                      )}
                     </article>
                   </Link>
                 );

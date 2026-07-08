@@ -59,7 +59,19 @@ public final class GameAssetPolicy {
     }
 
     public static boolean needsIgdbAssets(Game game) {
-        return !isIgdbImageUrl(game.getLogoUrl()) || !isIgdbImageUrl(game.getCoverUrl());
+        return !isIgdbImageUrl(game.getLogoUrl())
+                || !isIgdbImageUrl(game.getCoverUrl())
+                || isVerticalCoverAsset(game.getLogoUrl());
+    }
+
+    public static boolean isVerticalCoverAsset(String url) {
+        String sanitized = sanitizeImageUrl(url);
+        if (sanitized == null) {
+            return false;
+        }
+
+        String lower = sanitized.toLowerCase(Locale.ROOT);
+        return lower.contains("/t_cover") || lower.contains("/t_thumb");
     }
 
     public static String resolveLogoUrl(String slug, String persistedLogoUrl) {

@@ -18,7 +18,8 @@ public record UpcomingReleaseResponse(
         Integer criticRating,
         List<String> screenshotUrls,
         List<String> trailerVideoIds,
-        List<PlatformReleaseResponse> platforms
+        List<PlatformReleaseResponse> platforms,
+        Integer steamAppId
 ) {
 
     public static UpcomingReleaseResponse fromEntity(Game entity) {
@@ -29,7 +30,7 @@ public record UpcomingReleaseResponse(
                 entity.getGenre().getLabel(),
                 entity.resolvePrimaryReleaseDate(),
                 entity.getHypeCount(),
-                entity.getImageUrl(),
+                resolveReleaseImageUrl(entity),
                 entity.getLogoUrl(),
                 entity.getIgdbGameId(),
                 entity.getUserRating(),
@@ -38,7 +39,17 @@ public record UpcomingReleaseResponse(
                 List.copyOf(entity.getTrailerVideoIds()),
                 entity.getPlatforms().stream()
                         .map(PlatformReleaseResponse::fromEntity)
-                        .toList()
+                        .toList(),
+                entity.getSteamAppId()
         );
+    }
+
+    private static String resolveReleaseImageUrl(Game entity) {
+        String coverUrl = com.statustimer.config.GameAssetPolicy.sanitizeImageUrl(entity.getCoverUrl());
+        if (coverUrl != null) {
+            return coverUrl;
+        }
+
+        return com.statustimer.config.GameAssetPolicy.sanitizeImageUrl(entity.getImageUrl());
     }
 }

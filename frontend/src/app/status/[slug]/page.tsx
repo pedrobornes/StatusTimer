@@ -5,20 +5,22 @@ import IncidentLog from "@/components/dashboard/telemetry/IncidentLog";
 import PendingTelemetryGate from "@/components/dashboard/telemetry/PendingTelemetryGate";
 import NewsFeedPanel from "@/components/dashboard/NewsFeedPanel";
 import SteamStoreWidget from "@/components/dashboard/SteamStoreWidget";
+import GameExternalLinks from "@/components/GameExternalLinks";
+import GameMediaSidebar from "@/components/GameMediaSidebar";
+import GameStatusSubNav from "@/components/GameStatusSubNav";
 import PageShell from "@/components/PageShell";
 import GameStatusFaq from "@/components/seo/GameStatusFaq";
-import StatusContextBlock from "@/components/seo/StatusContextBlock";
 import JsonLdScript from "@/components/seo/JsonLdScript";
 import { APP_ROUTES, TRACKED_GAME_SLUGS } from "@/config/routes";
 import {
-  resolveGameCoverUrl,
   resolveGameDisplayName,
 } from "@/lib/gameAssets";
+import { resolveStatusPageHeroUrl } from "@/lib/statusHero";
 import { buildGameStatusFaq } from "@/lib/seo/gameFaq";
 import { buildStatusPageJsonLd } from "@/lib/seo/jsonLd";
 import { buildStatusPageMetadata } from "@/lib/seo/metadata";
-import { buildStatusContextInsight } from "@/lib/seo/statusContext";
 import { resolveCanonicalGameSlug } from "@/lib/gameSlugs";
+import { hasGameMedia, resolveGameMedia } from "@/lib/gameMedia";
 import { getConfirmedPlatforms } from "@/lib/releases";
 import { getGameStatusDetail } from "@/services/telemetryService";
 import { getUpcomingReleases } from "@/services/releasesService";
@@ -52,22 +54,46 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
 
   try {
     const [
-      { telemetry, history, incidents, news, telemetryReady, firstMonitoredAt, uptime, steamStore },
+      {
+        gameName: catalogGameName,
+        telemetry,
+        history,
+        incidents,
+        news,
+        telemetryReady,
+        catalogOnly = false,
+        firstMonitoredAt,
+        steamStore,
+        screenshotUrls,
+        trailerVideoIds,
+        youtubeChannelUrl,
+        externalLinks,
+      },
       releases,
     ] = await Promise.all([
       getGameStatusDetail(slug),
       getUpcomingReleases().catch(() => []),
     ]);
 
-    const gameName = resolveGameDisplayName(slug, telemetry ?? undefined);
-    const coverUrl = resolveGameCoverUrl(slug, telemetry ?? undefined);
-    const releasePlatforms = getConfirmedPlatforms(
-      releases.find((release) => release.slug === slug)?.platforms ?? [],
-    );
+    const releaseEntry = releases.find((release) => release.slug === slug);
+    const gameName =
+      telemetry?.gameName ?? catalogGameName ?? resolveGameDisplayName(slug, telemetry ?? undefined);
+    const coverUrl = resolveStatusPageHeroUrl(slug, telemetry, releaseEntry ?? null);
+    const releasePlatforms = getConfirmedPlatforms(releaseEntry?.platforms ?? []);
 
     const steamAppId = steamStore?.steamAppId ?? telemetry?.appId ?? null;
+    const gameMedia = resolveGameMedia(
+      { screenshotUrls, trailerVideoIds, youtubeChannelUrl },
+      telemetry,
+    );
+    const hasNews = news.length > 0;
+    const hasMedia = hasGameMedia(gameMedia);
 
-    if (!telemetryReady || telemetry === null) {
+    const isCatalogProfile = catalogOnly === true;
+    const isPendingTelemetry = !telemetryReady && !isCatalogProfile;
+    const hasPartialTelemetry = telemetry !== null;
+
+    if (isPendingTelemetry) {
       return (
         <PageShell
           badge="Live Server Status"
@@ -76,7 +102,12 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
           coverUrl={coverUrl}
           coverAlt={gameName}
         >
-          <div className="grid gap-8 xl:grid-cols-[1.4fr_1fr]">
+          <GameStatusSubNav
+            slug={slug}
+            hasNews={hasNews}
+            hasMedia={hasMedia}
+          />
+          <div className="grid gap-8 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,360px)]">
             <div className="space-y-8">
               <section aria-labelledby="server-status-heading">
                 <h2
@@ -86,36 +117,42 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
                   Live Server Report
                 </h2>
                 <PendingTelemetryGate gameSlug={slug} />
+                {hasPartialTelemetry ? (
+                  <div className="mt-6">
+                    <GameTelemetryCard
+                      telemetry={telemetry}
+                      linkToStatusPage={false}
+                      linkToProfile={false}
+                      platforms={releasePlatforms}
+                      serverStatusPending
+                    />
+                  </div>
+                ) : null}
               </section>
             </div>
 
             <div className="space-y-8">
-              <NewsFeedPanel
-                news={news}
-                fillHeight
-                sectionTitle="Game News & Updates"
-                eyebrow="Latest Alerts"
-              />
               {steamAppId ? (
                 <SteamStoreWidget steamAppId={steamAppId} gameName={gameName} />
               ) : null}
+              <GameExternalLinks links={externalLinks} />
+              <GameMediaSidebar gameName={gameName} gameSlug={slug} media={gameMedia} />
+              <NewsFeedPanel
+                news={news}
+                fillHeight
+                gameSlug={slug}
+                sectionTitle="Game News & Updates"
+                eyebrow="Latest Alerts"
+              />
             </div>
           </div>
         </PageShell>
       );
     }
 
-    const contextInsight = buildStatusContextInsight({
-      gameName,
-      status: telemetry.status,
-      lastChecked: telemetry.lastChecked,
-      livePlayers: telemetry.livePlayers,
-      twitchViewers: telemetry.twitchViewers,
-      incidents,
-      firstMonitoredAt,
-      uptime7dPercent: uptime?.uptime7dPercent,
-      uptime30dPercent: uptime?.uptime30dPercent,
-    });
+    if (telemetry === null) {
+      notFound();
+    }
 
     const faqItems = buildGameStatusFaq({
       gameName,
@@ -139,47 +176,66 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
       faqItems: showIndexableContent ? faqItems : undefined,
     });
 
+    const pageBadge = isCatalogProfile ? "Game Profile" : "Live Server Status";
+    const pageTitle = isCatalogProfile
+      ? gameName
+      : `Is ${gameName} Down?`;
+    const pageSubtitle = isCatalogProfile
+      ? `Live Twitch audience, IGDB ratings, trailers, and news for ${gameName}.`
+      : buildStatusPageSubtitle(gameName, telemetry.status);
+    const reportHeading = isCatalogProfile ? "Live Audience" : "Live Server Report";
+    const reportDescription = isCatalogProfile
+      ? "We track Twitch viewership and catalog data for this title. Server uptime is not monitored because it is not available on Steam or a supported probe."
+      : "Live status data compiled from official game status pages and player networks.";
+
     return (
       <>
-        <JsonLdScript data={jsonLd} />
+        {!isCatalogProfile ? (
+          <JsonLdScript data={jsonLd} />
+        ) : null}
 
         <PageShell
-          badge="Live Server Status"
-          title={`Is ${gameName} Down?`}
-          subtitle={buildStatusPageSubtitle(gameName, telemetry.status)}
+          badge={pageBadge}
+          title={pageTitle}
+          subtitle={pageSubtitle}
           coverUrl={coverUrl}
           coverAlt={gameName}
         >
-          <div className="grid gap-8 xl:grid-cols-[1.4fr_1fr]">
+          <GameStatusSubNav
+            slug={slug}
+            hasNews={hasNews}
+            hasMedia={hasMedia}
+          />
+          <div className="grid gap-8 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,360px)]">
             <div className="space-y-8">
               <section aria-labelledby="server-status-heading">
                 <h2
                   id="server-status-heading"
                   className="heading-section mb-2 text-2xl uppercase text-white"
                 >
-                  Live Server Report
+                  {reportHeading}
                 </h2>
                 <p className="mb-6 text-sm leading-6 text-slate-400">
-                  Live status data compiled from official game status pages and
-                  player networks.
+                  {reportDescription}
                 </p>
                 <GameTelemetryCard
                   telemetry={telemetry}
                   linkToStatusPage={false}
                   linkToProfile={false}
-                  history={history}
+                  history={isCatalogProfile ? [] : history}
                   platforms={releasePlatforms}
+                  catalogOnly={isCatalogProfile}
                 />
                 <div className="mt-8">
                   <AdSlot format="leaderboard" slotId={`status-${slug}-leaderboard`} />
                 </div>
               </section>
 
-              <StatusContextBlock insight={contextInsight} />
+              {!isCatalogProfile && showIndexableContent ? (
+                <GameStatusFaq items={faqItems} />
+              ) : null}
 
-              {showIndexableContent ? <GameStatusFaq items={faqItems} /> : null}
-
-              {showIndexableContent ? (
+              {!isCatalogProfile && showIndexableContent ? (
                 <IncidentLog
                   incidents={incidents}
                   sectionTitle="Recent Problems"
@@ -189,15 +245,18 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
             </div>
 
             <div className="space-y-8">
-              <NewsFeedPanel
-                news={news}
-                fillHeight
-                sectionTitle="Game News & Updates"
-                eyebrow="Latest Alerts"
-              />
               {steamAppId ? (
                 <SteamStoreWidget steamAppId={steamAppId} gameName={gameName} />
               ) : null}
+              <GameExternalLinks links={externalLinks} />
+              <GameMediaSidebar gameName={gameName} gameSlug={slug} media={gameMedia} />
+              <NewsFeedPanel
+                news={news}
+                fillHeight
+                gameSlug={slug}
+                sectionTitle="Game News & Updates"
+                eyebrow="Latest Alerts"
+              />
               <AdSlot
                 format="skyscraper"
                 slotId={`status-${slug}-skyscraper`}

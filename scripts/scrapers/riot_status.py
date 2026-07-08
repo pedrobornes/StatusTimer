@@ -159,7 +159,7 @@ class RiotStatusScraper:
             kind=kind,
             external_id=f"{target.game_tag}:{record_id}",
             game_tag=target.game_tag,
-            title=f"[RIOT {prefix}] {target.game_name}: {name}",
+            title=name,
             plain_text=plain_text,
             published_at=published_at,
             source_url="https://status.riotgames.com/",

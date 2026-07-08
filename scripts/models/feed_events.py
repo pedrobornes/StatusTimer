@@ -12,6 +12,7 @@ from models.schemas import PatchNotePayload
 
 class FeedSource(str, Enum):
     STEAM = "STEAM"
+    REDDIT = "REDDIT"
     RIOT = "RIOT"
     EPIC = "EPIC"
 

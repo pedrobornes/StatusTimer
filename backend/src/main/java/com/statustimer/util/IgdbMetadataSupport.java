@@ -2,6 +2,7 @@ package com.statustimer.util;
 
 import com.statustimer.entity.Game;
 import java.util.List;
+import java.util.Map;
 
 public final class IgdbMetadataSupport {
 
@@ -35,6 +36,25 @@ public final class IgdbMetadataSupport {
         if (trailerVideoIds != null && !trailerVideoIds.isEmpty()) {
             game.setTrailerVideoIds(List.copyOf(trailerVideoIds));
         }
+    }
+
+    public static void applyYoutubeChannelUrl(Game game, String youtubeChannelUrl) {
+        if (youtubeChannelUrl != null && !youtubeChannelUrl.isBlank()) {
+            game.setYoutubeChannelUrl(youtubeChannelUrl.trim());
+        }
+    }
+
+    public static void applyExternalLinks(Game game, Map<String, String> externalLinks) {
+        if (externalLinks == null || externalLinks.isEmpty()) {
+            return;
+        }
+
+        Map<String, String> merged = new java.util.LinkedHashMap<>();
+        if (game.getExternalLinks() != null) {
+            merged.putAll(game.getExternalLinks());
+        }
+        merged.putAll(externalLinks);
+        game.setExternalLinks(Map.copyOf(merged));
     }
 
     public static void applyGenreName(Game game, String genreName) {

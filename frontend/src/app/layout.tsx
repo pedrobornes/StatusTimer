@@ -15,11 +15,11 @@ const siteUrl =
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "StatusTimer | Live Gaming Server Status & Game News",
+    default: "StatusTimer | Live Gaming Server Status Monitor",
     template: "%s | StatusTimer",
   },
   description:
-    "Check live gaming and social server status alongside quick game news and crash alerts.",
+    "Check live gaming server status, player counts, outages, and upcoming releases. Independent monitoring for multiplayer games.",
   keywords: [
     "gaming server status",
     "platform uptime",
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "StatusTimer | Live Gaming Server Status & Game News",
     description:
-      "Check live gaming and social server status alongside quick game news and crash alerts.",
+      "Check live gaming server status, player counts, outages, and upcoming releases. Independent monitoring for multiplayer games.",
     url: siteUrl,
     siteName: "StatusTimer",
     locale: "en_US",
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "StatusTimer | Live Gaming Server Status & Game News",
     description:
-      "Check live gaming and social server status alongside quick game news and crash alerts.",
+      "Check live gaming server status, player counts, outages, and upcoming releases. Independent monitoring for multiplayer games.",
   },
   robots: {
     index: true,
