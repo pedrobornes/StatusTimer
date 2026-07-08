@@ -28,6 +28,7 @@ export interface GameTelemetry {
   userRating?: number | null;
   criticRating?: number | null;
   genreName?: string | null;
+  genreNames?: string[];
   screenshotUrls?: string[];
   trailerVideoIds?: string[];
   youtubeChannelUrl?: string | null;

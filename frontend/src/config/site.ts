@@ -7,7 +7,7 @@ export const SITE_NAME = "StatusTimer";
 export const CONTACT_EMAIL =
   process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim() || null;
 
-export const LEGAL_LAST_UPDATED = "July 7, 2026";
+export const LEGAL_LAST_UPDATED = "July 8, 2026";
 
 export function resolveContactMailto(): string | null {
   if (!CONTACT_EMAIL) {

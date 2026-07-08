@@ -16,6 +16,7 @@ public record GameCatalogEntryPayload(
         Boolean featured,
         Long igdbGameId,
         String genreName,
+        List<String> genreNames,
         Integer userRating,
         Integer criticRating,
         List<String> screenshotUrls,

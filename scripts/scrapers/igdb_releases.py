@@ -6,10 +6,11 @@ import logging
 from typing import Any
 
 from clients.igdb_client import IgdbClient, is_igdb_configured
-from models.enums import GameGenre, Platform
-from models.normalization import normalize_genre, to_slug
+from models.enums import Platform
+from models.normalization import to_slug
 from models.schemas import GameReleasePayload, PlatformRelease
 from scrapers.igdb_media import IgdbGameMetadata, is_main_game, parse_igdb_game_metadata
+from scrapers.igdb_platforms import has_supported_igdb_platform
 
 logger = logging.getLogger(__name__)
 
@@ -19,23 +20,6 @@ IGDB_PLATFORM_IDS: dict[int, Platform] = {
     167: Platform.PS5,
     169: Platform.XBOX,
     130: Platform.SWITCH,
-}
-
-IGDB_GENRE_NAME_MAP: dict[str, GameGenre] = {
-    "shooter": GameGenre.SHOOTER,
-    "fps": GameGenre.SHOOTER,
-    "tactical shooter": GameGenre.SHOOTER,
-    "role-playing (rpg)": GameGenre.RPG,
-    "rpg": GameGenre.RPG,
-    "survival": GameGenre.SURVIVAL,
-    "sport": GameGenre.SPORTS_RACING,
-    "racing": GameGenre.SPORTS_RACING,
-    "strategy": GameGenre.STRATEGY,
-    "real-time strategy (rts)": GameGenre.STRATEGY,
-    "adventure": GameGenre.ACTION,
-    "action": GameGenre.ACTION,
-    "fighting": GameGenre.ACTION,
-    "platform": GameGenre.ACTION,
 }
 
 
@@ -57,6 +41,13 @@ def fetch_igdb_upcoming_releases() -> list[GameReleasePayload]:
             logger.info(
                 "Skipping non-main IGDB release (category=%s): %s",
                 raw_game.get("category"),
+                raw_game.get("name"),
+            )
+            continue
+
+        if not has_supported_igdb_platform(raw_game.get("platforms")):
+            logger.info(
+                "Skipping IGDB release without PC/PS5/Xbox platforms: %s",
                 raw_game.get("name"),
             )
             continue
@@ -86,12 +77,11 @@ def map_igdb_metadata_to_release(
     raw_game: dict[str, Any],
 ) -> GameReleasePayload:
     platform_entries = _map_platform_entries(raw_game.get("platforms"), metadata.release_date)
-    genre = _resolve_genre(metadata.genre_names)
 
     return GameReleasePayload(
         gameName=metadata.name,
         slug=to_slug(metadata.name),
-        genre=genre,
+        genreNames=_clean_genre_names(metadata.genre_names),
         platforms=platform_entries,
         hypeCount=metadata.hype_count,
         imageUrl=metadata.cover_url,
@@ -130,10 +120,16 @@ def _map_platform_entries(
     return [PlatformRelease(platform=Platform.PC, release_date=release_date)]
 
 
-def _resolve_genre(genre_names: list[str]) -> GameGenre:
-    for genre_name in genre_names:
-        normalized = genre_name.strip().casefold()
-        if normalized in IGDB_GENRE_NAME_MAP:
-            return IGDB_GENRE_NAME_MAP[normalized]
-
-    return normalize_genre(genre_names)
+def _clean_genre_names(genre_names: list[str]) -> list[str]:
+    """Trim, drop blanks, and de-duplicate IGDB genre names (order-preserving)."""
+    seen: set[str] = set()
+    cleaned: list[str] = []
+    for name in genre_names:
+        if not name:
+            continue
+        trimmed = name.strip()
+        if not trimmed or trimmed in seen:
+            continue
+        seen.add(trimmed)
+        cleaned.append(trimmed)
+    return cleaned

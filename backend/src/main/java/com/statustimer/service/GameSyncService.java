@@ -63,7 +63,7 @@ public class GameSyncService {
         boolean isNew = game.getId() == null;
 
         game.setGameName(payload.gameName());
-        game.setGenre(payload.genre());
+        IgdbMetadataSupport.applyGenreNames(game, payload.genreNames());
         game.setImageUrl(sanitizeIgdbUrl(payload.imageUrl(), "imageUrl"));
         game.setLogoUrl(sanitizeIgdbUrl(payload.logoUrl(), "logoUrl"));
 

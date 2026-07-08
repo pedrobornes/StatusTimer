@@ -1,8 +1,9 @@
-import type { GameGenre, PlatformDetail, UpcomingRelease } from "@/types/api";
+import type { GamePlatform, PlatformDetail, UpcomingRelease } from "@/types/api";
 import {
   resolveGameBoxArtUrl,
   resolveGameCoverUrl,
 } from "@/lib/gameAssets";
+import { resolveReleaseGenres } from "@/lib/genres";
 
 export function resolveReleaseHeroUrl(
   slug: string,
@@ -24,18 +25,19 @@ export function resolveReleaseBoxArtUrl(
   });
 }
 
-export const OFFICIAL_GAME_GENRES = [
-  "Shooter",
-  "RPG",
-  "Survival",
-  "Action",
-  "Sports/Racing",
-  "Strategy",
-] as const satisfies readonly GameGenre[];
+export const ALL_GENRES_FILTER = "All" as const;
 
-export const RELEASE_GENRES = ["All", ...OFFICIAL_GAME_GENRES] as const;
+export type ReleaseGenreFilter = typeof ALL_GENRES_FILTER | (string & {});
 
-export type ReleaseGenreFilter = (typeof RELEASE_GENRES)[number];
+export function collectReleaseGenres(releases: UpcomingRelease[]): string[] {
+  const genres = new Set<string>();
+  for (const release of releases) {
+    for (const genre of resolveReleaseGenres(release)) {
+      genres.add(genre);
+    }
+  }
+  return [...genres].sort((left, right) => left.localeCompare(right));
+}
 
 export const RELEASE_SORT_MODES = ["date", "hype", "rating"] as const;
 
@@ -100,11 +102,13 @@ export function filterReleasesByGenre(
   releases: UpcomingRelease[],
   genre: ReleaseGenreFilter,
 ): UpcomingRelease[] {
-  if (genre === "All") {
+  if (genre === ALL_GENRES_FILTER) {
     return releases;
   }
 
-  return releases.filter((release) => release.genre === genre);
+  return releases.filter((release) =>
+    resolveReleaseGenres(release).includes(genre),
+  );
 }
 
 export function filterReleasesByMinRating(
@@ -138,5 +142,72 @@ export function getConfirmedPlatforms(
   return platforms.filter(
     (entry): entry is PlatformDetail & { releaseDate: string } =>
       entry.releaseDate !== null,
+  );
+}
+
+const PLATFORM_DISPLAY_ORDER: readonly GamePlatform[] = [
+  "PC",
+  "PS5",
+  "XBOX",
+  "SWITCH",
+  "SWITCH_2",
+];
+
+export interface PlatformReleaseGroup {
+  releaseDate: string | null;
+  platforms: GamePlatform[];
+}
+
+/** Groups platform launch windows that share the same date (or TBA). */
+export function groupPlatformsByReleaseDate(
+  platforms: PlatformDetail[],
+): PlatformReleaseGroup[] {
+  const grouped = new Map<string, PlatformReleaseGroup>();
+
+  for (const entry of platforms) {
+    const key = entry.releaseDate ?? "__tba__";
+    const existing = grouped.get(key);
+
+    if (existing) {
+      existing.platforms.push(entry.platform);
+      continue;
+    }
+
+    grouped.set(key, {
+      releaseDate: entry.releaseDate,
+      platforms: [entry.platform],
+    });
+  }
+
+  return [...grouped.values()]
+    .map((group) => ({
+      ...group,
+      platforms: sortPlatformsForDisplay(group.platforms),
+    }))
+    .sort(comparePlatformReleaseGroups);
+}
+
+function sortPlatformsForDisplay(platforms: GamePlatform[]): GamePlatform[] {
+  return [...platforms].sort(
+    (left, right) =>
+      PLATFORM_DISPLAY_ORDER.indexOf(left) -
+      PLATFORM_DISPLAY_ORDER.indexOf(right),
+  );
+}
+
+function comparePlatformReleaseGroups(
+  left: PlatformReleaseGroup,
+  right: PlatformReleaseGroup,
+): number {
+  if (left.releaseDate === null) {
+    return 1;
+  }
+
+  if (right.releaseDate === null) {
+    return -1;
+  }
+
+  return (
+    new Date(left.releaseDate).getTime() - new Date(right.releaseDate).getTime()
   );
 }

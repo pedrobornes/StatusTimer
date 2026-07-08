@@ -5,6 +5,8 @@ import GenreFilterBar from "@/components/GenreFilterBar";
 import ReleasesGrid from "@/components/ReleasesGrid";
 import ReleaseSortSelect from "@/components/ui/ReleaseSortSelect";
 import {
+  ALL_GENRES_FILTER,
+  collectReleaseGenres,
   filterReleasesByGenre,
   sortReleases,
   type ReleaseGenreFilter,
@@ -17,8 +19,14 @@ interface ReleasesHubProps {
 }
 
 export default function ReleasesHub({ releases }: ReleasesHubProps) {
-  const [currentGenre, setCurrentGenre] = useState<ReleaseGenreFilter>("All");
+  const [currentGenre, setCurrentGenre] =
+    useState<ReleaseGenreFilter>(ALL_GENRES_FILTER);
   const [sortMode, setSortMode] = useState<ReleaseSortMode>("hype");
+
+  const availableGenres = useMemo(
+    () => collectReleaseGenres(releases),
+    [releases],
+  );
 
   const filteredReleases = useMemo(() => {
     const byGenre = filterReleasesByGenre(releases, currentGenre);
@@ -26,7 +34,7 @@ export default function ReleasesHub({ releases }: ReleasesHubProps) {
   }, [releases, currentGenre, sortMode]);
 
   const emptyMessage =
-    currentGenre === "All"
+    currentGenre === ALL_GENRES_FILTER
       ? "No upcoming games found right now. Check back soon for new reveals!"
       : "No releases match the selected filters yet.";
 
@@ -45,10 +53,13 @@ export default function ReleasesHub({ releases }: ReleasesHubProps) {
         />
       </div>
 
-      <GenreFilterBar
-        currentGenre={currentGenre}
-        onGenreChange={setCurrentGenre}
-      />
+      {availableGenres.length > 0 ? (
+        <GenreFilterBar
+          genres={availableGenres}
+          currentGenre={currentGenre}
+          onGenreChange={setCurrentGenre}
+        />
+      ) : null}
 
       <ReleasesGrid releases={filteredReleases} emptyMessage={emptyMessage} />
     </>

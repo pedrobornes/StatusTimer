@@ -36,7 +36,14 @@ public class CatalogActivationService {
 
         boolean catalogOnly = CatalogMonitoringPolicy.isCatalogOnlyProfile(game);
         boolean promoted = promoteToMonitoredIfNeeded(game, catalogOnly);
-        boolean jobQueued = catalogOnly ? false : scrapeJobService.enqueueFullJob(canonicalSlug);
+
+        // Only enqueue an on-demand scrape job for games that have never produced
+        // telemetry yet. Already-monitored games are refreshed by the scheduled
+        // harvester, so visiting their page must not requeue a job every time.
+        boolean needsInitialTelemetry = !Boolean.TRUE.equals(game.getInitialTelemetryReady());
+        boolean jobQueued = !catalogOnly
+                && needsInitialTelemetry
+                && scrapeJobService.enqueueFullJob(canonicalSlug);
 
         if (catalogOnly) {
             game.setInitialTelemetryReady(true);

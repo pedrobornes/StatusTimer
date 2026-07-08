@@ -4,7 +4,7 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, Field, field_validator
 
-from models.enums import GameGenre, Platform
+from models.enums import Platform
 
 
 class PlatformRelease(BaseModel):
@@ -23,7 +23,7 @@ class PlatformRelease(BaseModel):
 class GameReleasePayload(BaseModel):
     game_name: str = Field(alias="gameName", min_length=1)
     slug: str = Field(min_length=1)
-    genre: GameGenre
+    genre_names: list[str] = Field(default_factory=list, alias="genreNames")
     platforms: list[PlatformRelease] = Field(min_length=1)
     hype_count: int = Field(default=0, alias="hypeCount", ge=0)
     image_url: str | None = Field(

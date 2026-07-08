@@ -7,6 +7,12 @@ from typing import TypedDict
 # Twitch / legacy slugs that must map to a single monitored title.
 CANONICAL_CATALOG_SLUGS: dict[str, str] = {
     "counter-strike": "counter-strike-2",
+    # Canonicalize GTA V variants into the IGDB slug.
+    "gta-v": "grand-theft-auto-v",
+    "grand-theft-auto-v-legacy": "grand-theft-auto-v",
+    "grand-theft-auto-v-enhanced": "grand-theft-auto-v",
+    # Canonicalize Overwatch 2 into the IGDB slug.
+    "overwatch-2": "overwatch",
 }
 
 MANUAL_PROTECTED_SLUGS = frozenset({"valorant", "fortnite", "counter-strike-2"})
@@ -35,7 +41,47 @@ PINNED_GAMES: dict[str, PinnedGame] = {
         "fallback_cover_url": (
             "https://images.igdb.com/igdb/image/upload/t_cover_big/coaczd.jpg"
         ),
-    }
+    },
+    "grand-theft-auto-v": {
+        "igdb_slug": "grand-theft-auto-v",
+        "igdb_game_id": 1020,
+        "steam_app_id": 3240220,
+        "blocked_steam_app_ids": frozenset({271590}),
+        "blocked_igdb_slugs": frozenset(),
+        "fallback_logo_url": (
+            "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/ar667x.jpg"
+        ),
+        "fallback_cover_url": (
+            "https://images.igdb.com/igdb/image/upload/t_cover_big/co2lbd.jpg"
+        ),
+    },
+    "overwatch": {
+        "igdb_slug": "overwatch--1",
+        "igdb_game_id": 125174,
+        "steam_app_id": 2357570,
+        "blocked_steam_app_ids": frozenset(),
+        # Block Overwatch (2016) which uses IGDB slug "overwatch" (id=8173).
+        "blocked_igdb_slugs": frozenset({"overwatch"}),
+        "fallback_logo_url": (
+            "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/ar6a9.jpg"
+        ),
+        "fallback_cover_url": (
+            "https://images.igdb.com/igdb/image/upload/t_cover_big/coc99p.jpg"
+        ),
+    },
+    "dead-by-daylight": {
+        "igdb_slug": "dead-by-daylight",
+        "igdb_game_id": 18866,
+        "steam_app_id": 381210,
+        "blocked_steam_app_ids": frozenset({3453670}),
+        "blocked_igdb_slugs": frozenset(),
+        "fallback_logo_url": (
+            "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/ar8eh.jpg"
+        ),
+        "fallback_cover_url": (
+            "https://images.igdb.com/igdb/image/upload/t_cover_big/co5zky.jpg"
+        ),
+    },
 }
 
 

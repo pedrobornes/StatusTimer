@@ -14,6 +14,13 @@ from scrapers.text_utils import is_relevant_gaming_news
 
 logger = logging.getLogger(__name__)
 
+_DIRECT_NEWS_SOURCES = frozenset({FeedSource.STEAM, FeedSource.REDDIT})
+
+
+def is_direct_news_event(event: ScrapedFeedEvent) -> bool:
+    """True when push_news_events owns persistence (Steam/Reddit NEWS feeds)."""
+    return event.kind == FeedEventKind.NEWS and event.source in _DIRECT_NEWS_SOURCES
+
 
 class NewsPushStore:
     """Tracks which feed events were successfully stored in gaming_news."""
@@ -76,7 +83,7 @@ def push_news_events(
     for event in sorted(events, key=lambda item: item.published_at, reverse=True):
         if event.kind != FeedEventKind.NEWS:
             continue
-        if event.source not in (FeedSource.STEAM, FeedSource.REDDIT):
+        if not is_direct_news_event(event):
             # Other sources must go through skill rewriting before persistence.
             continue
         if store.is_pushed(event):

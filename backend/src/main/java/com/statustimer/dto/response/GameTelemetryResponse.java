@@ -33,6 +33,7 @@ public record GameTelemetryResponse(
         Integer userRating,
         Integer criticRating,
         String genreName,
+        List<String> genreNames,
         List<String> screenshotUrls,
         List<String> trailerVideoIds
 ) {
@@ -78,6 +79,13 @@ public record GameTelemetryResponse(
         Integer userRating = trackedGame.map(Game::getUserRating).orElse(null);
         Integer criticRating = trackedGame.map(Game::getCriticRating).orElse(null);
         String genreName = trackedGame.map(Game::getGenreName).orElse(null);
+        List<String> genreNames = trackedGame
+                .map(Game::getGenreNames)
+                .filter(names -> names != null && !names.isEmpty())
+                .map(List::copyOf)
+                .orElseGet(() -> genreName != null && !genreName.isBlank()
+                        ? List.of(genreName)
+                        : List.of());
         List<String> screenshotUrls = trackedGame
                 .map(Game::getScreenshotUrls)
                 .filter(urls -> urls != null && !urls.isEmpty())
@@ -111,6 +119,7 @@ public record GameTelemetryResponse(
                 userRating,
                 criticRating,
                 genreName,
+                genreNames,
                 screenshotUrls,
                 trailerVideoIds
         );
@@ -160,6 +169,11 @@ public record GameTelemetryResponse(
                 game.getUserRating(),
                 game.getCriticRating(),
                 game.getGenreName(),
+                game.getGenreNames() != null && !game.getGenreNames().isEmpty()
+                        ? List.copyOf(game.getGenreNames())
+                        : (game.getGenreName() != null && !game.getGenreName().isBlank()
+                                ? List.of(game.getGenreName())
+                                : List.of()),
                 screenshotUrls,
                 trailerVideoIds
         );

@@ -28,7 +28,7 @@ function CountdownUnit({ label, value, compact = false }: CountdownUnitProps) {
       >
         {String(value).padStart(2, "0")}
       </p>
-      <p className="mt-1 text-[10px] uppercase tracking-[0.25em] text-cyan-200/60">
+      <p className="mt-1 text-[11px] uppercase tracking-[0.25em] text-cyan-200/60">
         {label}
       </p>
     </div>

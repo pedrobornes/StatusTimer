@@ -1,20 +1,23 @@
 "use client";
 
-import type { ReleaseGenreFilter } from "@/lib/releases";
-import { RELEASE_GENRES } from "@/lib/releases";
+import { ALL_GENRES_FILTER, type ReleaseGenreFilter } from "@/lib/releases";
 
 interface GenreFilterBarProps {
+  genres: string[];
   currentGenre: ReleaseGenreFilter;
   onGenreChange: (genre: ReleaseGenreFilter) => void;
 }
 
 export default function GenreFilterBar({
+  genres,
   currentGenre,
   onGenreChange,
 }: GenreFilterBarProps) {
+  const options: ReleaseGenreFilter[] = [ALL_GENRES_FILTER, ...genres];
+
   return (
     <div className="mb-6 flex flex-wrap gap-2">
-      {RELEASE_GENRES.map((genre) => {
+      {options.map((genre) => {
         const isActive = currentGenre === genre;
 
         return (
@@ -28,7 +31,7 @@ export default function GenreFilterBar({
                 : "border-white/12 bg-white/[0.04] text-slate-300 hover:border-cyan-400/25 hover:text-white"
             }`}
           >
-            {genre}
+            {genre === ALL_GENRES_FILTER ? "All genres" : genre}
           </button>
         );
       })}

@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from datetime import date
 
-from models.normalization import normalize_genre, normalize_platform, to_slug
+from models.normalization import normalize_platform, to_slug
 from models.schemas import GameReleasePayload, PlatformRelease
 from scrapers.igdb_releases import fetch_igdb_upcoming_releases
 from scrapers.platform_images import resolve_release_image_url, resolve_release_logo_url
@@ -45,12 +45,27 @@ def build_release_payload(
     return GameReleasePayload(
         gameName=game_name,
         slug=to_slug(game_name),
-        genre=normalize_genre(raw_genre_tags),
+        genreNames=_clean_genre_names(raw_genre_tags),
         platforms=platforms,
         hypeCount=hype_count,
         imageUrl=image_url,
         logoUrl=logo_url,
     )
+
+
+def _clean_genre_names(raw_genre_tags: list[str]) -> list[str]:
+    """Trim, drop blanks, and de-duplicate the raw IGDB genre tags (order-preserving)."""
+    seen: set[str] = set()
+    cleaned: list[str] = []
+    for tag in raw_genre_tags:
+        if not tag:
+            continue
+        trimmed = tag.strip()
+        if not trimmed or trimmed in seen:
+            continue
+        seen.add(trimmed)
+        cleaned.append(trimmed)
+    return cleaned
 
 
 def fetch_upcoming_releases() -> list[GameReleasePayload]:

@@ -3,7 +3,6 @@ package com.statustimer.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.statustimer.entity.Game;
-import com.statustimer.entity.GameGenre;
 import com.statustimer.entity.GamePlatform;
 import com.statustimer.entity.GamePlatformDetail;
 import java.time.LocalDate;
@@ -33,7 +32,6 @@ class UpcomingReleaseServiceTest {
         Game tba = Game.builder()
                 .slug("mystery-title")
                 .gameName("Mystery Title")
-                .genre(GameGenre.ACTION)
                 .build();
         tba.replacePlatforms(List.of(
                 GamePlatformDetail.builder()
@@ -49,7 +47,6 @@ class UpcomingReleaseServiceTest {
         Game game = Game.builder()
                 .slug(slug)
                 .gameName(slug)
-                .genre(GameGenre.ACTION)
                 .build();
         game.replacePlatforms(List.of(
                 GamePlatformDetail.builder()

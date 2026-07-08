@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { CalendarClock } from "lucide-react";
+import { ArrowLeft, CalendarClock, Newspaper } from "lucide-react";
 import { APP_ROUTES } from "@/config/routes";
 import HypeCounterButton from "@/components/HypeCounterButton";
 import GameMediaSidebar from "@/components/GameMediaSidebar";
@@ -11,6 +11,7 @@ import PageShell from "@/components/PageShell";
 import PlatformReleaseSchedule from "@/components/PlatformReleaseSchedule";
 import DashboardError from "@/components/dashboard/DashboardError";
 import { formatIgdbRating } from "@/lib/gameAssets";
+import { resolveReleaseGenres } from "@/lib/genres";
 import { resolveGameMedia } from "@/lib/gameMedia";
 import { resolveReleaseHeroUrl } from "@/lib/releases";
 import { toSlug } from "@/lib/slug";
@@ -99,12 +100,13 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
     const criticRating = formatIgdbRating(release.criticRating ?? null);
     const steamAppId = resolveSteamAppId(release, telemetry?.appId);
     const gameMedia = resolveGameMedia(release, telemetry);
+    const genreBadges = resolveReleaseGenres(release);
 
     return (
       <PageShell
-        badge="Release Profile"
+        badges={genreBadges}
         title={release.gameName}
-        subtitle={`${release.genre} · launch windows and latest game updates`}
+        subtitle="Launch windows and the latest patch notes across every platform."
         coverUrl={coverUrl}
         coverAlt={release.gameName}
         heroEmphasis
@@ -117,7 +119,7 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
                   <CalendarClock className="h-4 w-4 text-cyan-300" />
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-200/70">
+                  <p className="text-[11px] uppercase tracking-[0.3em] text-cyan-200/70">
                     Launch windows
                   </p>
                   <h2 className="text-lg font-semibold text-white">
@@ -173,18 +175,22 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
           </aside>
         </div>
 
-        <p className="mt-8 text-center text-xs text-slate-400">
-          <Link href="/" className="transition hover:text-violet-200/70">
+        <nav className="mt-10 flex flex-col items-center justify-center gap-3 border-t border-white/8 pt-6 sm:flex-row sm:gap-4">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-slate-300 transition hover:border-violet-400/30 hover:bg-violet-500/10 hover:text-violet-100"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden />
             Return to monitor
           </Link>
-          {" · "}
           <Link
             href={APP_ROUTES.gameNews(slug)}
-            className="transition hover:text-violet-200/70"
+            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-slate-300 transition hover:border-fuchsia-400/30 hover:bg-fuchsia-500/10 hover:text-fuchsia-100"
           >
-            View all {release.gameName} news & patches
+            <Newspaper className="h-4 w-4" aria-hidden />
+            View all {release.gameName} news &amp; patches
           </Link>
-        </p>
+        </nav>
       </PageShell>
     );
   } catch (error) {

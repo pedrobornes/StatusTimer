@@ -1,20 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { getTelemetryReady } from "@/services/telemetryService";
-
-/** First check runs immediately; subsequent polls use a 30s cadence. */
-const POLL_INTERVAL_MS = 30_000;
-/** ~10 minutes of waiting at 30s intervals (plus the immediate first check). */
-const MAX_ATTEMPTS = 20;
-/** Show the "still working" copy after ~2 minutes. */
-const SLOW_MESSAGE_AFTER_ATTEMPTS = 4;
-
-function refreshSessionKey(gameSlug: string): string {
-  return `telemetry-ready-refresh:${gameSlug}`;
-}
+import { useTelemetryReadyPoll } from "@/components/dashboard/telemetry/useTelemetryReadyPoll";
 
 interface PendingTelemetryGateProps {
   gameSlug: string;
@@ -23,64 +10,7 @@ interface PendingTelemetryGateProps {
 export default function PendingTelemetryGate({
   gameSlug,
 }: PendingTelemetryGateProps) {
-  const router = useRouter();
-  const refreshedRef = useRef(false);
-  const [attempts, setAttempts] = useState(0);
-  const [timedOut, setTimedOut] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    let timeoutId: number | undefined;
-
-    async function checkReady(): Promise<boolean> {
-      const result = await getTelemetryReady(gameSlug);
-      return result.ready;
-    }
-
-    async function pollUntilReady(attempt: number) {
-      if (cancelled) {
-        return;
-      }
-
-      setAttempts(attempt);
-
-      try {
-        const ready = await checkReady();
-        if (ready) {
-          const refreshKey = refreshSessionKey(gameSlug);
-          if (!refreshedRef.current && !sessionStorage.getItem(refreshKey)) {
-            refreshedRef.current = true;
-            sessionStorage.setItem(refreshKey, "1");
-            router.refresh();
-          }
-          return;
-        }
-      } catch {
-        // Keep polling until attempts are exhausted.
-      }
-
-      if (attempt >= MAX_ATTEMPTS) {
-        setTimedOut(true);
-        return;
-      }
-
-      timeoutId = window.setTimeout(() => {
-        void pollUntilReady(attempt + 1);
-      }, POLL_INTERVAL_MS);
-    }
-
-    void pollUntilReady(1);
-
-    return () => {
-      cancelled = true;
-      if (timeoutId !== undefined) {
-        window.clearTimeout(timeoutId);
-      }
-    };
-  }, [gameSlug, router]);
-
-  const showSlowMessage =
-    attempts >= SLOW_MESSAGE_AFTER_ATTEMPTS && !timedOut;
+  const { timedOut, showSlowMessage } = useTelemetryReadyPoll(gameSlug);
 
   return (
     <div

@@ -14,6 +14,15 @@ from config.settings import settings
 logger = logging.getLogger(__name__)
 
 
+def _as_bool(value: object) -> bool:
+    """Coerce a DB flag to bool. MySQL BIT(1) comes back as bytes (b'\\x00'/b'\\x01'),
+    and a non-empty bytes object is always truthy, so bool() alone misreads b'\\x00'
+    as True. Inspect the actual byte value instead."""
+    if isinstance(value, (bytes, bytearray)):
+        return any(value)
+    return bool(value)
+
+
 def should_skip_steam_app(app_id: int) -> bool:
     """Return True when a blacklisted AppID is not yet due for weekly re-scan."""
     if app_id <= 0:
@@ -34,7 +43,7 @@ def should_skip_steam_app(app_id: int) -> bool:
     if row is None:
         return False
 
-    blacklisted = bool(row.get("steam_blacklisted"))
+    blacklisted = _as_bool(row.get("steam_blacklisted"))
     if not blacklisted:
         return False
 
@@ -121,7 +130,7 @@ def record_steam_app_404(app_id: int) -> None:
             return
 
         count = int(count_row.get("steam_consecutive_404_count") or 0)
-        blacklisted = bool(count_row.get("steam_blacklisted"))
+        blacklisted = _as_bool(count_row.get("steam_blacklisted"))
 
         if blacklisted and count >= threshold:
             logger.warning(

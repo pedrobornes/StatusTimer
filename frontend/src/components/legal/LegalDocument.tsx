@@ -4,6 +4,7 @@ import { LEGAL_LAST_UPDATED } from "@/config/site";
 
 export interface LegalSection {
   title: string;
+  id?: string;
   content: ReactNode;
 }
 
@@ -28,7 +29,8 @@ export default function LegalDocument({
         {sections.map((section) => (
           <section
             key={section.title}
-            className="glass-panel rounded-2xl p-6 md:p-8"
+            id={section.id}
+            className="glass-panel scroll-mt-24 rounded-2xl p-6 md:p-8"
           >
             <h2 className="mb-4 text-lg font-semibold text-white">
               {section.title}

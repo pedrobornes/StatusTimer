@@ -9,6 +9,7 @@ public record UpcomingReleaseResponse(
         String gameName,
         String slug,
         String genre,
+        List<String> genreNames,
         LocalDateTime releaseDate,
         Long hypeCount,
         String imageUrl,
@@ -23,11 +24,15 @@ public record UpcomingReleaseResponse(
 ) {
 
     public static UpcomingReleaseResponse fromEntity(Game entity) {
+        List<String> genreNames = List.copyOf(entity.getGenreNames());
+        String primaryGenre = resolvePrimaryGenre(entity, genreNames);
+
         return new UpcomingReleaseResponse(
                 entity.getId(),
                 entity.getGameName(),
                 entity.getSlug(),
-                entity.getGenre().getLabel(),
+                primaryGenre,
+                genreNames,
                 entity.resolvePrimaryReleaseDate(),
                 entity.getHypeCount(),
                 resolveReleaseImageUrl(entity),
@@ -42,6 +47,18 @@ public record UpcomingReleaseResponse(
                         .toList(),
                 entity.getSteamAppId()
         );
+    }
+
+    private static String resolvePrimaryGenre(Game entity, List<String> genreNames) {
+        if (!genreNames.isEmpty()) {
+            return genreNames.getFirst();
+        }
+
+        if (entity.getGenreName() != null && !entity.getGenreName().isBlank()) {
+            return entity.getGenreName().trim();
+        }
+
+        return null;
     }
 
     private static String resolveReleaseImageUrl(Game entity) {

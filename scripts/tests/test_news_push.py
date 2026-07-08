@@ -6,7 +6,7 @@ from pathlib import Path
 from clients.backend_client import BackendClient
 from clients.http_result import PushResult
 from models.feed_events import FeedEventKind, FeedSource, ScrapedFeedEvent
-from pipeline.news_push import NewsPushStore, push_news_events
+from pipeline.news_push import NewsPushStore, is_direct_news_event, push_news_events
 from unittest.mock import Mock
 
 
@@ -107,3 +107,29 @@ def test_push_news_events_skips_non_steam_sources(tmp_path: Path) -> None:
 
     assert pushed == 0
     client.push_patch_note.assert_not_called()
+
+
+def test_is_direct_news_event_for_steam_and_reddit() -> None:
+    steam = _sample_event()
+    reddit = ScrapedFeedEvent(
+        source=FeedSource.REDDIT,
+        kind=FeedEventKind.NEWS,
+        external_id="reddit-1",
+        game_tag="valorant",
+        title="Patch notes",
+        plain_text="Balance changes.",
+        published_at=datetime(2026, 7, 6, tzinfo=timezone.utc),
+    )
+    riot = ScrapedFeedEvent(
+        source=FeedSource.RIOT,
+        kind=FeedEventKind.INCIDENT,
+        external_id="riot-1",
+        game_tag="valorant",
+        title="Outage",
+        plain_text="Login issues.",
+        published_at=datetime(2026, 7, 6, tzinfo=timezone.utc),
+    )
+
+    assert is_direct_news_event(steam) is True
+    assert is_direct_news_event(reddit) is True
+    assert is_direct_news_event(riot) is False

@@ -3,6 +3,7 @@ package com.statustimer.integration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.statustimer.config.IgdbProperties;
 import com.statustimer.util.IgdbExternalLinksSupport;
+import com.statustimer.util.IgdbPlatformSupport;
 import com.statustimer.util.IgdbYoutubeSupport;
 import com.statustimer.util.IgdbYoutubeSupport.YoutubeWebsiteData;
 import java.util.ArrayList;
@@ -20,7 +21,7 @@ public class IgdbSearchClient {
 
     private static final int STEAM_EXTERNAL_CATEGORY = 1;
     private static final String GAME_FIELDS =
-            "id,name,slug,category,game_type,cover.image_id,artworks.image_id,screenshots.image_id,"
+            "id,name,slug,category,game_type,platforms,cover.image_id,artworks.image_id,screenshots.image_id,"
                     + "hypes,rating,aggregated_rating,genres.name,videos.video_id,websites.url,websites.category,"
                     + "external_games.uid,external_games.category,external_games.url";
 
@@ -55,6 +56,10 @@ public class IgdbSearchClient {
         List<IgdbGameMatch> matches = new ArrayList<>();
         for (JsonNode row : payload.get()) {
             if (!IgdbGameCategories.isMainGame(row)) {
+                continue;
+            }
+
+            if (!IgdbPlatformSupport.hasSupportedPlatform(row.path("platforms"))) {
                 continue;
             }
 

@@ -14,7 +14,13 @@ public class GameSlugMapper {
 
     private static final Map<String, String> SLUG_ALIASES = Map.of(
             "mecha-chameleon", "meccha-chameleon",
-            "counter-strike", "counter-strike-2"
+            "counter-strike", "counter-strike-2",
+            // GTA V variants collapse into the IGDB slug.
+            "gta-v", "grand-theft-auto-v",
+            "grand-theft-auto-v-legacy", "grand-theft-auto-v",
+            "grand-theft-auto-v-enhanced", "grand-theft-auto-v",
+            // Overwatch 2 is represented as IGDB slug "overwatch--1" but we expose "overwatch" in the app.
+            "overwatch-2", "overwatch"
     );
 
     public String resolveCanonicalSlug(String slug) {

@@ -3,6 +3,7 @@ import AdSlot from "@/components/ads/AdSlot";
 import GameTelemetryCard from "@/components/dashboard/GameTelemetryCard";
 import IncidentLog from "@/components/dashboard/telemetry/IncidentLog";
 import PendingTelemetryGate from "@/components/dashboard/telemetry/PendingTelemetryGate";
+import TelemetryRefreshBanner from "@/components/dashboard/telemetry/TelemetryRefreshBanner";
 import NewsFeedPanel from "@/components/dashboard/NewsFeedPanel";
 import SteamStoreWidget from "@/components/dashboard/SteamStoreWidget";
 import GameExternalLinks from "@/components/GameExternalLinks";
@@ -20,6 +21,7 @@ import { buildGameStatusFaq } from "@/lib/seo/gameFaq";
 import { buildStatusPageJsonLd } from "@/lib/seo/jsonLd";
 import { buildStatusPageMetadata } from "@/lib/seo/metadata";
 import { resolveCanonicalGameSlug } from "@/lib/gameSlugs";
+import { resolveGenres } from "@/lib/genres";
 import { hasGameMedia, resolveGameMedia } from "@/lib/gameMedia";
 import { getConfirmedPlatforms } from "@/lib/releases";
 import { getGameStatusDetail } from "@/services/telemetryService";
@@ -71,7 +73,7 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
       },
       releases,
     ] = await Promise.all([
-      getGameStatusDetail(slug),
+      getGameStatusDetail(slug, { revalidate: 0, cache: "no-store" }),
       getUpcomingReleases().catch(() => []),
     ]);
 
@@ -80,6 +82,11 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
       telemetry?.gameName ?? catalogGameName ?? resolveGameDisplayName(slug, telemetry ?? undefined);
     const coverUrl = resolveStatusPageHeroUrl(slug, telemetry, releaseEntry ?? null);
     const releasePlatforms = getConfirmedPlatforms(releaseEntry?.platforms ?? []);
+    const telemetryGenres = resolveGenres(telemetry ?? undefined);
+    const genreBadges =
+      telemetryGenres.length > 0
+        ? telemetryGenres
+        : resolveGenres(releaseEntry ?? undefined);
 
     const steamAppId = steamStore?.steamAppId ?? telemetry?.appId ?? null;
     const gameMedia = resolveGameMedia(
@@ -92,11 +99,13 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
     const isCatalogProfile = catalogOnly === true;
     const isPendingTelemetry = !telemetryReady && !isCatalogProfile;
     const hasPartialTelemetry = telemetry !== null;
+    const isInitialProbe = isPendingTelemetry && !hasPartialTelemetry;
+    const isCatalogBootstrap = isPendingTelemetry && hasPartialTelemetry;
 
-    if (isPendingTelemetry) {
+    if (isInitialProbe) {
       return (
         <PageShell
-          badge="Live Server Status"
+          badges={genreBadges}
           title={`Is ${gameName} Down?`}
           subtitle={`We're checking ${gameName} servers right now. It may take a few minutes.`}
           coverUrl={coverUrl}
@@ -150,6 +159,63 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
       );
     }
 
+    if (isCatalogBootstrap && telemetry !== null) {
+      return (
+        <PageShell
+          badges={genreBadges}
+          title={`Is ${gameName} Down?`}
+          subtitle={`See if ${gameName} servers are up and read the latest game news.`}
+          coverUrl={coverUrl}
+          coverAlt={gameName}
+        >
+          <GameStatusSubNav
+            slug={slug}
+            hasNews={hasNews}
+            hasMedia={hasMedia}
+          />
+          <div className="grid gap-8 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,360px)]">
+            <div className="space-y-8">
+              <section aria-labelledby="server-status-heading">
+                <h2
+                  id="server-status-heading"
+                  className="heading-section mb-2 text-2xl uppercase text-white"
+                >
+                  Live Server Report
+                </h2>
+                <TelemetryRefreshBanner gameSlug={slug} />
+                <p className="mb-6 text-sm leading-6 text-slate-400">
+                  Live status data compiled from official game status pages and
+                  player networks.
+                </p>
+                <GameTelemetryCard
+                  telemetry={telemetry}
+                  linkToStatusPage={false}
+                  linkToProfile={false}
+                  platforms={releasePlatforms}
+                  serverStatusPending
+                />
+              </section>
+            </div>
+
+            <div className="space-y-8">
+              {steamAppId ? (
+                <SteamStoreWidget steamAppId={steamAppId} gameName={gameName} />
+              ) : null}
+              <GameExternalLinks links={externalLinks} />
+              <GameMediaSidebar gameName={gameName} gameSlug={slug} media={gameMedia} />
+              <NewsFeedPanel
+                news={news}
+                fillHeight
+                gameSlug={slug}
+                sectionTitle="Game News & Updates"
+                eyebrow="Latest Alerts"
+              />
+            </div>
+          </div>
+        </PageShell>
+      );
+    }
+
     if (telemetry === null) {
       notFound();
     }
@@ -176,7 +242,6 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
       faqItems: showIndexableContent ? faqItems : undefined,
     });
 
-    const pageBadge = isCatalogProfile ? "Game Profile" : "Live Server Status";
     const pageTitle = isCatalogProfile
       ? gameName
       : `Is ${gameName} Down?`;
@@ -195,7 +260,7 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
         ) : null}
 
         <PageShell
-          badge={pageBadge}
+          badges={genreBadges}
           title={pageTitle}
           subtitle={pageSubtitle}
           coverUrl={coverUrl}

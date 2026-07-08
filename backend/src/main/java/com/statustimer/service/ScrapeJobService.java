@@ -1,5 +1,6 @@
 package com.statustimer.service;
 
+import com.statustimer.config.CatalogMonitoringPolicy;
 import com.statustimer.dto.response.PendingScrapeJobResponse;
 import com.statustimer.entity.Game;
 import com.statustimer.entity.ScrapeJob;

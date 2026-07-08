@@ -2,8 +2,10 @@ import Link from "next/link";
 import HypeCounterButton from "@/components/HypeCounterButton";
 import GameBoxArtImage from "@/components/ui/GameBoxArtImage";
 import GameCoverFrame from "@/components/ui/GameCoverFrame";
+import GenreBadge from "@/components/ui/GenreBadge";
 import PlatformReleaseSchedule from "@/components/PlatformReleaseSchedule";
 import { formatIgdbRating } from "@/lib/gameAssets";
+import { resolveReleaseGenres } from "@/lib/genres";
 import { APP_ROUTES } from "@/config/routes";
 import {
   resolveReleaseBoxArtUrl,
@@ -24,6 +26,7 @@ export default function ReleaseCard({
   const heroUrl = showCover ? resolveReleaseHeroUrl(release.slug, release) : null;
   const userRating = formatIgdbRating(release.userRating ?? null);
   const criticRating = formatIgdbRating(release.criticRating ?? null);
+  const genreBadges = resolveReleaseGenres(release);
 
   const releaseHref = APP_ROUTES.release(release.slug);
 
@@ -66,9 +69,11 @@ export default function ReleaseCard({
               </Link>
             </h3>
 
-            <p className="mt-1 text-xs uppercase tracking-[0.16em] text-cyan-200/70">
-              {release.genre}
-            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {genreBadges.map((genre) => (
+                <GenreBadge key={genre} label={genre} />
+              ))}
+            </div>
 
             {(userRating || criticRating) && (
               <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-300">

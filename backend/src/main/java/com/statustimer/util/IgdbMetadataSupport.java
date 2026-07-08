@@ -1,6 +1,7 @@
 package com.statustimer.util;
 
 import com.statustimer.entity.Game;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -61,6 +62,25 @@ public final class IgdbMetadataSupport {
         if (genreName != null && !genreName.isBlank()) {
             game.setGenreName(genreName.trim());
         }
+    }
+
+    public static void applyGenreNames(Game game, List<String> genreNames) {
+        if (genreNames == null || genreNames.isEmpty()) {
+            return;
+        }
+
+        List<String> normalized = genreNames.stream()
+                .filter(name -> name != null && !name.isBlank())
+                .map(String::trim)
+                .distinct()
+                .toList();
+
+        if (normalized.isEmpty()) {
+            return;
+        }
+
+        game.setGenreNames(new ArrayList<>(normalized));
+        game.setGenreName(normalized.getFirst());
     }
 
     private static Integer clampRating(Integer rating) {

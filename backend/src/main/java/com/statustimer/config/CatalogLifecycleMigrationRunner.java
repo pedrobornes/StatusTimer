@@ -86,6 +86,13 @@ public class CatalogLifecycleMigrationRunner implements CommandLineRunner {
             changed = true;
         }
 
+        if ((game.getGenreNames() == null || game.getGenreNames().isEmpty())
+                && game.getGenreName() != null
+                && !game.getGenreName().isBlank()) {
+            game.setGenreNames(java.util.List.of(game.getGenreName().trim()));
+            changed = true;
+        }
+
         return changed;
     }
 }

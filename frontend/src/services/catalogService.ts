@@ -71,6 +71,7 @@ export function searchGames(query: string): Promise<GameCatalogSearchResult[]> {
   const params = new URLSearchParams({ q: query });
   return fetchJson<GameCatalogSearchResult[]>(
     `/api/v1/games/search?${params.toString()}`,
+    { cache: "no-store", revalidate: 0 },
   );
 }
 

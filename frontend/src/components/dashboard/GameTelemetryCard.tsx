@@ -6,6 +6,7 @@ import GameLiveMetricsRow from "@/components/dashboard/GameLiveMetricsRow";
 import GameBoxArtImage from "@/components/ui/GameBoxArtImage";
 import PlatformBadge from "@/components/ui/PlatformBadge";
 import StatusBadge from "@/components/ui/StatusBadge";
+import RelativeTime from "@/components/ui/RelativeTime";
 import { APP_ROUTES } from "@/config/routes";
 import {
   formatIgdbRating,
@@ -17,7 +18,6 @@ import {
 import { formatProbeSource } from "@/lib/telemetry";
 import { formatReleaseDate } from "@/lib/countdown";
 import { getConfirmedPlatforms } from "@/lib/releases";
-import { formatRelativeTime } from "@/utils/dateFormatter";
 import type { PlatformDetail } from "@/types/api";
 import type { GameTelemetry, TelemetryHistorySnapshot } from "@/types/telemetry";
 
@@ -175,9 +175,11 @@ export default memo(function GameTelemetryCard({
             <Gauge className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />
             <span>{formatProbeSource(telemetry.gameSlug, telemetry.dataSource)}</span>
             <span aria-hidden>•</span>
-            <time dateTime={telemetry.lastChecked}>
-              Updated {formatRelativeTime(telemetry.lastChecked)}
-            </time>
+            <RelativeTime
+              value={telemetry.lastChecked}
+              prefix="Updated "
+              updateIntervalMs={1_000}
+            />
           </footer>
         </>
       ) : null}

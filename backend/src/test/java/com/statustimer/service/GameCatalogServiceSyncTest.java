@@ -7,6 +7,7 @@ import com.statustimer.dto.request.GameCatalogEntryPayload;
 import com.statustimer.dto.request.SyncGameCatalogRequest;
 import com.statustimer.entity.Game;
 import com.statustimer.entity.LifecycleState;
+import com.statustimer.integration.IgdbSearchClient;
 import com.statustimer.repository.GameRepository;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -26,6 +28,14 @@ class GameCatalogServiceSyncTest {
 
     @Autowired
     private GameRepository gameRepository;
+
+    /**
+     * Keep the catalog sync deterministic: an unconfigured IGDB client short-circuits
+     * enrichment so tests never depend on live IGDB responses (which would overwrite
+     * the assets asserted below).
+     */
+    @MockitoBean
+    private IgdbSearchClient igdbSearchClient;
 
     @BeforeEach
     void seedGames() {
@@ -51,6 +61,7 @@ class GameCatalogServiceSyncTest {
                         null,
                         135_611L,
                         false,
+                        null,
                         null,
                         null,
                         null,
@@ -102,6 +113,7 @@ class GameCatalogServiceSyncTest {
                         null,
                         null,
                         null,
+                        null,
                         List.of(),
                         List.of(),
                         null,
@@ -142,6 +154,7 @@ class GameCatalogServiceSyncTest {
                         842_113L,
                         null,
                         false,
+                        null,
                         null,
                         null,
                         null,

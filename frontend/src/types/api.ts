@@ -23,14 +23,6 @@ export interface GamingNews {
 
 export type GamePlatform = "PC" | "PS5" | "XBOX" | "SWITCH" | "SWITCH_2";
 
-export type GameGenre =
-  | "Shooter"
-  | "RPG"
-  | "Survival"
-  | "Action"
-  | "Sports/Racing"
-  | "Strategy";
-
 export interface PlatformDetail {
   platform: GamePlatform;
   releaseDate: string | null;
@@ -40,7 +32,8 @@ export interface UpcomingRelease {
   id: number;
   gameName: string;
   slug: string;
-  genre: GameGenre;
+  genre?: string | null;
+  genreNames?: string[];
   releaseDate: string;
   hypeCount: number;
   imageUrl?: string | null;

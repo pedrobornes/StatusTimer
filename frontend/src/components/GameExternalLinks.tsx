@@ -35,6 +35,9 @@ export default function GameExternalLinks({ links }: GameExternalLinksProps) {
       <div className="flex flex-wrap gap-3">
         {orderedLinks.map(({ key, url }) => {
           const brand = GAME_PLATFORM_LINK_BRANDS[key];
+          const isBrandLogo = key !== "official";
+
+          const buttonClass = `inline-flex h-11 w-11 items-center justify-center rounded-2xl border bg-gradient-to-br transition hover:scale-[1.03] ${brand.ringClass} ${brand.accentClass} ${isBrandLogo ? "p-2.5" : ""}`;
 
           return (
             <a
@@ -44,9 +47,12 @@ export default function GameExternalLinks({ links }: GameExternalLinksProps) {
               rel="noopener noreferrer"
               aria-label={brand.label}
               title={brand.label}
-              className={`inline-flex h-11 w-11 items-center justify-center rounded-2xl border bg-gradient-to-br transition hover:scale-[1.03] ${brand.ringClass} ${brand.accentClass}`}
+              className={buttonClass}
             >
-              <GamePlatformLinkIcon linkKey={key} className="h-5 w-5" />
+              <GamePlatformLinkIcon
+                linkKey={key}
+                className={isBrandLogo ? "h-full w-full" : "h-5 w-5"}
+              />
             </a>
           );
         })}

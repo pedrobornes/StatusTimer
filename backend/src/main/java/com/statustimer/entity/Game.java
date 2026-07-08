@@ -57,10 +57,10 @@ public class Game {
     @Column(name = "genre_name", length = 128)
     private String genreName;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Convert(converter = StringListJsonConverter.class)
+    @Column(name = "genre_names_json", columnDefinition = "TEXT")
     @Builder.Default
-    private GameGenre genre = GameGenre.ACTION;
+    private List<String> genreNames = new ArrayList<>();
 
     @Column(nullable = false)
     @Builder.Default

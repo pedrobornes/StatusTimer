@@ -48,8 +48,11 @@ export function getGameTelemetryBySlug(slug: string): Promise<GameTelemetry> {
   return fetchJson<GameTelemetry>(`/api/v1/telemetry/${slug}`);
 }
 
-export function getGameStatusDetail(slug: string): Promise<GameStatusDetail> {
-  return fetchJson<GameStatusDetail>(`/api/v1/status/${slug}`);
+export function getGameStatusDetail(
+  slug: string,
+  options?: ApiRequestOptions,
+): Promise<GameStatusDetail> {
+  return fetchJson<GameStatusDetail>(`/api/v1/status/${slug}`, options);
 }
 
 export function getTelemetryHistory(

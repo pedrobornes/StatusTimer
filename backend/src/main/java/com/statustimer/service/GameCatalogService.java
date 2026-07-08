@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -36,6 +37,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class GameCatalogService {
 
     private static final Set<String> MANUAL_PROTECTED_SLUGS = Set.of(
@@ -316,15 +318,28 @@ public class GameCatalogService {
 
         int remaining = IGDB_DISCOVERY_LIMIT - results.size();
         if (remaining > 0 && igdbSearchClient.isConfigured()) {
-            for (IgdbGameMatch match : igdbSearchClient.search(trimmed, remaining)) {
-                Game discovered = upsertFromIgdbDiscovery(match);
-                if (discovered == null) {
-                    continue;
-                }
+            try {
+                for (IgdbGameMatch match : igdbSearchClient.search(trimmed, remaining)) {
+                    try {
+                        Game discovered = upsertFromIgdbDiscovery(match);
+                        if (discovered == null) {
+                            continue;
+                        }
 
-                if (seenSlugs.add(discovered.getSlug())) {
-                    results.add(toSearchResponse(discovered));
+                        if (seenSlugs.add(discovered.getSlug())) {
+                            results.add(toSearchResponse(discovered));
+                        }
+                    } catch (RuntimeException exception) {
+                        log.warn(
+                                "Skipping IGDB discovery match '{}' during search for '{}'",
+                                match.name(),
+                                trimmed,
+                                exception
+                        );
+                    }
                 }
+            } catch (RuntimeException exception) {
+                log.warn("IGDB discovery failed during search for '{}'", trimmed, exception);
             }
         }
 
@@ -365,10 +380,13 @@ public class GameCatalogService {
                 continue;
             }
 
-            Game game = gameRepository.findBySlug(slug)
-                    .orElseGet(() -> gameRepository.save(buildTrackedCatalogGame(slug, metadata)));
-
-            results.add(toSearchResponse(game));
+            try {
+                Game game = gameRepository.findBySlug(slug)
+                        .orElseGet(() -> gameRepository.save(buildTrackedCatalogGame(slug, metadata)));
+                results.add(toSearchResponse(game));
+            } catch (RuntimeException exception) {
+                log.warn("Failed to resolve tracked catalog match '{}' during search", slug, exception);
+            }
         }
     }
 
@@ -399,6 +417,10 @@ public class GameCatalogService {
     }
 
     private Game upsertFromIgdbDiscovery(IgdbGameMatch match) {
+        if (match.name() == null || match.name().isBlank()) {
+            return null;
+        }
+
         String slug = SlugUtils.toSlug(match.igdbSlug() != null && !match.igdbSlug().isBlank()
                 ? match.igdbSlug()
                 : match.name());
@@ -452,10 +474,7 @@ public class GameCatalogService {
                 List.of(),
                 List.of()
         );
-        IgdbMetadataSupport.applyGenreName(
-                game,
-                match.genreNames().isEmpty() ? null : match.genreNames().getFirst()
-        );
+        IgdbMetadataSupport.applyGenreNames(game, match.genreNames());
 
         if (!GameAssetPolicy.isRenderableLogo(game.getLogoUrl())) {
             game.setLogoUrl(GameAssetPolicy.LOGO_NONE);
@@ -618,7 +637,10 @@ public class GameCatalogService {
             );
             IgdbMetadataSupport.applyYoutubeChannelUrl(game, payload.youtubeChannelUrl());
             IgdbMetadataSupport.applyExternalLinks(game, payload.externalLinks());
-            IgdbMetadataSupport.applyGenreName(game, payload.genreName());
+            IgdbMetadataSupport.applyGenreNames(game, payload.genreNames());
+            if (payload.genreNames() == null || payload.genreNames().isEmpty()) {
+                IgdbMetadataSupport.applyGenreName(game, payload.genreName());
+            }
         }
 
         GameAssetPolicy.normalizeStoredAssets(game);
@@ -712,10 +734,7 @@ public class GameCatalogService {
         );
         IgdbMetadataSupport.applyYoutubeChannelUrl(game, match.youtubeChannelUrl());
         IgdbMetadataSupport.applyExternalLinks(game, match.externalLinks());
-        IgdbMetadataSupport.applyGenreName(
-                game,
-                match.genreNames().isEmpty() ? null : match.genreNames().getFirst()
-        );
+        IgdbMetadataSupport.applyGenreNames(game, match.genreNames());
 
         if (game.getSteamAppId() == null && match.steamAppId() != null
                 && !PinnedGamePolicy.isBlockedSteamAppId(game.getSlug(), match.steamAppId())) {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Scale } from "lucide-react";
 import { APP_ROUTES } from "@/config/routes";
+import { TRADEMARK_FOOTER_NOTICE } from "@/config/legal";
 import { CONTACT_EMAIL, SITE_NAME } from "@/config/site";
 
 const PRODUCT_LINKS = [
@@ -81,11 +82,14 @@ export default function Footer() {
             </div>
 
             <p className="text-sm leading-relaxed text-slate-400">
-              {SITE_NAME} is an independent tracking platform. It is not
-              affiliated, associated, authorized, or endorsed by any company,
-              brand, or trademark listed on this site. All product names, logos,
-              and trademarks are the property of their respective owners and are
-              used solely for identification and informational purposes.
+              {TRADEMARK_FOOTER_NOTICE}{" "}
+              <Link
+                href={`${APP_ROUTES.terms}#trademarks`}
+                className="text-violet-200/90 transition hover:text-white"
+              >
+                Read the full trademark notice
+              </Link>
+              .
             </p>
 
             {CONTACT_EMAIL ? (

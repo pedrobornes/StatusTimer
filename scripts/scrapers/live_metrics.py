@@ -239,12 +239,12 @@ def fetch_steam_live_players(
     if should_skip_steam_app(app_id):
         return None
 
-    if not settings.steam_api_key:
-        logger.debug("Steam API key missing; skipping live players for app %s", app_id)
-        return None
-
+    # GetNumberOfCurrentPlayers is a public Steam endpoint; the API key is
+    # optional and only added when configured (mirrors steam_probe/steam_charts).
     http = session or requests.Session()
-    params = {"appid": app_id, "key": settings.steam_api_key}
+    params: dict[str, str | int] = {"appid": app_id}
+    if settings.steam_api_key:
+        params["key"] = settings.steam_api_key
 
     try:
         response = http.get(

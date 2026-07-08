@@ -16,6 +16,7 @@ from scrapers.igdb_media import (
     is_main_game,
     parse_igdb_game_metadata,
 )
+from scrapers.igdb_platforms import has_supported_igdb_platform
 
 logger = logging.getLogger(__name__)
 
@@ -138,6 +139,9 @@ class IgdbClient:
         rows = self._fetch_games(query)
         for row in rows:
             if not is_main_game(row):
+                continue
+
+            if not has_supported_igdb_platform(row.get("platforms")):
                 continue
 
             try:

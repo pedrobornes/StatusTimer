@@ -27,7 +27,7 @@ from pipeline.cycle_resilience import (
     resolve_phase_criticality,
 )
 from pipeline.deduplication import DedupStore, filter_new_events, filter_recent_events
-from pipeline.news_push import NewsPushStore, push_news_events
+from pipeline.news_push import NewsPushStore, is_direct_news_event, push_news_events
 from pipeline.skill_router import SkillRouter
 from pipeline.sync_router import dispatch_skill_result
 from pipeline.tier_trends import TierTrendReport, run_tier_maintenance
@@ -781,10 +781,10 @@ def _sync_prefetched_releases(
             for entry in release.platforms
         )
         logger.info(
-            "[%s] %s | genre=%s | imageUrl=%s | logoUrl=%s | platforms=[%s]",
+            "[%s] %s | genres=%s | imageUrl=%s | logoUrl=%s | platforms=[%s]",
             release.slug,
             release.game_name,
-            release.genre.value,
+            ", ".join(release.genre_names) or "none",
             release.image_url or "none",
             release.logo_url or "none",
             platform_summary,
@@ -958,6 +958,13 @@ def _sync_prefetched_platform_intel(
     last_result = PushResult(success=False, error_message="No platform intel pushes attempted")
 
     for event in new_events:
+        if is_direct_news_event(event):
+            logger.debug(
+                "Skill router skipped for [%s]: Steam/Reddit news handled by direct push",
+                event.game_tag,
+            )
+            continue
+
         preloaded_game_id = catalog_preload.resolve_game_id(event.game_tag)
         if preloaded_game_id is None:
             logger.debug("No preloaded game_id for slug=%s", event.game_tag)

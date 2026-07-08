@@ -5,6 +5,7 @@ import SidebarPanelHeader, {
   SidebarEmptyState,
 } from "@/components/dashboard/SidebarPanelHeader";
 import GameAssetImage from "@/components/ui/GameAssetImage";
+import RelativeTime from "@/components/ui/RelativeTime";
 import { APP_ROUTES } from "@/config/routes";
 import {
   buildNewsExcerpt,
@@ -14,7 +15,6 @@ import {
   resolveNewsGameName,
 } from "@/lib/intelFeed";
 import { resolveCatalogImageUrl } from "@/lib/gameAssets";
-import { formatRelativeTime, resolveRecordDate } from "@/utils/dateFormatter";
 import type { GamingNews } from "@/types/api";
 
 interface NewsFeedPanelProps {
@@ -29,11 +29,6 @@ interface NewsFeedPanelProps {
   /** When set, article and "view more" links stay scoped to this game. */
   gameSlug?: string;
   viewMoreHref?: string;
-}
-
-function resolveNewsDateIso(article: GamingNews): string | null {
-  const resolved = resolveRecordDate(article as unknown as Record<string, unknown>);
-  return resolved ? resolved.toISOString() : null;
 }
 
 export default function NewsFeedPanel({
@@ -66,7 +61,12 @@ export default function NewsFeedPanel({
     : "";
 
   const showDescription = !sidebar && !compact;
-  const visibleNews = sidebar ? news.slice(0, 3) : news;
+  const visibleNews = sidebar
+    ? news.slice(0, 3)
+    : fillHeight
+      ? news.slice(0, 6)
+      : news;
+  const hasHiddenNews = visibleNews.length < news.length;
   const isGameScoped = Boolean(gameSlug);
 
   return (
@@ -131,7 +131,6 @@ export default function NewsFeedPanel({
         ) : (
           <div className={sidebar ? "space-y-3" : "space-y-4"}>
             {visibleNews.map((article) => {
-              const publishedIso = resolveNewsDateIso(article);
               const kind = classifyIntelArticle(article.title);
               const accent = getIntelArticleAccent(kind);
               const displayTitle = cleanNewsDisplayTitle(
@@ -169,14 +168,10 @@ export default function NewsFeedPanel({
                               >
                                 {accent.label}
                               </span>
-                              <time
-                                dateTime={publishedIso ?? undefined}
+                              <RelativeTime
+                                value={article.publishedAt ?? article.createdAt}
                                 className="text-[10px] text-slate-500"
-                              >
-                                {formatRelativeTime(
-                                  article.publishedAt ?? article.createdAt,
-                                )}
-                              </time>
+                              />
                             </div>
 
                             <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-white">
@@ -207,14 +202,10 @@ export default function NewsFeedPanel({
                               <Sparkles className="h-3 w-3" />
                               {accent.label}
                             </span>
-                            <span className="inline-flex items-center gap-1 text-xs text-slate-400">
-                              <CalendarDays className="h-3.5 w-3.5" />
-                              <time dateTime={publishedIso ?? undefined}>
-                                {formatRelativeTime(
-                                  article.publishedAt ?? article.createdAt,
-                                )}
-                              </time>
-                            </span>
+                            <RelativeTime
+                              value={article.publishedAt ?? article.createdAt}
+                              className="inline-flex items-center gap-1 text-xs text-slate-400"
+                            />
                           </div>
 
                           <h3 className="text-lg font-bold leading-snug text-white">
@@ -250,11 +241,9 @@ export default function NewsFeedPanel({
                                 </span>
                                 <span className="inline-flex items-center gap-1 text-xs text-slate-400">
                                   <CalendarDays className="h-3.5 w-3.5" />
-                                  <time dateTime={publishedIso ?? undefined}>
-                                    {formatRelativeTime(
-                                      article.publishedAt ?? article.createdAt,
-                                    )}
-                                  </time>
+                                  <RelativeTime
+                                    value={article.publishedAt ?? article.createdAt}
+                                  />
                                 </span>
                               </div>
 
@@ -274,6 +263,16 @@ export default function NewsFeedPanel({
           </div>
         )}
       </div>
+
+      {hasHiddenNews && showViewMore ? (
+        <Link
+          href={resolvedViewMoreHref!}
+          className="mt-5 inline-flex shrink-0 items-center justify-center gap-1 rounded-full border border-fuchsia-400/25 bg-fuchsia-500/10 px-4 py-2 text-xs font-medium text-fuchsia-100 transition hover:bg-fuchsia-500/20"
+        >
+          View all news
+          <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+        </Link>
+      ) : null}
     </section>
   );
 }

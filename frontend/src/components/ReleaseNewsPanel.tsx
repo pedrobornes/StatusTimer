@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { ArrowRight, FileText } from "lucide-react";
 import GameAssetImage from "@/components/ui/GameAssetImage";
+import RelativeTime from "@/components/ui/RelativeTime";
 import { APP_ROUTES } from "@/config/routes";
 import {
   cleanNewsDisplayTitle,
   resolveNewsGameName,
 } from "@/lib/intelFeed";
 import { resolveCatalogImageUrl } from "@/lib/gameAssets";
-import { formatRelativeTime, resolveRecordDate } from "@/utils/dateFormatter";
+import { resolveRecordDate } from "@/utils/dateFormatter";
 import type { GamingNews } from "@/types/api";
 
 interface ReleaseNewsPanelProps {
@@ -45,7 +46,7 @@ export default function ReleaseNewsPanel({
 
         <Link
           href={APP_ROUTES.gameNews(gameSlug)}
-          className="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.16em] text-fuchsia-200/80 transition hover:text-fuchsia-100"
+          className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.16em] text-fuchsia-200/80 transition hover:text-fuchsia-100"
         >
           All {gameName} news
           <ArrowRight className="h-3 w-3" aria-hidden />
@@ -89,16 +90,14 @@ export default function ReleaseNewsPanel({
 
                   <div className="flex flex-1 flex-col p-4 md:p-5">
                     <div className="mb-2 flex items-center justify-between gap-3">
-                      <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-fuchsia-200/70">
+                      <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-fuchsia-200/70">
                         {resolveNewsGameName(article)}
                       </p>
                       {dateIso ? (
-                        <time
-                          dateTime={dateIso}
-                          className="shrink-0 text-[10px] uppercase tracking-[0.14em] text-slate-500"
-                        >
-                          {formatRelativeTime(dateIso)}
-                        </time>
+                        <RelativeTime
+                          value={dateIso}
+                          className="shrink-0 text-[11px] uppercase tracking-[0.14em] text-slate-500"
+                        />
                       ) : null}
                     </div>
 

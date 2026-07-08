@@ -35,8 +35,44 @@ public final class PinnedGamePolicy {
             "https://images.igdb.com/igdb/image/upload/t_cover_big/coaczd.jpg"
     );
 
+    private static final Pin GRAND_THEFT_AUTO_V = new Pin(
+            "grand-theft-auto-v",
+            "grand-theft-auto-v",
+            1020L,
+            3240220,
+            Set.of(271590),
+            Set.of(),
+            "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/ar667x.jpg",
+            "https://images.igdb.com/igdb/image/upload/t_cover_big/co2lbd.jpg"
+    );
+
+    private static final Pin OVERWATCH_2 = new Pin(
+            "overwatch",
+            "overwatch--1",
+            125_174L,
+            2357570,
+            Set.of(),
+            Set.of("overwatch"),
+            "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/ar6a9.jpg",
+            "https://images.igdb.com/igdb/image/upload/t_cover_big/coc99p.jpg"
+    );
+
+    private static final Pin DEAD_BY_DAYLIGHT = new Pin(
+            "dead-by-daylight",
+            "dead-by-daylight",
+            18866L,
+            381210,
+            Set.of(3453670),
+            Set.of(),
+            "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/ar8eh.jpg",
+            "https://images.igdb.com/igdb/image/upload/t_cover_big/co5zky.jpg"
+    );
+
     private static final Map<String, Pin> BY_SLUG = Map.of(
-            COUNTER_STRIKE_2.slug(), COUNTER_STRIKE_2
+            COUNTER_STRIKE_2.slug(), COUNTER_STRIKE_2,
+            GRAND_THEFT_AUTO_V.slug(), GRAND_THEFT_AUTO_V,
+            OVERWATCH_2.slug(), OVERWATCH_2,
+            DEAD_BY_DAYLIGHT.slug(), DEAD_BY_DAYLIGHT
     );
 
     private PinnedGamePolicy() {

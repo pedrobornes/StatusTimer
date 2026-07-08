@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import LegalDocument from "@/components/legal/LegalDocument";
+import { TRADEMARK_EXAMPLE_HOLDERS } from "@/config/legal";
 import { APP_ROUTES } from "@/config/routes";
 import { SITE_NAME } from "@/config/site";
 
@@ -41,9 +42,52 @@ export default function TermsOfServicePage() {
           content: (
             <p>
               {SITE_NAME} is independent and not affiliated with any game
-              publisher, platform, or trademark holder referenced on the site.
-              All trademarks are the property of their respective owners.
+              publisher, platform operator, or trademark holder referenced on
+              the site. References to third-party products or services do not
+              imply endorsement, partnership, or sponsorship.
             </p>
+          ),
+        },
+        {
+          id: "trademarks",
+          title: "Trademarks and third-party assets",
+          content: (
+            <>
+              <p>
+                Game titles, studio and publisher names, platform names, logos,
+                icons, and related assets displayed on {SITE_NAME} remain the
+                property of their respective owners. We use them only in a
+                descriptive, informational way — for example, to show which
+                platforms a game is scheduled to release on or to identify a
+                monitored online service.
+              </p>
+              <p>
+                This includes, without limitation, trademarks and branding
+                associated with:
+              </p>
+              <ul className="list-disc space-y-2 pl-5">
+                {TRADEMARK_EXAMPLE_HOLDERS.map((holder) => (
+                  <li key={holder}>{holder}</li>
+                ))}
+                <li>Other publishers, studios, and services listed on the site</li>
+              </ul>
+              <p>
+                Nothing on this website should be interpreted as authorization
+                to use those marks outside {SITE_NAME}, nor as a suggestion that
+                any rights holder approves or is responsible for our content.
+              </p>
+              <p>
+                If you are a rights holder and believe any use on this site
+                should be changed or removed, please contact us through our{" "}
+                <Link
+                  href={APP_ROUTES.contact}
+                  className="text-violet-200/90 hover:text-white"
+                >
+                  Contact page
+                </Link>
+                .
+              </p>
+            </>
           ),
         },
         {
@@ -84,8 +128,15 @@ export default function TermsOfServicePage() {
           content: (
             <p>
               Site design, branding, and original content are owned by{" "}
-              {SITE_NAME} or its licensors. Third-party names and assets remain
-              the property of their respective owners.
+              {SITE_NAME} or its licensors. Third-party names, logos, and assets
+              remain the property of their respective owners. See{" "}
+              <Link
+                href={`${APP_ROUTES.terms}#trademarks`}
+                className="text-violet-200/90 hover:text-white"
+              >
+                Trademarks and third-party assets
+              </Link>
+              .
             </p>
           ),
         },

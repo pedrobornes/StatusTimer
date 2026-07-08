@@ -9,6 +9,7 @@ from config.settings import settings
 from models.catalog_schemas import GameCatalogEntryPayload
 from models.normalization import to_slug
 from scrapers.igdb_media import parse_igdb_game_metadata, resolve_catalog_image_urls
+from scrapers.igdb_platforms import has_supported_igdb_platform
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,9 @@ def fetch_igdb_popular_catalog(limit: int | None = None) -> list[GameCatalogEntr
     seen_slugs: set[str] = set()
 
     for row in rows:
+        if not has_supported_igdb_platform(row.get("platforms")):
+            continue
+
         try:
             metadata = parse_igdb_game_metadata(row)
         except ValueError:
