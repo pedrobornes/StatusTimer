@@ -59,6 +59,7 @@ public interface GameRepository extends JpaRepository<Game, Long> {
             WHERE (:genre IS NULL OR LOWER(g.genreName) = LOWER(:genre))
               AND (:q IS NULL OR LOWER(g.gameName) LIKE LOWER(CONCAT('%', :q, '%'))
                    OR LOWER(g.slug) LIKE LOWER(CONCAT('%', :q, '%')))
+              AND (g.staleReason IS NULL OR g.staleReason <> 'TWITCH_CATEGORY')
             """)
     Page<Game> findCatalogPage(
             @Param("genre") String genre,

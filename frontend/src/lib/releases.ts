@@ -43,6 +43,13 @@ export const RELEASE_SORT_MODES = ["date", "hype", "rating"] as const;
 
 export type ReleaseSortMode = (typeof RELEASE_SORT_MODES)[number];
 
+function isTbaUpcomingRelease(release: UpcomingRelease): boolean {
+  return (
+    release.platforms.length > 0 ||
+    release.hypeCount > 0
+  );
+}
+
 export function getPrimaryReleaseTimestamp(release: UpcomingRelease): number {
   const platformDates = release.platforms
     .map((platform) => platform.releaseDate)
@@ -54,8 +61,16 @@ export function getPrimaryReleaseTimestamp(release: UpcomingRelease): number {
     return Math.min(...platformDates);
   }
 
-  const fallback = new Date(release.releaseDate).getTime();
-  return Number.isNaN(fallback) ? Number.MAX_SAFE_INTEGER : fallback;
+  if (release.releaseDate) {
+    const fallback = new Date(release.releaseDate).getTime();
+    if (!Number.isNaN(fallback)) {
+      return fallback;
+    }
+  }
+
+  return isTbaUpcomingRelease(release)
+    ? Number.MAX_SAFE_INTEGER
+    : Number.NEGATIVE_INFINITY;
 }
 
 export function sortReleasesByDate(
@@ -96,6 +111,28 @@ export function sortReleases(
   }
 
   return sortReleasesByDate(releases);
+}
+
+/**
+ * Keeps only games that have not launched yet. TBA titles from the release feed
+ * remain visible when they still carry platform targets or hype.
+ */
+export function filterUpcomingReleases(
+  releases: UpcomingRelease[],
+  now: number = Date.now(),
+): UpcomingRelease[] {
+  return releases.filter((release) => {
+    const timestamp = getPrimaryReleaseTimestamp(release);
+    if (!Number.isFinite(timestamp)) {
+      return false;
+    }
+
+    if (timestamp > now) {
+      return true;
+    }
+
+    return timestamp === Number.MAX_SAFE_INTEGER;
+  });
 }
 
 export function filterReleasesByGenre(

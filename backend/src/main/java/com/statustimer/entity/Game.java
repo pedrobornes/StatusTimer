@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -94,6 +95,9 @@ public class Game {
 
     @Column(name = "steam_release_date")
     private LocalDate steamReleaseDate;
+
+    @Column(name = "igdb_first_release_date")
+    private LocalDate igdbFirstReleaseDate;
 
     @Column(name = "steam_adult_content", nullable = false)
     @Builder.Default
@@ -218,12 +222,45 @@ public class Game {
         }
     }
 
-    public LocalDateTime resolvePrimaryReleaseDate() {
-        return platforms.stream()
+    public Optional<LocalDate> resolveEarliestKnownReleaseDate() {
+        Optional<LocalDate> platformReleaseDate = platforms.stream()
                 .map(GamePlatformDetail::getReleaseDate)
                 .filter(Objects::nonNull)
-                .min(Comparator.naturalOrder())
+                .min(Comparator.naturalOrder());
+
+        if (platformReleaseDate.isPresent()) {
+            return platformReleaseDate;
+        }
+
+        if (igdbFirstReleaseDate != null) {
+            return Optional.of(igdbFirstReleaseDate);
+        }
+
+        if (steamReleaseDate != null) {
+            return Optional.of(steamReleaseDate);
+        }
+
+        return Optional.empty();
+    }
+
+    public boolean isUpcomingRelease(LocalDate today) {
+        Optional<LocalDate> knownReleaseDate = resolveEarliestKnownReleaseDate();
+        if (knownReleaseDate.isPresent()) {
+            return knownReleaseDate.get().isAfter(today);
+        }
+
+        return hasUpcomingReleaseSignals();
+    }
+
+    public boolean hasUpcomingReleaseSignals() {
+        boolean hasPlatformTargets = !platforms.isEmpty();
+        boolean hasHype = hypeCount != null && hypeCount > 0L;
+        return hasPlatformTargets || hasHype;
+    }
+
+    public LocalDateTime resolvePrimaryReleaseDate() {
+        return resolveEarliestKnownReleaseDate()
                 .map(LocalDate::atStartOfDay)
-                .orElse(LocalDateTime.of(2099, 12, 31, 0, 0));
+                .orElse(null);
     }
 }

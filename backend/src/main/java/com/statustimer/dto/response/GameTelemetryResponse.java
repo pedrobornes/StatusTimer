@@ -59,10 +59,13 @@ public record GameTelemetryResponse(
         );
 
         LocalDate releaseDate = game
-                .flatMap(TrackedGameCatalogHelper::resolveEarliestReleaseDate)
+                .flatMap(Game::resolveEarliestKnownReleaseDate)
                 .orElse(null);
         boolean isUpcoming = entity.getStatus() == TelemetryStatus.UPCOMING
                 || (releaseDate != null && releaseDate.isAfter(LocalDate.now()));
+        String status = isUpcoming
+                ? TelemetryStatus.UPCOMING.name()
+                : entity.getStatus().name();
         Integer twitchRank = catalogService.resolveTwitchRank(slug);
         String twitchGameId = catalogService.resolveTwitchGameId(slug);
         LocalDate steamReleaseDate = catalogService.resolveSteamReleaseDate(slug);
@@ -96,10 +99,10 @@ public record GameTelemetryResponse(
                 .orElse(List.of());
 
         return new GameTelemetryResponse(
-                entity.getId(),
+                entity.getGame().getId(),
                 slug,
                 gameName,
-                entity.getStatus().name(),
+                status,
                 entity.getLatencyMs(),
                 entity.getDataSource().name(),
                 entity.getLastChecked(),
@@ -129,11 +132,7 @@ public record GameTelemetryResponse(
         String slug = game.getSlug();
         String logoUrl = catalogService.resolveLogoUrl(slug, game.getLogoUrl());
         String coverUrl = catalogService.resolveCoverUrl(slug, game.getImageUrl());
-        LocalDate releaseDate = game.getPlatforms().stream()
-                .map(platform -> platform.getReleaseDate())
-                .filter(date -> date != null)
-                .min(LocalDate::compareTo)
-                .orElse(null);
+        LocalDate releaseDate = game.resolveEarliestKnownReleaseDate().orElse(null);
         boolean isUpcoming = releaseDate != null && releaseDate.isAfter(LocalDate.now());
         Integer appId = game.getSteamAppId() != null
                 ? game.getSteamAppId()
@@ -179,15 +178,4 @@ public record GameTelemetryResponse(
         );
     }
 
-    private static final class TrackedGameCatalogHelper {
-        private TrackedGameCatalogHelper() {
-        }
-
-        private static Optional<LocalDate> resolveEarliestReleaseDate(Game game) {
-            return game.getPlatforms().stream()
-                    .map(platform -> platform.getReleaseDate())
-                    .filter(date -> date != null)
-                    .min(LocalDate::compareTo);
-        }
-    }
 }

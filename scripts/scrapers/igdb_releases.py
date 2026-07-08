@@ -9,7 +9,13 @@ from clients.igdb_client import IgdbClient, is_igdb_configured
 from models.enums import Platform
 from models.normalization import to_slug
 from models.schemas import GameReleasePayload, PlatformRelease
-from scrapers.igdb_media import IgdbGameMetadata, is_main_game, parse_igdb_game_metadata
+from scrapers.igdb_media import (
+    IgdbGameMetadata,
+    is_main_game,
+    parse_igdb_game_metadata,
+    resolve_display_name,
+    resolve_hero_url,
+)
 from scrapers.igdb_platforms import has_supported_igdb_platform
 
 logger = logging.getLogger(__name__)
@@ -79,13 +85,13 @@ def map_igdb_metadata_to_release(
     platform_entries = _map_platform_entries(raw_game.get("platforms"), metadata.release_date)
 
     return GameReleasePayload(
-        gameName=metadata.name,
-        slug=to_slug(metadata.name),
+        gameName=resolve_display_name(metadata),
+        slug=to_slug(metadata.slug or metadata.name),
         genreNames=_clean_genre_names(metadata.genre_names),
         platforms=platform_entries,
         hypeCount=metadata.hype_count,
         imageUrl=metadata.cover_url,
-        logoUrl=metadata.background_url or metadata.logo_url,
+        logoUrl=resolve_hero_url(metadata),
         igdbGameId=metadata.igdb_game_id,
         userRating=metadata.user_rating,
         criticRating=metadata.critic_rating,

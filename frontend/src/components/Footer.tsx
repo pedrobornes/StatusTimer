@@ -6,7 +6,7 @@ import { CONTACT_EMAIL, SITE_NAME } from "@/config/site";
 
 const PRODUCT_LINKS = [
   { href: APP_ROUTES.home, label: "Monitor" },
-  { href: APP_ROUTES.telemetry, label: "Servers" },
+  { href: APP_ROUTES.games, label: "Games" },
   { href: APP_ROUTES.releases, label: "Game Releases" },
   { href: APP_ROUTES.howItWorks, label: "How it works" },
 ] as const;

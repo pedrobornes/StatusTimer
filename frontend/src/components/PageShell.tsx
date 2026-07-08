@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import GameStatusCover from "@/components/ui/GameStatusCover";
 import GenreBadge from "@/components/ui/GenreBadge";
@@ -7,6 +8,7 @@ interface PageShellProps {
   children: React.ReactNode;
   title: string;
   subtitle?: string;
+  subtitleHref?: string;
   badge?: string;
   badges?: string[];
   coverUrl?: string | null;
@@ -18,6 +20,7 @@ export default function PageShell({
   children,
   title,
   subtitle,
+  subtitleHref,
   badge = "StatusTimer",
   badges,
   coverUrl,
@@ -58,9 +61,18 @@ export default function PageShell({
             {title}
           </h1>
           {subtitle ? (
-            <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-300 md:text-base">
-              {subtitle}
-            </p>
+            subtitleHref ? (
+              <Link
+                href={subtitleHref}
+                className="mt-3 inline-flex rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-sm font-medium text-violet-100/90 transition hover:border-violet-400/30 hover:bg-violet-500/10 hover:text-white"
+              >
+                {subtitle}
+              </Link>
+            ) : (
+              <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-300 md:text-base">
+                {subtitle}
+              </p>
+            )
           ) : null}
         </header>
 

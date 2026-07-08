@@ -30,7 +30,7 @@ export type TrackedGameSlug = (typeof TRACKED_GAME_SLUGS)[number];
 
 export const APP_ROUTES = {
   home: "/",
-  telemetry: "/telemetry",
+  games: "/games",
   releases: "/releases",
   howItWorks: "/how-it-works",
   faq: "/faq",

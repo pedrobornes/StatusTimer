@@ -6,13 +6,16 @@ import type { PlatformDetail } from "@/types/api";
 interface PlatformReleaseScheduleProps {
   platforms: PlatformDetail[];
   layout?: "stack" | "grid";
+  fallbackReleaseDate?: string | null;
 }
 
 export default function PlatformReleaseSchedule({
   platforms,
   layout = "stack",
+  fallbackReleaseDate = null,
 }: PlatformReleaseScheduleProps) {
   const groups = groupPlatformsByReleaseDate(platforms);
+  const hasPlatformGroups = groups.length > 0;
 
   const containerClass =
     layout === "grid"
@@ -21,7 +24,7 @@ export default function PlatformReleaseSchedule({
 
   return (
     <div className={containerClass}>
-      {groups.map((group) => {
+      {hasPlatformGroups ? groups.map((group) => {
         const groupKey =
           group.releaseDate ?? `tba-${group.platforms.join("-")}`;
 
@@ -39,7 +42,14 @@ export default function PlatformReleaseSchedule({
             <ReleaseCountdown releaseDate={group.releaseDate} compact />
           </div>
         );
-      })}
+      }) : (
+        <div className="rounded-xl border border-white/8 bg-black/20 p-3">
+          <p className="mb-2.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
+            All platforms
+          </p>
+          <ReleaseCountdown releaseDate={fallbackReleaseDate} compact />
+        </div>
+      )}
     </div>
   );
 }

@@ -131,6 +131,7 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
               <PlatformReleaseSchedule
                 platforms={release.platforms}
                 layout="grid"
+                fallbackReleaseDate={release.releaseDate}
               />
 
               {(userRating || criticRating) && (
@@ -183,13 +184,15 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
             <ArrowLeft className="h-4 w-4" aria-hidden />
             Return to monitor
           </Link>
-          <Link
-            href={APP_ROUTES.gameNews(slug)}
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-slate-300 transition hover:border-fuchsia-400/30 hover:bg-fuchsia-500/10 hover:text-fuchsia-100"
-          >
-            <Newspaper className="h-4 w-4" aria-hidden />
-            View all {release.gameName} news &amp; patches
-          </Link>
+          {gameNews.length > 0 ? (
+            <Link
+              href={APP_ROUTES.gameNews(slug)}
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-slate-300 transition hover:border-fuchsia-400/30 hover:bg-fuchsia-500/10 hover:text-fuchsia-100"
+            >
+              <Newspaper className="h-4 w-4" aria-hidden />
+              View all {release.gameName} news &amp; patches
+            </Link>
+          ) : null}
         </nav>
       </PageShell>
     );

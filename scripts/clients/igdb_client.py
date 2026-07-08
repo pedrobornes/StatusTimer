@@ -93,6 +93,39 @@ class IgdbClient:
 
         return collected[:limit]
 
+    def lookup_game_metadata_by_id(self, igdb_game_id: int) -> IgdbGameMetadata | None:
+        """
+        Re-fetch a game by its stable IGDB numeric id.
+
+        This is the only collision-proof way to refresh a known game: names and
+        even slugs can be shared or reassigned across entries (e.g. "Fable" 2004
+        vs the "Fable" reboot), but ids are unique and permanent.
+        """
+        if not is_igdb_configured() or not isinstance(igdb_game_id, int) or igdb_game_id <= 0:
+            return None
+
+        query = (
+            f"fields {IGDB_GAME_FIELDS}; "
+            f"where id = {igdb_game_id}; "
+            "limit 1;"
+        )
+
+        rows = self._fetch_games(query)
+        for row in rows:
+            if not is_main_game(row):
+                continue
+
+            try:
+                return parse_igdb_game_metadata(row)
+            except ValueError as error:
+                logger.warning(
+                    "IGDB metadata parse failed for id %s: %s",
+                    igdb_game_id,
+                    error,
+                )
+
+        return None
+
     def lookup_game_metadata_by_slug(self, slug: str) -> IgdbGameMetadata | None:
         if not is_igdb_configured():
             return None

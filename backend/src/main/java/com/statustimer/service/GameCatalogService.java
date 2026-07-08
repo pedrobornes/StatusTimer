@@ -1,5 +1,6 @@
 package com.statustimer.service;
 
+import com.statustimer.config.CatalogNoisePolicy;
 import com.statustimer.config.GameAssetPolicy;
 import com.statustimer.config.CacheConfig;
 import com.statustimer.config.GameSlugMapper;
@@ -353,6 +354,10 @@ public class GameCatalogService {
     ) {
         for (Game game : gameRepository
                 .findByGameNameContainingIgnoreCaseOrSlugContainingIgnoreCase(query, query)) {
+            if (CatalogNoisePolicy.shouldSkipCatalogSurfacing(game)) {
+                continue;
+            }
+
             if (seenSlugs.add(game.getSlug())) {
                 results.add(toSearchResponse(game));
             }
@@ -525,6 +530,12 @@ public class GameCatalogService {
 
             String targetSlug = gameSlugMapper.getSteamSlug(payload.slug().trim());
 
+            if (CatalogNoisePolicy.isTwitchCategoryNoise(targetSlug, payload.gameName())) {
+                gameRepository.findBySlug(targetSlug).ifPresent(CatalogNoisePolicy::applyQuarantineIfNoise);
+                skipped++;
+                continue;
+            }
+
             if (MANUAL_PROTECTED_SLUGS.contains(targetSlug)) {
                 if (updateTwitchMetricsOnly(payload, targetSlug)) {
                     updated++;
@@ -592,6 +603,12 @@ public class GameCatalogService {
             if (PinnedGamePolicy.isPinned(game.getSlug())) {
                 continue;
             }
+
+            if (CatalogNoisePolicy.applyQuarantineIfNoise(game)) {
+                gameRepository.save(game);
+                continue;
+            }
+
             TrackedGameCatalog.findBySlug(game.getSlug())
                     .ifPresent(tracked -> game.setGameName(tracked.gameName()));
 
@@ -601,7 +618,11 @@ public class GameCatalogService {
                 resolveAllSteamAppIds(game);
             }
 
-            if (GameAssetPolicy.needsIgdbAssets(game)) {
+            boolean needsIgdbEnrichment = igdbSearchClient.isConfigured()
+                    && (GameAssetPolicy.needsIgdbAssets(game)
+                    || (game.getIgdbFirstReleaseDate() == null && game.getPlatforms().isEmpty()));
+
+            if (needsIgdbEnrichment) {
                 enrichFromIgdbSearch(game);
             }
 
@@ -640,6 +661,9 @@ public class GameCatalogService {
             IgdbMetadataSupport.applyGenreNames(game, payload.genreNames());
             if (payload.genreNames() == null || payload.genreNames().isEmpty()) {
                 IgdbMetadataSupport.applyGenreName(game, payload.genreName());
+            }
+            if (payload.igdbFirstReleaseDate() != null) {
+                game.setIgdbFirstReleaseDate(payload.igdbFirstReleaseDate());
             }
         }
 
@@ -682,6 +706,10 @@ public class GameCatalogService {
 
     private void enrichFromIgdbSearch(Game game) {
         if (!igdbSearchClient.isConfigured()) {
+            return;
+        }
+
+        if (CatalogNoisePolicy.shouldSkipCatalogSurfacing(game)) {
             return;
         }
 
@@ -735,6 +763,10 @@ public class GameCatalogService {
         IgdbMetadataSupport.applyYoutubeChannelUrl(game, match.youtubeChannelUrl());
         IgdbMetadataSupport.applyExternalLinks(game, match.externalLinks());
         IgdbMetadataSupport.applyGenreNames(game, match.genreNames());
+
+        if (match.firstReleaseDate() != null) {
+            game.setIgdbFirstReleaseDate(match.firstReleaseDate());
+        }
 
         if (game.getSteamAppId() == null && match.steamAppId() != null
                 && !PinnedGamePolicy.isBlockedSteamAppId(game.getSlug(), match.steamAppId())) {

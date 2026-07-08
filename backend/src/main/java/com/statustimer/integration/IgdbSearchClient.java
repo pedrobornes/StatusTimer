@@ -6,6 +6,9 @@ import com.statustimer.util.IgdbExternalLinksSupport;
 import com.statustimer.util.IgdbPlatformSupport;
 import com.statustimer.util.IgdbYoutubeSupport;
 import com.statustimer.util.IgdbYoutubeSupport.YoutubeWebsiteData;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -21,7 +24,7 @@ public class IgdbSearchClient {
 
     private static final int STEAM_EXTERNAL_CATEGORY = 1;
     private static final String GAME_FIELDS =
-            "id,name,slug,category,game_type,platforms,cover.image_id,artworks.image_id,screenshots.image_id,"
+            "id,name,slug,category,game_type,first_release_date,platforms,cover.image_id,artworks.image_id,screenshots.image_id,"
                     + "hypes,rating,aggregated_rating,genres.name,videos.video_id,websites.url,websites.category,"
                     + "external_games.uid,external_games.category,external_games.url";
 
@@ -70,7 +73,7 @@ public class IgdbSearchClient {
         }
 
         if (matches.isEmpty()) {
-            log.warn(
+            log.debug(
                     "IGDB search for '{}' returned {} raw row(s) but no main-game matches",
                     trimmed,
                     rawCount
@@ -146,6 +149,7 @@ public class IgdbSearchClient {
                 normalizeRating(row.path("aggregated_rating")),
                 parseNames(row.path("genres")),
                 row.path("hypes").asInt(0),
+                parseFirstReleaseDate(row.path("first_release_date")),
                 screenshotUrls,
                 trailerVideoIds,
                 youtubeData.channelUrl(),
@@ -165,7 +169,18 @@ public class IgdbSearchClient {
             }
         }
 
-        return IgdbImageUrls.coverSmall(coverImageId);
+        JsonNode screenshots = row.path("screenshots");
+        if (screenshots.isArray()) {
+            for (JsonNode screenshot : screenshots) {
+                String imageId = screenshot.path("image_id").asText(null);
+                String hero = IgdbImageUrls.screenshotHuge(imageId);
+                if (hero != null) {
+                    return hero;
+                }
+            }
+        }
+
+        return IgdbImageUrls.coverBig(coverImageId);
     }
 
     private Integer resolveSteamAppId(JsonNode externalGames) {
@@ -299,6 +314,19 @@ public class IgdbSearchClient {
         return Math.min(rating, 100);
     }
 
+    private LocalDate parseFirstReleaseDate(JsonNode value) {
+        if (value.isMissingNode() || value.isNull()) {
+            return null;
+        }
+
+        long epochSeconds = value.asLong(0L);
+        if (epochSeconds <= 0L) {
+            return null;
+        }
+
+        return Instant.ofEpochSecond(epochSeconds).atZone(ZoneOffset.UTC).toLocalDate();
+    }
+
     public record IgdbGameMatch(
             long igdbId,
             String name,
@@ -310,6 +338,7 @@ public class IgdbSearchClient {
             Integer criticRating,
             List<String> genreNames,
             int hypeCount,
+            LocalDate firstReleaseDate,
             List<String> screenshotUrls,
             List<String> trailerVideoIds,
             String youtubeChannelUrl,

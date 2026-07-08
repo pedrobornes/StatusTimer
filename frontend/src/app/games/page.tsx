@@ -9,14 +9,14 @@ import { getServerStatuses } from "@/services/statusService";
 import { getTelemetryIncidents } from "@/services/telemetryService";
 
 export const metadata: Metadata = {
-  title: "Server Live Status",
+  title: "Game Server Live Status",
   description:
-    "Browse gaming server status, social platform connectivity, and recent outages in one place.",
+    "Browse gaming server status, player counts, and recent outages for tracked games in one place.",
 };
 
 export const revalidate = 120;
 
-export default async function TelemetryPage() {
+export default async function GamesPage() {
   try {
     const [statuses, catalogPage, incidents, releases] = await Promise.all([
       getServerStatuses(),
@@ -35,9 +35,9 @@ export default async function TelemetryPage() {
 
     return (
       <PageShell
-        title="Server live status"
-        subtitle="Gaming telemetry, social platform checks, and recent outages — organized in three sections below."
-        badge="Servers"
+        title="Game server live status"
+        subtitle="Gaming telemetry, player activity, and recent outages for every tracked game."
+        badge="Games"
       >
         <TelemetryStatusHub
           statuses={statuses}
@@ -53,7 +53,7 @@ export default async function TelemetryPage() {
     const message =
       error instanceof Error
         ? error.message
-        : "Unable to load server status data from the backend.";
+        : "Unable to load game status data from the backend.";
 
     return <DashboardError message={message} />;
   }

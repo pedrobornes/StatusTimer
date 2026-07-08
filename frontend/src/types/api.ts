@@ -34,7 +34,7 @@ export interface UpcomingRelease {
   slug: string;
   genre?: string | null;
   genreNames?: string[];
-  releaseDate: string;
+  releaseDate: string | null;
   hypeCount: number;
   imageUrl?: string | null;
   logoUrl?: string | null;

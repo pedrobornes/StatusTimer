@@ -66,7 +66,7 @@ export function buildStatusPageJsonLd(input: StatusPageJsonLdInput): Record<stri
         potentialAction: {
           "@type": "ViewAction",
           name: "Browse live game server status pages",
-          target: `${input.siteUrl}${APP_ROUTES.telemetry}`,
+          target: `${input.siteUrl}${APP_ROUTES.games}`,
         },
       },
       {

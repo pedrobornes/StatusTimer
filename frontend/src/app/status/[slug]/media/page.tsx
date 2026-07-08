@@ -11,6 +11,7 @@ import { resolveGameDisplayName } from "@/lib/gameAssets";
 import { hasGameMedia, resolveGameMedia } from "@/lib/gameMedia";
 import { resolveCanonicalGameSlug } from "@/lib/gameSlugs";
 import { getGameStatusDetail } from "@/services/telemetryService";
+import type { GameTelemetry } from "@/types/telemetry";
 
 export const revalidate = 60;
 
@@ -41,6 +42,10 @@ export default async function GameMediaPage({ params }: GameMediaPageProps) {
   const detail = await getGameStatusDetail(canonicalSlug).catch(() => null);
 
   if (!detail) {
+    notFound();
+  }
+
+  if (isUnreleasedGame(detail.telemetry)) {
     notFound();
   }
 
@@ -148,4 +153,22 @@ export default async function GameMediaPage({ params }: GameMediaPageProps) {
       </p>
     </PageShell>
   );
+}
+
+function isUnreleasedGame(telemetry: GameTelemetry | null): boolean {
+  if (!telemetry) {
+    return false;
+  }
+
+  if (telemetry.status === "UPCOMING" || telemetry.isUpcoming === true) {
+    return true;
+  }
+
+  const now = Date.now();
+  const futureDates = [telemetry.releaseDate, telemetry.steamReleaseDate]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => new Date(value).getTime())
+    .filter((timestamp) => Number.isFinite(timestamp));
+
+  return futureDates.some((timestamp) => timestamp > now);
 }

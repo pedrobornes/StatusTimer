@@ -353,11 +353,21 @@ def _drop_decorative_image_lines(markdown: str) -> str:
     return "\n".join(lines)
 
 
+def _normalize_bold_spacing(markdown: str) -> str:
+    def wrap(match: re.Match[str]) -> str:
+        return f"**{match.group(1).strip()}**"
+
+    normalized = re.sub(r"\*\*([^*]+)\*\*", wrap, markdown)
+    normalized = re.sub(r"(\S)(\*\*[^*]+\*\*)", r"\1 \2", normalized)
+    return re.sub(r"(\*\*[^*]+\*\*)([A-Za-z0-9])", r"\1 \2", normalized)
+
+
 def _finalize_markdown(markdown: str) -> str:
     normalized = _normalize_markdown_bullets(markdown)
     normalized = _strip_empty_bullets(normalized)
     normalized = _promote_image_links(normalized)
     normalized = _drop_decorative_image_lines(normalized)
+    normalized = _normalize_bold_spacing(normalized)
     return normalized.strip()
 
 

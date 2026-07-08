@@ -59,6 +59,57 @@ class ReleasePayloadTests(unittest.TestCase):
         self.assertTrue(payload.image_url.startswith("https://images.igdb.com/"))
         self.assertIn("t_screenshot_huge/arlogo123", payload.logo_url or "")
 
+    def test_release_slug_uses_igdb_slug_to_avoid_same_name_collision(self) -> None:
+        """The 'Fable' reboot (igdb slug fable--1) must not collapse onto 'fable'."""
+        metadata = parse_igdb_game_metadata(
+            {
+                "id": 92550,
+                "name": "Fable",
+                "slug": "fable--1",
+                "category": 0,
+                "first_release_date": 1803081600,
+                "platforms": [6, 169],
+                "cover": {"image_id": "cofable1"},
+            }
+        )
+        payload = map_igdb_metadata_to_release(metadata, {"platforms": [6, 169]})
+
+        self.assertEqual(payload.slug, "fable-1")
+        self.assertNotEqual(payload.slug, "fable")
+
+    def test_release_display_name_appends_year_for_disambiguated_titles(self) -> None:
+        """IGDB '--N' slugs signal a name collision -> show 'Fable (2027)'."""
+        metadata = parse_igdb_game_metadata(
+            {
+                "id": 92550,
+                "name": "Fable",
+                "slug": "fable--1",
+                "category": 0,
+                "first_release_date": 1803081600,
+                "platforms": [6, 169],
+                "cover": {"image_id": "cofable1"},
+            }
+        )
+        payload = map_igdb_metadata_to_release(metadata, {"platforms": [6, 169]})
+
+        self.assertEqual(payload.game_name, "Fable (2027)")
+
+    def test_release_display_name_unchanged_for_unique_titles(self) -> None:
+        metadata = parse_igdb_game_metadata(
+            {
+                "id": 521,
+                "name": "Fable",
+                "slug": "fable",
+                "category": 0,
+                "first_release_date": 1095120000,
+                "platforms": [6],
+                "cover": {"image_id": "cofable"},
+            }
+        )
+        payload = map_igdb_metadata_to_release(metadata, {"platforms": [6]})
+
+        self.assertEqual(payload.game_name, "Fable")
+
     @patch("scrapers.releases.fetch_igdb_upcoming_releases")
     def test_fetch_upcoming_releases_serializes_image_url_for_sync(self, mock_fetch) -> None:
         metadata = parse_igdb_game_metadata(

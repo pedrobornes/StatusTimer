@@ -56,7 +56,13 @@ def enrich_catalog_entries_with_igdb(
             metadata = client.lookup_game_metadata_by_slug(pin["igdb_slug"])
             if metadata is not None and _is_blocked_igdb_metadata(canonical_slug, metadata):
                 metadata = None
+        elif working_entry.igdb_game_id:
+            # Known game: refresh by stable IGDB id so we never re-bind to a
+            # different title that happens to share the same name (e.g. the
+            # "Fable" 2004 original vs the upcoming reboot).
+            metadata = client.lookup_game_metadata_by_id(working_entry.igdb_game_id)
         else:
+            # First-time discovery only: fall back to a name search.
             metadata = client.lookup_game_metadata(working_entry.game_name)
 
         if metadata is None:
@@ -89,6 +95,7 @@ def enrich_catalog_entries_with_igdb(
                     or sanitize_igdb_image_url(working_entry.cover_url),
                     "steam_app_id": steam_app_id or working_entry.steam_app_id,
                     "igdb_game_id": igdb_game_id,
+                    "igdb_first_release_date": metadata.release_date,
                     "genre_name": metadata.genre_names[0] if metadata.genre_names else None,
                     "user_rating": metadata.user_rating,
                     "critic_rating": metadata.critic_rating,

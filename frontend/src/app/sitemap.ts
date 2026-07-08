@@ -31,7 +31,7 @@ function buildStaticSitemapEntries(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     {
-      url: `${siteUrl}${APP_ROUTES.telemetry}`,
+      url: `${siteUrl}${APP_ROUTES.games}`,
       lastModified: now,
       changeFrequency: "hourly",
       priority: 0.8,

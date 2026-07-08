@@ -70,6 +70,14 @@ class TextUtilsTests(unittest.TestCase):
         self.assertNotIn("bar-red.png", markdown)
         self.assertNotIn("\n-\n", markdown)
 
+    def test_markdown_from_html_spaces_inline_bold_markers(self) -> None:
+        raw_html = (
+            "<p>Great news!<strong>BOMBANANA Demo</strong>now officially supports"
+            "<strong>macOS</strong>!</p>"
+        )
+        markdown = markdown_from_html(raw_html)
+        self.assertIn("Great news! **BOMBANANA Demo** now officially supports **macOS**!", markdown)
+
     def test_clean_news_title_removes_source_tag_and_duplicate_game_name(self) -> None:
         title = clean_news_title(
             "[STEAM NEWS] PUBG: Battlegrounds: PUBG: BATTLEGROUNDS Weekly Bans Notice",

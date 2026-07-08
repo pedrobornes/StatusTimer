@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Dashboard from "@/components/dashboard/Dashboard";
 import DashboardError from "@/components/dashboard/DashboardError";
+import { FEATURED_GAME_SLUGS } from "@/config/routes";
 import type { ApiRequestOptions } from "@/services/api";
+import { getGamingNews } from "@/services/newsService";
 import { getUpcomingReleases } from "@/services/releasesService";
 import { getServerStatuses } from "@/services/statusService";
 import {
@@ -10,6 +12,7 @@ import {
   getTelemetryHistory,
   getTelemetryIncidents,
 } from "@/services/telemetryService";
+import type { GamingNews } from "@/types/api";
 import type { GameTelemetry, TelemetryHistorySnapshot } from "@/types/telemetry";
 
 export const metadata: Metadata = {
@@ -30,8 +33,17 @@ export const metadata: Metadata = {
 
 export const revalidate = 60;
 
-const DASHBOARD_TELEMETRY_LIMIT = 6;
+const DASHBOARD_TELEMETRY_LIMIT = 12;
+const DASHBOARD_NEWS_LIMIT = 4;
 const LIVE_FETCH_OPTIONS: ApiRequestOptions = { revalidate: 0 };
+
+const FEATURED_SLUG_SET = new Set<string>(FEATURED_GAME_SLUGS);
+
+function selectFeaturedNews(news: GamingNews[]): GamingNews[] {
+  return news
+    .filter((article) => FEATURED_SLUG_SET.has(article.gameTag))
+    .slice(0, DASHBOARD_NEWS_LIMIT);
+}
 
 async function loadDashboardTelemetry(
   limit: number,
@@ -71,12 +83,14 @@ async function loadTelemetryHistoryBySlug(
 
 export default async function HomePage() {
   try {
-    const [gameTelemetry, releases, incidents, statuses] = await Promise.all([
-      loadDashboardTelemetry(DASHBOARD_TELEMETRY_LIMIT),
-      getUpcomingReleases(),
-      getTelemetryIncidents().catch(() => []),
-      getServerStatuses().catch(() => []),
-    ]);
+    const [gameTelemetry, releases, incidents, statuses, news] =
+      await Promise.all([
+        loadDashboardTelemetry(DASHBOARD_TELEMETRY_LIMIT),
+        getUpcomingReleases(),
+        getTelemetryIncidents().catch(() => []),
+        getServerStatuses().catch(() => []),
+        getGamingNews().catch(() => []),
+      ]);
 
     const historyBySlug = await loadTelemetryHistoryBySlug(
       gameTelemetry.map((entry) => entry.gameSlug),
@@ -89,6 +103,7 @@ export default async function HomePage() {
         releases={releases.slice(0, 4)}
         incidents={incidents}
         statuses={statuses}
+        news={selectFeaturedNews(news)}
       />
     );
   } catch (error) {

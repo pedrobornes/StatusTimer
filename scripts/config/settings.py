@@ -63,6 +63,7 @@ class Settings(BaseSettings):
     steam_news_max_items: int = 10
     steam_news_top_n: int = 15
     steam_news_min_content_chars: int = 120
+    enable_reddit_news: bool = False
     reddit_news_max_items: int = 8
     reddit_news_top_n: int = 12
     reddit_news_min_content_chars: int = 80

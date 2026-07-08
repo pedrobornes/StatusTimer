@@ -8,7 +8,11 @@ from clients.igdb_client import IgdbClient, is_igdb_configured
 from config.settings import settings
 from models.catalog_schemas import GameCatalogEntryPayload
 from models.normalization import to_slug
-from scrapers.igdb_media import parse_igdb_game_metadata, resolve_catalog_image_urls
+from scrapers.igdb_media import (
+    parse_igdb_game_metadata,
+    resolve_catalog_image_urls,
+    resolve_display_name,
+)
 from scrapers.igdb_platforms import has_supported_igdb_platform
 
 logger = logging.getLogger(__name__)
@@ -47,7 +51,7 @@ def fetch_igdb_popular_catalog(limit: int | None = None) -> list[GameCatalogEntr
         payloads.append(
             GameCatalogEntryPayload(
                 slug=slug,
-                game_name=metadata.name,
+                game_name=resolve_display_name(metadata),
                 steam_app_id=metadata.steam_app_id,
                 logo_url=hero_url,
                 cover_url=cover_url,

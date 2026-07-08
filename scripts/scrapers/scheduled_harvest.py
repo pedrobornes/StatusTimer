@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 
 from config.game_slug_registry import resolve_harvest_steam_app_id
+from config.settings import settings
 from clients.backend_client import BackendClient
 from clients.http_result import PushResult
 from models.catalog_schemas import SyncGameCatalogRequest
@@ -115,7 +116,7 @@ def _run_news_due(
         return 0, PushResult(success=True, status_code=204)
 
     scraper = SteamNewsScraper()
-    reddit_scraper = RedditNewsScraper()
+    reddit_scraper = RedditNewsScraper() if settings.enable_reddit_news else None
     completions: list[dict[str, object]] = []
     collected_events: list[ScrapedFeedEvent] = []
     news_store = NewsPushStore.from_settings()
@@ -147,8 +148,12 @@ def _run_news_due(
                 news_success = False
 
         reddit_url = _resolve_reddit_url_from_target(target)
-        subreddit = parse_subreddit_from_url(reddit_url) if reddit_url else None
-        if subreddit:
+        subreddit = (
+            parse_subreddit_from_url(reddit_url)
+            if settings.enable_reddit_news and reddit_url
+            else None
+        )
+        if subreddit and reddit_scraper is not None:
             try:
                 reddit_events = reddit_scraper.fetch_for_subreddit(
                     RedditNewsTarget(
@@ -167,6 +172,8 @@ def _run_news_due(
             except Exception:
                 logger.exception("Scheduled Reddit news fetch failed for slug=%s", slug)
                 news_success = False
+        elif reddit_url and not settings.enable_reddit_news:
+            logger.debug("Skipping Reddit news for %s (ENABLE_REDDIT_NEWS=false)", slug)
 
         if steam_app_id is None and subreddit is None:
             completions.append(_work_result(slug, "NEWS", True))

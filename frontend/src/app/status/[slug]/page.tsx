@@ -26,7 +26,7 @@ import { hasGameMedia, resolveGameMedia } from "@/lib/gameMedia";
 import { getConfirmedPlatforms } from "@/lib/releases";
 import { getGameStatusDetail } from "@/services/telemetryService";
 import { getUpcomingReleases } from "@/services/releasesService";
-import type { TelemetryStatus } from "@/types/telemetry";
+import type { GameTelemetry, TelemetryStatus } from "@/types/telemetry";
 
 export const revalidate = 60;
 
@@ -95,6 +95,10 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
     );
     const hasNews = news.length > 0;
     const hasMedia = hasGameMedia(gameMedia);
+
+    if (isUnreleasedGame(telemetry)) {
+      notFound();
+    }
 
     const isCatalogProfile = catalogOnly === true;
     const isPendingTelemetry = !telemetryReady && !isCatalogProfile;
@@ -354,4 +358,22 @@ function buildStatusPageSubtitle(
   }
 
   return `See if ${gameName} servers are up, check recent outages, and read the latest game news.`;
+}
+
+function isUnreleasedGame(telemetry: GameTelemetry | null): boolean {
+  if (!telemetry) {
+    return false;
+  }
+
+  if (telemetry.status === "UPCOMING" || telemetry.isUpcoming === true) {
+    return true;
+  }
+
+  const now = Date.now();
+  const futureDates = [telemetry.releaseDate, telemetry.steamReleaseDate]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => new Date(value).getTime())
+    .filter((timestamp) => Number.isFinite(timestamp));
+
+  return futureDates.some((timestamp) => timestamp > now);
 }

@@ -1,5 +1,7 @@
 """Pydantic schemas for tracked game catalog ingestion."""
 
+from datetime import date
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -15,6 +17,7 @@ class GameCatalogEntryPayload(BaseModel):
     twitch_viewers: int | None = Field(default=None, alias="twitchViewers", ge=0)
     featured: bool = False
     igdb_game_id: int | None = Field(default=None, alias="igdbGameId", ge=1)
+    igdb_first_release_date: date | None = Field(default=None, alias="igdbFirstReleaseDate")
     genre_name: str | None = Field(default=None, alias="genreName", max_length=64)
     user_rating: int | None = Field(default=None, alias="userRating", ge=0, le=100)
     critic_rating: int | None = Field(default=None, alias="criticRating", ge=0, le=100)

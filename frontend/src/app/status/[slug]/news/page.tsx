@@ -9,6 +9,7 @@ import { APP_ROUTES } from "@/config/routes";
 import { resolveGameDisplayName } from "@/lib/gameAssets";
 import { resolveCanonicalGameSlug } from "@/lib/gameSlugs";
 import {
+  buildNewsExcerpt,
   classifyIntelArticle,
   cleanNewsDisplayTitle,
   getIntelArticleAccent,
@@ -18,6 +19,7 @@ import { resolveCatalogImageUrl } from "@/lib/gameAssets";
 import { hasGameMedia, resolveGameMedia } from "@/lib/gameMedia";
 import { getGamingNewsByGame } from "@/services/newsService";
 import { getGameStatusDetail } from "@/services/telemetryService";
+import type { GameTelemetry } from "@/types/telemetry";
 import { formatRelativeTime } from "@/utils/dateFormatter";
 
 export const revalidate = 60;
@@ -52,6 +54,10 @@ export default async function GameNewsIndexPage({
     getGamingNewsByGame(canonicalSlug).catch(() => null),
     getGameStatusDetail(canonicalSlug).catch(() => null),
   ]);
+
+  if (isUnreleasedGame(detail?.telemetry ?? null)) {
+    notFound();
+  }
 
   if (!news || news.length === 0) {
     notFound();
@@ -131,8 +137,7 @@ export default async function GameNewsIndexPage({
                     </h2>
 
                     <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-400">
-                      {article.content.replace(/\s+/g, " ").slice(0, 180)}
-                      {article.content.length > 180 ? "…" : ""}
+                      {buildNewsExcerpt(article.content)}
                     </p>
 
                     <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-violet-200/80">
@@ -157,4 +162,22 @@ export default async function GameNewsIndexPage({
       </p>
     </PageShell>
   );
+}
+
+function isUnreleasedGame(telemetry: GameTelemetry | null): boolean {
+  if (!telemetry) {
+    return false;
+  }
+
+  if (telemetry.status === "UPCOMING" || telemetry.isUpcoming === true) {
+    return true;
+  }
+
+  const now = Date.now();
+  const futureDates = [telemetry.releaseDate, telemetry.steamReleaseDate]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => new Date(value).getTime())
+    .filter((timestamp) => Number.isFinite(timestamp));
+
+  return futureDates.some((timestamp) => timestamp > now);
 }

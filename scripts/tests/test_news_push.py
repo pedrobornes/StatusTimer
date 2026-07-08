@@ -67,7 +67,7 @@ def test_push_news_events_skips_low_signal_items(tmp_path: Path) -> None:
     client.push_patch_note.assert_not_called()
 
 
-def test_push_news_events_accepts_reddit_sources(tmp_path: Path) -> None:
+def test_push_news_events_skips_reddit_sources(tmp_path: Path) -> None:
     store = NewsPushStore(tmp_path / "pushed_news.json")
     client = Mock(spec=BackendClient)
     client.push_patch_note.return_value = PushResult(success=True, status_code=201)
@@ -84,8 +84,8 @@ def test_push_news_events_accepts_reddit_sources(tmp_path: Path) -> None:
 
     pushed = push_news_events(client, [reddit_event], store)
 
-    assert pushed == 1
-    client.push_patch_note.assert_called_once()
+    assert pushed == 0
+    client.push_patch_note.assert_not_called()
 
 
 def test_push_news_events_skips_non_steam_sources(tmp_path: Path) -> None:
@@ -109,7 +109,7 @@ def test_push_news_events_skips_non_steam_sources(tmp_path: Path) -> None:
     client.push_patch_note.assert_not_called()
 
 
-def test_is_direct_news_event_for_steam_and_reddit() -> None:
+def test_is_direct_news_event_only_for_steam_news() -> None:
     steam = _sample_event()
     reddit = ScrapedFeedEvent(
         source=FeedSource.REDDIT,
@@ -131,5 +131,5 @@ def test_is_direct_news_event_for_steam_and_reddit() -> None:
     )
 
     assert is_direct_news_event(steam) is True
-    assert is_direct_news_event(reddit) is True
+    assert is_direct_news_event(reddit) is False
     assert is_direct_news_event(riot) is False

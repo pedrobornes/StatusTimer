@@ -39,6 +39,9 @@ NON_GAME_CATEGORIES = frozenset(
         "sports",
         "special events",
         "software and game development",
+        "games + demos",
+        "animals, aquariums,and zoos",
+        "animals, aquariums, and zoos",
     }
 )
 

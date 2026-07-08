@@ -434,6 +434,50 @@ def _parse_release_date(raw_value: Any) -> date | None:
     return datetime.fromtimestamp(timestamp, tz=timezone.utc).date()
 
 
+_DISAMBIGUATED_SLUG_PATTERN = re.compile(r"--\d+$")
+
+
+def is_disambiguated_igdb_slug(igdb_slug: str | None) -> bool:
+    """
+    IGDB appends a ``--N`` suffix (fable--1, fable--2, ...) only when a title
+    collides with an existing name in its database. That suffix is therefore a
+    reliable, source-provided signal that a game is a "repeat" of another and
+    should be disambiguated for humans.
+    """
+    return bool(igdb_slug and _DISAMBIGUATED_SLUG_PATTERN.search(igdb_slug))
+
+
+def resolve_display_name(metadata: IgdbGameMetadata) -> str:
+    """
+    Human-facing name. For IGDB-disambiguated titles (e.g. the "Fable" reboot,
+    slug ``fable--1``) append the release year so the UI can tell duplicates
+    apart — "Fable (2027)" vs the original "Fable".
+    """
+    if is_disambiguated_igdb_slug(metadata.slug) and metadata.release_date:
+        return f"{metadata.name} ({metadata.release_date.year})"
+
+    return metadata.name
+
+
+def resolve_hero_url(metadata: IgdbGameMetadata) -> str | None:
+    """
+    Best available horizontal hero image, in priority order:
+
+    1. Official artwork (t_screenshot_huge)
+    2. First in-game screenshot (t_screenshot_huge)
+    3. Big vertical cover (t_cover_big) as a last resort — the frontend
+       renders it centered over a blurred backdrop when no landscape art
+       exists (e.g. announced-only games like The Elder Scrolls VI).
+    """
+    if metadata.background_url:
+        return metadata.background_url
+
+    if metadata.screenshot_urls:
+        return metadata.screenshot_urls[0]
+
+    return metadata.cover_url
+
+
 def resolve_catalog_image_urls(
     metadata: IgdbGameMetadata,
 ) -> tuple[str | None, str | None]:
@@ -441,8 +485,8 @@ def resolve_catalog_image_urls(
     Map IGDB metadata to backend catalog fields.
 
     cover_url  -> vertical box art (t_cover_big)
-    logo_url   -> horizontal hero background (t_screenshot_huge artwork)
+    logo_url   -> horizontal hero background (artwork -> screenshot -> cover)
     """
     cover_url = metadata.cover_url
-    hero_url = metadata.background_url or metadata.logo_url
+    hero_url = resolve_hero_url(metadata)
     return hero_url, cover_url

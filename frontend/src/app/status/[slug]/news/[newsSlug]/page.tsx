@@ -14,6 +14,7 @@ import { loadStatusPageHeroUrl } from "@/lib/statusHero";
 import { hasGameMedia, resolveGameMedia } from "@/lib/gameMedia";
 import { getGamingNewsBySlug } from "@/services/newsService";
 import { getGameStatusDetail } from "@/services/telemetryService";
+import type { GameTelemetry } from "@/types/telemetry";
 import { formatLocalizedTimestamp } from "@/utils/dateFormatter";
 
 export const revalidate = 60;
@@ -71,6 +72,9 @@ export default async function GameNewsArticlePage({
     const displayTitle = cleanNewsDisplayTitle(article.title, article.gameTag);
     const coverUrl = await loadStatusPageHeroUrl(canonicalSlug);
     const detail = await getGameStatusDetail(canonicalSlug).catch(() => null);
+    if (isUnreleasedGame(detail?.telemetry ?? null)) {
+      notFound();
+    }
     const hasMedia = detail
       ? hasGameMedia(
           resolveGameMedia(
@@ -89,18 +93,13 @@ export default async function GameNewsArticlePage({
         badge="News & Patch Notes"
         title={displayTitle}
         subtitle={gameName}
+        subtitleHref={APP_ROUTES.status(canonicalSlug)}
         coverUrl={coverUrl}
         coverAlt={gameName}
       >
         <GameStatusSubNav slug={canonicalSlug} hasNews hasMedia={hasMedia} />
         <section className="glass-panel mb-6 rounded-3xl p-6 md:p-8">
           <div className="mb-6 flex flex-wrap items-center gap-3">
-            <Link
-              href={APP_ROUTES.status(canonicalSlug)}
-              className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs font-medium text-slate-200 transition hover:border-violet-400/30 hover:text-white"
-            >
-              {gameName}
-            </Link>
             <span className="text-xs text-slate-400">
               Published: {resolveNewsTime(article.publishedAt, article.createdAt)}
             </span>
@@ -122,4 +121,22 @@ export default async function GameNewsArticlePage({
   } catch {
     notFound();
   }
+}
+
+function isUnreleasedGame(telemetry: GameTelemetry | null): boolean {
+  if (!telemetry) {
+    return false;
+  }
+
+  if (telemetry.status === "UPCOMING" || telemetry.isUpcoming === true) {
+    return true;
+  }
+
+  const now = Date.now();
+  const futureDates = [telemetry.releaseDate, telemetry.steamReleaseDate]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => new Date(value).getTime())
+    .filter((timestamp) => Number.isFinite(timestamp));
+
+  return futureDates.some((timestamp) => timestamp > now);
 }

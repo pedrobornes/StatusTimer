@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getCountdownParts } from "@/lib/countdown";
+import type { CountdownParts } from "@/types/api";
 
 interface ReleaseCountdownProps {
   releaseDate: string | null;
@@ -35,16 +36,28 @@ function CountdownUnit({ label, value, compact = false }: CountdownUnitProps) {
   );
 }
 
+function CountdownPlaceholder({ compact = false }: { compact?: boolean }) {
+  return (
+    <div
+      className="grid grid-cols-3 gap-3"
+      aria-hidden
+    >
+      <CountdownUnit label="Days" value={0} compact={compact} />
+      <CountdownUnit label="Hours" value={0} compact={compact} />
+      <CountdownUnit label="Minutes" value={0} compact={compact} />
+    </div>
+  );
+}
+
 export default function ReleaseCountdown({
   releaseDate,
   compact = false,
 }: ReleaseCountdownProps) {
-  const [countdown, setCountdown] = useState(() =>
-    getCountdownParts(releaseDate),
-  );
+  const [countdown, setCountdown] = useState<CountdownParts | null>(null);
 
   useEffect(() => {
     if (releaseDate === null) {
+      setCountdown(null);
       return;
     }
 
@@ -66,6 +79,10 @@ export default function ReleaseCountdown({
         TBA
       </p>
     );
+  }
+
+  if (countdown === null) {
+    return <CountdownPlaceholder compact={compact} />;
   }
 
   if (countdown.isReleased) {

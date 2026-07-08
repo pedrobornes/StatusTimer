@@ -2,11 +2,13 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import TelemetryGrid from "@/components/dashboard/TelemetryGrid";
 import IncidentLog from "@/components/dashboard/telemetry/IncidentLog";
+import MonitorNewsPanel from "@/components/dashboard/MonitorNewsPanel";
+import MonitorSocialPanel from "@/components/dashboard/MonitorSocialPanel";
 import UpcomingReleasesPanel from "@/components/dashboard/UpcomingReleasesPanel";
 import GameSearchBar from "@/components/ui/GameSearchBar";
 import StatusTimerSonarLogo from "@/components/ui/StatusTimerSonarLogo";
 import { APP_ROUTES } from "@/config/routes";
-import type { ServerStatus, UpcomingRelease } from "@/types/api";
+import type { GamingNews, ServerStatus, UpcomingRelease } from "@/types/api";
 import type { GameTelemetry, TelemetryHistorySnapshot, TelemetryIncident } from "@/types/telemetry";
 
 interface DashboardProps {
@@ -15,6 +17,7 @@ interface DashboardProps {
   releases: UpcomingRelease[];
   incidents: TelemetryIncident[];
   statuses: ServerStatus[];
+  news: GamingNews[];
 }
 
 export default function Dashboard({
@@ -23,6 +26,7 @@ export default function Dashboard({
   releases,
   incidents,
   statuses,
+  news,
 }: DashboardProps) {
   const socialPlatformAlerts = statuses.filter(
     (status) => status.category === "SOCIAL" && status.isUp === false,
@@ -57,7 +61,7 @@ export default function Dashboard({
               historyBySlug={historyBySlug}
               headerAction={
                 <Link
-                  href={APP_ROUTES.telemetry}
+                  href={APP_ROUTES.games}
                   className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.14em] text-violet-200/75 transition hover:text-violet-100"
                 >
                   View more
@@ -74,6 +78,8 @@ export default function Dashboard({
               platformAlerts={socialPlatformAlerts}
               sidebar
             />
+            <MonitorNewsPanel news={news} />
+            <MonitorSocialPanel statuses={statuses} />
           </aside>
         </div>
       </div>

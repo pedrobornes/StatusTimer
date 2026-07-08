@@ -135,8 +135,19 @@ export function cleanNewsDisplayTitle(title: string, gameTag?: string | null): s
 }
 
 /** Plain-text preview for news cards (no markdown artifacts). */
+/** Ensures inline **bold** markers have word boundaries when HTML conversion glues them. */
+export function normalizeBoldSpacing(text: string): string {
+  const normalized = text.replace(/\*\*([^*]+)\*\*/g, (_, inner: string) => {
+    return `**${inner.trim()}**`;
+  });
+
+  return normalized
+    .replace(/(\S)(\*\*[^*]+\*\*)/g, "$1 $2")
+    .replace(/(\*\*[^*]+\*\*)([A-Za-z0-9])/g, "$1 $2");
+}
+
 export function buildNewsExcerpt(content: string, maxLength = 180): string {
-  const plain = content
+  const plain = normalizeBoldSpacing(content)
     .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
     .replace(/^#{1,3}\s+/gm, "")
     .replace(/^[-*•·]\s+/gm, "")
@@ -324,12 +335,14 @@ function parseLineKind(line: string): {
 
   return {
     kind: "paragraph",
-    text: line.replace(/\*\*/g, "").trim(),
+    text: normalizeBoldSpacing(line).trim(),
   };
 }
 
+const combinedPattern = /!\[([^\]]*)\]\(([^)]+)\)|\[([^\]]+)\]\(([^)]+)\)/g;
+
 export function parseIntelContentBlocks(content: string): IntelContentBlock[] {
-  const lines = normalizeContentLines(sanitizeNewsContent(content));
+  const lines = normalizeContentLines(sanitizeNewsContent(normalizeBoldSpacing(content)));
   const blocks: IntelContentBlock[] = [];
   let bulletBuffer: string[] = [];
   let numberedBuffer: string[] = [];
@@ -402,22 +415,59 @@ export function parseIntelContentBlocks(content: string): IntelContentBlock[] {
   return blocks;
 }
 
-const combinedPattern = /!\[([^\]]*)\]\(([^)]+)\)|\[([^\]]+)\]\(([^)]+)\)/g;
+const BOLD_INLINE_PATTERN = /\*\*([^*]+)\*\*/g;
+
+function mapIntelTextSegment(
+  segment: IntelTextSegment,
+): IntelInlinePart {
+  return segment.type === "text"
+    ? { type: "text", value: segment.value }
+    : { type: segment.type, value: segment.value };
+}
+
+function splitTextInlineParts(text: string): IntelInlinePart[] {
+  const normalized = normalizeBoldSpacing(text);
+  const parts: IntelInlinePart[] = [];
+  let lastIndex = 0;
+
+  for (const match of normalized.matchAll(BOLD_INLINE_PATTERN)) {
+    const index = match.index ?? 0;
+    if (index > lastIndex) {
+      parts.push(
+        ...splitIntelInlineSegments(normalized.slice(lastIndex, index)).map(
+          mapIntelTextSegment,
+        ),
+      );
+    }
+
+    parts.push({ type: "emphasis", value: match[1].trim() });
+    lastIndex = index + match[0].length;
+  }
+
+  if (lastIndex < normalized.length) {
+    parts.push(
+      ...splitIntelInlineSegments(normalized.slice(lastIndex)).map(
+        mapIntelTextSegment,
+      ),
+    );
+  }
+
+  if (parts.length === 0) {
+    return splitIntelInlineSegments(normalized).map(mapIntelTextSegment);
+  }
+
+  return parts;
+}
 
 export function parseIntelInlineParts(text: string): IntelInlinePart[] {
   const parts: IntelInlinePart[] = [];
   let lastIndex = 0;
+  const normalizedText = normalizeBoldSpacing(text);
 
-  for (const match of text.matchAll(combinedPattern)) {
+  for (const match of normalizedText.matchAll(combinedPattern)) {
     const index = match.index ?? 0;
     if (index > lastIndex) {
-      parts.push(
-        ...splitIntelInlineSegments(text.slice(lastIndex, index)).map((segment) =>
-          segment.type === "text"
-            ? ({ type: "text", value: segment.value } as const)
-            : ({ type: segment.type, value: segment.value } as const),
-        ),
-      );
+      parts.push(...splitTextInlineParts(normalizedText.slice(lastIndex, index)));
     }
 
     if (match[1] !== undefined && match[2] !== undefined && match[0].startsWith("![")) {
@@ -454,22 +504,12 @@ export function parseIntelInlineParts(text: string): IntelInlinePart[] {
     lastIndex = index + match[0].length;
   }
 
-  if (lastIndex < text.length) {
-    parts.push(
-      ...splitIntelInlineSegments(text.slice(lastIndex)).map((segment) =>
-        segment.type === "text"
-          ? ({ type: "text", value: segment.value } as const)
-          : ({ type: segment.type, value: segment.value } as const),
-      ),
-    );
+  if (lastIndex < normalizedText.length) {
+    parts.push(...splitTextInlineParts(normalizedText.slice(lastIndex)));
   }
 
   if (parts.length === 0) {
-    return splitIntelInlineSegments(text).map((segment) =>
-      segment.type === "text"
-        ? ({ type: "text", value: segment.value } as const)
-        : ({ type: segment.type, value: segment.value } as const),
-    );
+    return splitTextInlineParts(normalizedText);
   }
 
   return parts;

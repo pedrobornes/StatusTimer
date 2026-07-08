@@ -1,6 +1,7 @@
 package com.statustimer.dto.response;
 
 import com.statustimer.entity.Game;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -33,7 +34,9 @@ public record UpcomingReleaseResponse(
                 entity.getSlug(),
                 primaryGenre,
                 genreNames,
-                entity.resolvePrimaryReleaseDate(),
+                entity.resolveEarliestKnownReleaseDate()
+                        .map(LocalDate::atStartOfDay)
+                        .orElse(null),
                 entity.getHypeCount(),
                 resolveReleaseImageUrl(entity),
                 entity.getLogoUrl(),

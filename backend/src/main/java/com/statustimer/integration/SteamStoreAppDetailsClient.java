@@ -141,10 +141,6 @@ public class SteamStoreAppDetailsClient {
     }
 
     private LocalDate parseReleaseDate(JsonNode releaseDateNode) {
-        if (releaseDateNode.path("coming_soon").asBoolean(false)) {
-            return null;
-        }
-
         String rawDate = releaseDateNode.path("date").asText("").trim();
         if (rawDate.isEmpty()) {
             return null;

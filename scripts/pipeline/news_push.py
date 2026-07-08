@@ -14,11 +14,11 @@ from scrapers.text_utils import is_relevant_gaming_news
 
 logger = logging.getLogger(__name__)
 
-_DIRECT_NEWS_SOURCES = frozenset({FeedSource.STEAM, FeedSource.REDDIT})
+_DIRECT_NEWS_SOURCES = frozenset({FeedSource.STEAM})
 
 
 def is_direct_news_event(event: ScrapedFeedEvent) -> bool:
-    """True when push_news_events owns persistence (Steam/Reddit NEWS feeds)."""
+    """True when push_news_events owns persistence (official direct NEWS feeds)."""
     return event.kind == FeedEventKind.NEWS and event.source in _DIRECT_NEWS_SOURCES
 
 

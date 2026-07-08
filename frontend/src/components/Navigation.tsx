@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Activity,
   CircleHelp,
+  Gamepad2,
   Home,
   Rocket,
 } from "lucide-react";
@@ -26,11 +26,11 @@ const NAV_ITEMS: NavItem[] = [
     isActive: (pathname) => pathname === APP_ROUTES.home,
   },
   {
-    href: APP_ROUTES.telemetry,
-    label: "Servers",
-    icon: Activity,
+    href: APP_ROUTES.games,
+    label: "Games",
+    icon: Gamepad2,
     isActive: (pathname) =>
-      pathname.startsWith(APP_ROUTES.telemetry) ||
+      pathname.startsWith(APP_ROUTES.games) ||
       pathname.startsWith("/status/"),
   },
   {

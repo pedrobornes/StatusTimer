@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import IncidentLog from "@/components/dashboard/telemetry/IncidentLog";
-import SocialPlatformsSection from "@/components/dashboard/SocialPlatformsSection";
 import TelemetryGamesPanel from "@/components/dashboard/TelemetryGamesPanel";
 import type { PlatformDetail, ServerStatus } from "@/types/api";
 import type {
@@ -44,8 +43,6 @@ export default function TelemetryStatusHub({
         platformsBySlug={platformsBySlug}
         catalogTotal={catalogTotal}
       />
-
-      <SocialPlatformsSection statuses={statuses} />
 
       <IncidentLog
         incidents={incidents}

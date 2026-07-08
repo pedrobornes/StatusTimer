@@ -55,7 +55,22 @@ class IgdbMediaImageTests(unittest.TestCase):
         self.assertIn("t_screenshot_huge/ar1", hero_url or "")
         self.assertIn("t_cover_big/co1", cover_url or "")
 
-    def test_background_url_is_none_without_artworks(self) -> None:
+    def test_hero_falls_back_to_screenshot_without_artworks(self) -> None:
+        metadata = parse_igdb_game_metadata(
+            {
+                "id": 3,
+                "name": "Screenshot Only",
+                "game_type": 0,
+                "cover": {"image_id": "co3"},
+                "screenshots": [{"image_id": "sc3a"}, {"image_id": "sc3b"}],
+            }
+        )
+
+        self.assertIsNone(metadata.background_url)
+        hero_url, _ = resolve_catalog_image_urls(metadata)
+        self.assertIn("t_screenshot_huge/sc3a", hero_url or "")
+
+    def test_hero_falls_back_to_big_cover_without_art_or_screenshots(self) -> None:
         metadata = parse_igdb_game_metadata(
             {
                 "id": 2,
@@ -66,8 +81,9 @@ class IgdbMediaImageTests(unittest.TestCase):
         )
 
         self.assertIsNone(metadata.background_url)
+        self.assertEqual([], metadata.screenshot_urls)
         hero_url, _ = resolve_catalog_image_urls(metadata)
-        self.assertIn("t_cover_small/co2", hero_url or "")
+        self.assertIn("t_cover_big/co2", hero_url or "")
 
     def test_resolve_steam_app_id_from_store_url_when_category_missing(self) -> None:
         metadata = parse_igdb_game_metadata(

@@ -51,7 +51,7 @@ export default memo(function GamingStatusSection({
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {paginatedGames.map((entry) => (
               <GameTelemetryCard
-                key={entry.id}
+                key={entry.gameSlug}
                 telemetry={entry}
                 history={telemetryHistoryBySlug[entry.gameSlug] ?? []}
                 platforms={platformsBySlug[entry.gameSlug] ?? []}

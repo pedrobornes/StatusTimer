@@ -44,13 +44,15 @@ export default function ReleaseNewsPanel({
           </div>
         </div>
 
-        <Link
-          href={APP_ROUTES.gameNews(gameSlug)}
-          className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.16em] text-fuchsia-200/80 transition hover:text-fuchsia-100"
-        >
-          All {gameName} news
-          <ArrowRight className="h-3 w-3" aria-hidden />
-        </Link>
+        {news.length > 0 ? (
+          <Link
+            href={APP_ROUTES.gameNews(gameSlug)}
+            className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.16em] text-fuchsia-200/80 transition hover:text-fuchsia-100"
+          >
+            All {gameName} news
+            <ArrowRight className="h-3 w-3" aria-hidden />
+          </Link>
+        ) : null}
       </div>
 
       {news.length === 0 ? (

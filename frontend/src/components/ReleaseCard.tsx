@@ -93,7 +93,10 @@ export default function ReleaseCard({
         </div>
 
         <div className="mb-6 flex-1">
-          <PlatformReleaseSchedule platforms={release.platforms} />
+          <PlatformReleaseSchedule
+            platforms={release.platforms}
+            fallbackReleaseDate={release.releaseDate}
+          />
         </div>
 
         <HypeCounterButton

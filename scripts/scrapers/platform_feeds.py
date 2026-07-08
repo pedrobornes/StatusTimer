@@ -6,6 +6,7 @@ import logging
 
 import requests
 
+from config.settings import settings
 from models.feed_events import ScrapedFeedEvent
 from scrapers.epic_status import fetch_epic_incident_events
 from scrapers.http_client import build_http_session
@@ -19,16 +20,21 @@ logger = logging.getLogger(__name__)
 def fetch_all_platform_feed_events(
     session: requests.Session | None = None,
 ) -> list[ScrapedFeedEvent]:
-    """Fetch Steam news, Riot incidents, and Epic incidents in one pass."""
+    """Fetch Steam news plus official incident feeds in one pass."""
     shared_session = session or build_http_session()
     events: list[ScrapedFeedEvent] = []
 
-    for fetcher in (
+    fetchers = [
         fetch_steam_news_events,
-        fetch_reddit_news_events,
         fetch_riot_incident_events,
         fetch_epic_incident_events,
-    ):
+    ]
+    if settings.enable_reddit_news:
+        fetchers.insert(1, fetch_reddit_news_events)
+    else:
+        logger.info("Reddit news ingestion disabled (ENABLE_REDDIT_NEWS=false)")
+
+    for fetcher in fetchers:
         try:
             events.extend(fetcher(shared_session))
         except Exception:

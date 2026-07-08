@@ -2,6 +2,7 @@ package com.statustimer.dto.request;
 
 import java.util.List;
 import java.util.Map;
+import java.time.LocalDate;
 
 public record GameCatalogEntryPayload(
         String slug,
@@ -15,6 +16,7 @@ public record GameCatalogEntryPayload(
         Long twitchViewers,
         Boolean featured,
         Long igdbGameId,
+        LocalDate igdbFirstReleaseDate,
         String genreName,
         List<String> genreNames,
         Integer userRating,
