@@ -1,5 +1,6 @@
 package com.statustimer.service;
 
+import com.statustimer.config.CatalogMatureContentPolicy;
 import com.statustimer.dto.response.UpcomingReleaseResponse;
 import com.statustimer.entity.Game;
 import com.statustimer.repository.GameRepository;
@@ -23,6 +24,7 @@ public class UpcomingReleaseService {
         LocalDate today = LocalDate.now();
 
         return gameRepository.findAll().stream()
+                .filter(game -> !CatalogMatureContentPolicy.shouldSkipCatalogSurfacing(game))
                 .filter(game -> game.isUpcomingRelease(today))
                 .sorted(Comparator.comparing(
                         game -> game.resolveEarliestKnownReleaseDate().orElse(LocalDate.MAX)

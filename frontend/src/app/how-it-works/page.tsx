@@ -3,11 +3,12 @@ import Link from "next/link";
 import { Activity, Database, Newspaper, Shield } from "lucide-react";
 import PageShell from "@/components/PageShell";
 import { APP_ROUTES } from "@/config/routes";
+import { MONITORED_SOCIAL_PLATFORMS_TEXT } from "@/config/seo";
 
 export const metadata: Metadata = {
   title: "How StatusTimer Works",
   description:
-    "Learn how StatusTimer monitors game servers, aggregates public data, and presents per-game status and news.",
+    "Learn how StatusTimer monitors game servers and social platforms, aggregates public data, and presents per-game status and news.",
 };
 
 const STEPS = [
@@ -21,7 +22,7 @@ const STEPS = [
     icon: Activity,
     title: "Scheduled monitoring",
     body:
-      "Games in our catalog are checked on a recurring schedule. Each game page shows when data was last refreshed so you can judge how current the status is.",
+      `Games in our catalog are checked on a recurring schedule and labeled online, down, or maintenance. We also probe connectivity for ${MONITORED_SOCIAL_PLATFORMS_TEXT}. Each page shows when data was last refreshed.`,
   },
   {
     icon: Newspaper,

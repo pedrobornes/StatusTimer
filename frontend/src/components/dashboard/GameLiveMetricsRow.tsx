@@ -5,6 +5,7 @@ interface GameLiveMetricsRowProps {
   twitchViewers?: number | null;
   className?: string;
   orientation?: "horizontal" | "vertical";
+  unifiedColors?: boolean;
 }
 
 function MetricSlot({
@@ -23,7 +24,7 @@ function MetricSlot({
   return (
     <span className="inline-flex items-center gap-1.5">
       <span
-        className={`h-2 w-2 rounded-full ${
+        className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-black/25 ${
           hasValue ? activeDotClassName : inactiveDotClassName
         }`}
         aria-hidden
@@ -41,6 +42,7 @@ export default function GameLiveMetricsRow({
   twitchViewers,
   className,
   orientation = "horizontal",
+  unifiedColors = false,
 }: GameLiveMetricsRowProps) {
   const isVertical = orientation === "vertical";
   const layoutClass = isVertical
@@ -64,8 +66,8 @@ export default function GameLiveMetricsRow({
       ) : null}
 
       <MetricSlot
-        activeDotClassName="bg-purple-500"
-        inactiveDotClassName="bg-purple-900/70"
+        activeDotClassName={unifiedColors ? "bg-green-500" : "bg-purple-500"}
+        inactiveDotClassName={unifiedColors ? "bg-zinc-600" : "bg-purple-900/70"}
         value={twitchViewers}
         label="watching"
       />

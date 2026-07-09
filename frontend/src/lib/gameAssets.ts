@@ -16,6 +16,43 @@ export interface SearchableGame {
 
 
 const IGDB_IMAGE_HOST = "images.igdb.com";
+const BLOCKED_HERO_IMAGE_IDS = new Set(["ar667x"]);
+
+function extractIgdbImageId(url: string): string | null {
+  const match = url.match(/\/t_[^/]+\/([^/.]+)\.jpg/i);
+  return match?.[1] ?? null;
+}
+
+function isGameplayScreenshotHero(url: string): boolean {
+  const imageId = extractIgdbImageId(url);
+  return imageId !== null && imageId.toLowerCase().startsWith("sc");
+}
+
+export function isSuitableHeroUrl(url: string | null | undefined): boolean {
+  if (!isIgdbImageUrl(url)) {
+    return false;
+  }
+
+  const normalized = url!.trim();
+  if (isVerticalCoverAsset(normalized)) {
+    return false;
+  }
+
+  const imageId = extractIgdbImageId(normalized);
+  if (imageId && BLOCKED_HERO_IMAGE_IDS.has(imageId)) {
+    return false;
+  }
+
+  if (imageId && imageId.toLowerCase().startsWith("co")) {
+    return false;
+  }
+
+  if (imageId && !imageId.toLowerCase().startsWith("ar")) {
+    return false;
+  }
+
+  return !isGameplayScreenshotHero(normalized);
+}
 
 
 
@@ -352,16 +389,18 @@ export function resolveGameCoverUrl(
   _slug: string,
   telemetry?: Pick<GameTelemetry, "coverUrl" | "logoUrl">,
 ): string | null {
-  const candidates = [telemetry?.logoUrl, telemetry?.coverUrl]
-    .map((url) => url?.trim())
-    .filter((url): url is string => Boolean(url && isRenderableLogoUrl(url)));
+  const hero = telemetry?.logoUrl?.trim();
 
-  const horizontalHero = candidates.find((url) => !isVerticalCoverAsset(url));
-  if (horizontalHero) {
-    return horizontalHero;
+  if (
+    hero &&
+    isRenderableLogoUrl(hero) &&
+    isSuitableHeroUrl(hero) &&
+    !isVerticalCoverAsset(hero)
+  ) {
+    return resolveIgdbFullHdUrl(hero);
   }
 
-  return candidates[0] ?? null;
+  return null;
 }
 
 

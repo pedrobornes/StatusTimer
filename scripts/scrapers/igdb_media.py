@@ -30,10 +30,46 @@ EPIC_STORE_URL_PATTERN = re.compile(r"epicgames\.com/(?:store|en-US)", re.IGNORE
 REDDIT_SUBREDDIT_PATTERN = re.compile(r"reddit\.com/r/([\w_]+)", re.IGNORECASE)
 MAIN_GAME_CATEGORY = 0
 MAIN_GAME_TYPE = 0
+HERO_MIN_WIDTH = 1920
+HERO_MIN_HEIGHT = 720
+BLOCKED_HERO_IMAGE_IDS = frozenset({"ar667x"})
+
+
+def is_suitable_hero_url(url: str | None) -> bool:
+    if not url or "images.igdb.com" not in url.lower():
+        return False
+
+    lower = url.lower()
+    if "/t_cover" in lower or "/t_thumb" in lower:
+        return False
+
+    image_id = url.rsplit("/", 1)[-1].replace(".jpg", "")
+    if image_id in BLOCKED_HERO_IMAGE_IDS or image_id.lower().startswith("sc"):
+        return False
+
+    if image_id.lower().startswith("co"):
+        return False
+
+    if not image_id.lower().startswith("ar"):
+        return False
+
+    return True
+
+
+def prefer_hero_url(current: str | None, candidate: str | None) -> str | None:
+    sanitized_candidate = candidate.strip() if candidate else None
+    if sanitized_candidate and is_suitable_hero_url(sanitized_candidate):
+        return sanitized_candidate
+
+    sanitized_current = current.strip() if current else None
+    if sanitized_current and is_suitable_hero_url(sanitized_current):
+        return sanitized_current
+
+    return sanitized_candidate or sanitized_current
 
 IGDB_GAME_FIELDS = (
     "id, name, slug, category, game_type, first_release_date, platforms, genres.name, "
-    "cover.image_id, artworks.image_id, screenshots.image_id, "
+    "cover.image_id, artworks.image_id, artworks.width, artworks.height, screenshots.image_id, screenshots.width, screenshots.height, "
     "hypes, rating, aggregated_rating, "
     "videos.video_id, websites.url, websites.category, "
     "external_games.uid, external_games.category, external_games.url"
@@ -90,7 +126,10 @@ def parse_igdb_game_metadata(raw_game: dict[str, Any]) -> IgdbGameMetadata:
 
     cover_url = _resolve_cover_url(raw_game.get("cover"))
     logo_url = _resolve_logo_url(raw_game.get("cover"))
-    background_url = _resolve_background_url(raw_game.get("artworks"))
+    background_url = _resolve_background_url(
+        raw_game.get("artworks"),
+        raw_game.get("screenshots"),
+    )
 
     youtube_channel_url, website_video_ids = _resolve_youtube_from_websites(
         raw_game.get("websites")
@@ -141,13 +180,72 @@ def _resolve_logo_url(raw_cover: Any) -> str | None:
     return igdb_image_url(image_id, "t_cover_small")
 
 
-def _resolve_background_url(raw_artworks: Any) -> str | None:
-    """Horizontal profile background from the first IGDB artwork."""
-    artworks = raw_artworks if isinstance(raw_artworks, list) else []
-    for artwork in artworks:
-        image_id = _extract_image_id(artwork)
-        if image_id is not None:
-            return igdb_image_url(image_id, "t_screenshot_huge")
+def _resolve_background_url(raw_artworks: Any, raw_screenshots: Any) -> str | None:
+    """Pick a banner hero from official IGDB artworks only."""
+    best_artwork = _select_best_landscape_hero(raw_artworks)
+    if best_artwork is not None:
+        return best_artwork
+
+    return _select_first_hero(raw_artworks)
+
+
+def _select_best_landscape_hero(raw_images: Any) -> str | None:
+    images = raw_images if isinstance(raw_images, list) else []
+    best_landscape: tuple[int, str] | None = None
+
+    for image in images:
+        image_id = _extract_image_id(image)
+        if image_id is None or image_id in BLOCKED_HERO_IMAGE_IDS:
+            continue
+
+        if not image_id.lower().startswith("ar"):
+            continue
+
+        if not isinstance(image, dict):
+            continue
+
+        width = image.get("width")
+        height = image.get("height")
+        if not isinstance(width, int) or not isinstance(height, int) or width <= 0 or height <= 0:
+            continue
+        if width <= height:
+            continue
+        if width < HERO_MIN_WIDTH or height < HERO_MIN_HEIGHT:
+            continue
+
+        hero_url = igdb_image_url(image_id, "t_screenshot_huge")
+        area = width * height
+        candidate = (area, hero_url)
+        if best_landscape is None or candidate[0] > best_landscape[0]:
+            best_landscape = candidate
+
+    if best_landscape is not None:
+        return best_landscape[1]
+
+    return None
+
+
+def _select_first_hero(raw_images: Any) -> str | None:
+    images = raw_images if isinstance(raw_images, list) else []
+    for image in images:
+        image_id = _extract_image_id(image)
+        if image_id is None or image_id in BLOCKED_HERO_IMAGE_IDS:
+            continue
+
+        if not image_id.lower().startswith("ar"):
+            continue
+
+        if isinstance(image, dict):
+            width = image.get("width")
+            height = image.get("height")
+            if not isinstance(width, int) or not isinstance(height, int):
+                continue
+            if width < HERO_MIN_WIDTH or height < HERO_MIN_HEIGHT or width <= height:
+                continue
+        else:
+            continue
+
+        return igdb_image_url(image_id, "t_screenshot_huge")
 
     return None
 
@@ -460,22 +558,11 @@ def resolve_display_name(metadata: IgdbGameMetadata) -> str:
 
 
 def resolve_hero_url(metadata: IgdbGameMetadata) -> str | None:
-    """
-    Best available horizontal hero image, in priority order:
-
-    1. Official artwork (t_screenshot_huge)
-    2. First in-game screenshot (t_screenshot_huge)
-    3. Big vertical cover (t_cover_big) as a last resort — the frontend
-       renders it centered over a blurred backdrop when no landscape art
-       exists (e.g. announced-only games like The Elder Scrolls VI).
-    """
-    if metadata.background_url:
+    """Landscape artwork/screenshot only — never box art or gameplay HUD shots."""
+    if metadata.background_url and is_suitable_hero_url(metadata.background_url):
         return metadata.background_url
 
-    if metadata.screenshot_urls:
-        return metadata.screenshot_urls[0]
-
-    return metadata.cover_url
+    return None
 
 
 def resolve_catalog_image_urls(

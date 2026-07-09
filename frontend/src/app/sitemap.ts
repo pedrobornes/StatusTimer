@@ -8,6 +8,10 @@ import {
   fetchIndexableSlugs,
   type GameIndexableSlug,
 } from "@/services/catalogService";
+import {
+  fetchNewsSitemapEntries,
+  fetchReleaseSitemapEntries,
+} from "@/lib/seo/sitemapBuilders";
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -55,24 +59,6 @@ function buildStaticSitemapEntries(): MetadataRoute.Sitemap {
       priority: 0.4,
     },
     {
-      url: `${siteUrl}${APP_ROUTES.privacy}`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.3,
-    },
-    {
-      url: `${siteUrl}${APP_ROUTES.terms}`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.3,
-    },
-    {
-      url: `${siteUrl}${APP_ROUTES.cookies}`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.3,
-    },
-    {
       url: `${siteUrl}${APP_ROUTES.contact}`,
       lastModified: now,
       changeFrequency: "yearly",
@@ -96,9 +82,18 @@ const staticFallbackUrls = buildStaticSitemapEntries();
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
-    const slugs = await fetchIndexableSlugs();
+    const [slugs, releaseEntries, newsEntries] = await Promise.all([
+      fetchIndexableSlugs(),
+      fetchReleaseSitemapEntries(siteUrl),
+      fetchNewsSitemapEntries(siteUrl),
+    ]);
     rememberSitemapSlugs(slugs);
-    return [...staticFallbackUrls, ...toGameSitemapEntries(slugs)];
+    return [
+      ...staticFallbackUrls,
+      ...toGameSitemapEntries(slugs),
+      ...releaseEntries,
+      ...newsEntries,
+    ];
   } catch {
     const cachedSlugs = getLastSuccessfulSitemapSlugs();
     if (cachedSlugs && cachedSlugs.length > 0) {

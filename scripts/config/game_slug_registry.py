@@ -36,7 +36,7 @@ PINNED_GAMES: dict[str, PinnedGame] = {
         "blocked_steam_app_ids": frozenset({10}),
         "blocked_igdb_slugs": frozenset({"counter-strike"}),
         "fallback_logo_url": (
-            "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/ar439t.jpg"
+            "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/ar4kon.jpg"
         ),
         "fallback_cover_url": (
             "https://images.igdb.com/igdb/image/upload/t_cover_big/coaczd.jpg"
@@ -49,7 +49,7 @@ PINNED_GAMES: dict[str, PinnedGame] = {
         "blocked_steam_app_ids": frozenset({271590}),
         "blocked_igdb_slugs": frozenset(),
         "fallback_logo_url": (
-            "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/ar667x.jpg"
+            "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/ar4cy.jpg"
         ),
         "fallback_cover_url": (
             "https://images.igdb.com/igdb/image/upload/t_cover_big/co2lbd.jpg"

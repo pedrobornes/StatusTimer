@@ -4,10 +4,12 @@
 
 export const SITE_NAME = "StatusTimer";
 
-export const CONTACT_EMAIL =
-  process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim() || null;
+export const DEFAULT_CONTACT_EMAIL = "info@status-timer.com";
 
-export const LEGAL_LAST_UPDATED = "July 8, 2026";
+export const CONTACT_EMAIL =
+  process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim() || DEFAULT_CONTACT_EMAIL;
+
+export const LEGAL_LAST_UPDATED = "July 9, 2026";
 
 export function resolveContactMailto(): string | null {
   if (!CONTACT_EMAIL) {

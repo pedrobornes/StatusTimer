@@ -4,17 +4,19 @@ import GameTelemetryCard from "@/components/dashboard/GameTelemetryCard";
 import IncidentLog from "@/components/dashboard/telemetry/IncidentLog";
 import PendingTelemetryGate from "@/components/dashboard/telemetry/PendingTelemetryGate";
 import TelemetryRefreshBanner from "@/components/dashboard/telemetry/TelemetryRefreshBanner";
-import NewsFeedPanel from "@/components/dashboard/NewsFeedPanel";
 import SteamStoreWidget from "@/components/dashboard/SteamStoreWidget";
 import GameExternalLinks from "@/components/GameExternalLinks";
-import GameMediaSidebar from "@/components/GameMediaSidebar";
+import ReleaseMediaPanel from "@/components/ReleaseMediaPanel";
+import ReleaseNewsPanel from "@/components/ReleaseNewsPanel";
 import GameStatusSubNav from "@/components/GameStatusSubNav";
 import PageShell from "@/components/PageShell";
 import GameStatusFaq from "@/components/seo/GameStatusFaq";
 import JsonLdScript from "@/components/seo/JsonLdScript";
+import GameAssetImage from "@/components/ui/GameAssetImage";
 import { APP_ROUTES, TRACKED_GAME_SLUGS } from "@/config/routes";
 import {
   resolveGameDisplayName,
+  resolveGameBoxArtUrl,
 } from "@/lib/gameAssets";
 import { resolveStatusPageHeroUrl } from "@/lib/statusHero";
 import { buildGameStatusFaq } from "@/lib/seo/gameFaq";
@@ -23,7 +25,7 @@ import { buildStatusPageMetadata } from "@/lib/seo/metadata";
 import { resolveCanonicalGameSlug } from "@/lib/gameSlugs";
 import { resolveGenres } from "@/lib/genres";
 import { hasGameMedia, resolveGameMedia } from "@/lib/gameMedia";
-import { getConfirmedPlatforms } from "@/lib/releases";
+import { getConfirmedPlatforms, resolveReleaseBoxArtUrl } from "@/lib/releases";
 import { getGameStatusDetail } from "@/services/telemetryService";
 import { getUpcomingReleases } from "@/services/releasesService";
 import type { GameTelemetry, TelemetryStatus } from "@/types/telemetry";
@@ -80,7 +82,10 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
     const releaseEntry = releases.find((release) => release.slug === slug);
     const gameName =
       telemetry?.gameName ?? catalogGameName ?? resolveGameDisplayName(slug, telemetry ?? undefined);
-    const coverUrl = resolveStatusPageHeroUrl(slug, telemetry, releaseEntry ?? null);
+    const coverUrl = resolveStatusPageHeroUrl(slug, telemetry);
+    const boxArtUrl =
+      resolveGameBoxArtUrl(slug, telemetry ?? undefined) ??
+      (releaseEntry ? resolveReleaseBoxArtUrl(slug, releaseEntry) : null);
     const releasePlatforms = getConfirmedPlatforms(releaseEntry?.platforms ?? []);
     const telemetryGenres = resolveGenres(telemetry ?? undefined);
     const genreBadges =
@@ -109,9 +114,38 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
     if (isInitialProbe) {
       return (
         <PageShell
-          badges={genreBadges}
-          title={`Is ${gameName} Down?`}
-          subtitle={`We're checking ${gameName} servers right now. It may take a few minutes.`}
+          title=""
+          customHeader={
+            <div className="flex items-start gap-4 md:gap-5">
+              <GameAssetImage
+                name={gameName}
+                src={boxArtUrl}
+                className="h-24 w-16 rounded-xl md:h-28 md:w-20"
+                imageClassName="object-cover"
+              />
+              <div className="min-w-0">
+                {genreBadges.length > 0 ? (
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    {genreBadges.map((genre) => (
+                      <span
+                        key={genre}
+                        className="rounded-full border border-white/10 px-2 py-0.5 text-[11px] uppercase tracking-[0.12em] text-slate-200"
+                      >
+                        {genre}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                <h1 className="heading-display text-3xl uppercase text-white md:text-4xl">
+                  Is {gameName} Down?
+                </h1>
+                <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-300 md:text-base">
+                  We&apos;re checking {gameName} servers right now. It may take a few
+                  minutes.
+                </p>
+              </div>
+            </div>
+          }
           coverUrl={coverUrl}
           coverAlt={gameName}
         >
@@ -120,7 +154,7 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
             hasNews={hasNews}
             hasMedia={hasMedia}
           />
-          <div className="grid gap-8 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,360px)]">
+          <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="space-y-8">
               <section aria-labelledby="server-status-heading">
                 <h2
@@ -142,22 +176,21 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
                   </div>
                 ) : null}
               </section>
+
+              <ReleaseNewsPanel
+                news={news}
+                gameName={gameName}
+                gameSlug={slug}
+              />
+              <ReleaseMediaPanel gameName={gameName} media={gameMedia} />
             </div>
 
-            <div className="space-y-8">
+            <aside className="space-y-6 xl:sticky xl:top-24 xl:self-start">
               {steamAppId ? (
                 <SteamStoreWidget steamAppId={steamAppId} gameName={gameName} />
               ) : null}
               <GameExternalLinks links={externalLinks} />
-              <GameMediaSidebar gameName={gameName} gameSlug={slug} media={gameMedia} />
-              <NewsFeedPanel
-                news={news}
-                fillHeight
-                gameSlug={slug}
-                sectionTitle="Game News & Updates"
-                eyebrow="Latest Alerts"
-              />
-            </div>
+            </aside>
           </div>
         </PageShell>
       );
@@ -166,9 +199,37 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
     if (isCatalogBootstrap && telemetry !== null) {
       return (
         <PageShell
-          badges={genreBadges}
-          title={`Is ${gameName} Down?`}
-          subtitle={`See if ${gameName} servers are up and read the latest game news.`}
+          title=""
+          customHeader={
+            <div className="flex items-start gap-4 md:gap-5">
+              <GameAssetImage
+                name={gameName}
+                src={boxArtUrl}
+                className="h-24 w-16 rounded-xl md:h-28 md:w-20"
+                imageClassName="object-cover"
+              />
+              <div className="min-w-0">
+                {genreBadges.length > 0 ? (
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    {genreBadges.map((genre) => (
+                      <span
+                        key={genre}
+                        className="rounded-full border border-white/10 px-2 py-0.5 text-[11px] uppercase tracking-[0.12em] text-slate-200"
+                      >
+                        {genre}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                <h1 className="heading-display text-3xl uppercase text-white md:text-4xl">
+                  Is {gameName} Down?
+                </h1>
+                <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-300 md:text-base">
+                  See if {gameName} servers are up and read the latest game news.
+                </p>
+              </div>
+            </div>
+          }
           coverUrl={coverUrl}
           coverAlt={gameName}
         >
@@ -177,7 +238,7 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
             hasNews={hasNews}
             hasMedia={hasMedia}
           />
-          <div className="grid gap-8 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,360px)]">
+          <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="space-y-8">
               <section aria-labelledby="server-status-heading">
                 <h2
@@ -199,22 +260,21 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
                   serverStatusPending
                 />
               </section>
+
+              <ReleaseNewsPanel
+                news={news}
+                gameName={gameName}
+                gameSlug={slug}
+              />
+              <ReleaseMediaPanel gameName={gameName} media={gameMedia} />
             </div>
 
-            <div className="space-y-8">
+            <aside className="space-y-6 xl:sticky xl:top-24 xl:self-start">
               {steamAppId ? (
                 <SteamStoreWidget steamAppId={steamAppId} gameName={gameName} />
               ) : null}
               <GameExternalLinks links={externalLinks} />
-              <GameMediaSidebar gameName={gameName} gameSlug={slug} media={gameMedia} />
-              <NewsFeedPanel
-                news={news}
-                fillHeight
-                gameSlug={slug}
-                sectionTitle="Game News & Updates"
-                eyebrow="Latest Alerts"
-              />
-            </div>
+            </aside>
           </div>
         </PageShell>
       );
@@ -264,9 +324,37 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
         ) : null}
 
         <PageShell
-          badges={genreBadges}
-          title={pageTitle}
-          subtitle={pageSubtitle}
+          title=""
+          customHeader={
+            <div className="flex items-start gap-4 md:gap-5">
+              <GameAssetImage
+                name={gameName}
+                src={boxArtUrl}
+                className="h-24 w-16 rounded-xl md:h-28 md:w-20"
+                imageClassName="object-cover"
+              />
+              <div className="min-w-0">
+                {genreBadges.length > 0 ? (
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    {genreBadges.map((genre) => (
+                      <span
+                        key={genre}
+                        className="rounded-full border border-white/10 px-2 py-0.5 text-[11px] uppercase tracking-[0.12em] text-slate-200"
+                      >
+                        {genre}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                <h1 className="heading-display text-3xl uppercase text-white md:text-4xl">
+                  {pageTitle}
+                </h1>
+                <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-300 md:text-base">
+                  {pageSubtitle}
+                </p>
+              </div>
+            </div>
+          }
           coverUrl={coverUrl}
           coverAlt={gameName}
         >
@@ -275,9 +363,35 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
             hasNews={hasNews}
             hasMedia={hasMedia}
           />
-          <div className="grid gap-8 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,360px)]">
+          <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="space-y-8">
-              <section aria-labelledby="server-status-heading">
+              {!isCatalogProfile && showIndexableContent ? (
+                <GameStatusFaq items={faqItems} />
+              ) : null}
+
+              {!isCatalogProfile && showIndexableContent ? (
+                <IncidentLog
+                  incidents={incidents}
+                  sectionTitle="Recent Problems"
+                  eyebrow="Crash & Maintenance Log"
+                />
+              ) : null}
+
+              <ReleaseNewsPanel
+                news={news}
+                gameName={gameName}
+                gameSlug={slug}
+              />
+
+              <ReleaseMediaPanel gameName={gameName} media={gameMedia} />
+
+              <div className="mt-8">
+                <AdSlot format="leaderboard" slotId={`status-${slug}-leaderboard`} />
+              </div>
+            </div>
+
+            <aside className="space-y-6 xl:sticky xl:top-24 xl:self-start">
+              <section aria-labelledby="server-status-heading" className="glass-panel rounded-3xl p-6">
                 <h2
                   id="server-status-heading"
                   className="heading-section mb-2 text-2xl uppercase text-white"
@@ -294,44 +408,15 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
                   history={isCatalogProfile ? [] : history}
                   platforms={releasePlatforms}
                   catalogOnly={isCatalogProfile}
+                  timelineLegendLayout="stacked"
                 />
-                <div className="mt-8">
-                  <AdSlot format="leaderboard" slotId={`status-${slug}-leaderboard`} />
-                </div>
               </section>
-
-              {!isCatalogProfile && showIndexableContent ? (
-                <GameStatusFaq items={faqItems} />
-              ) : null}
-
-              {!isCatalogProfile && showIndexableContent ? (
-                <IncidentLog
-                  incidents={incidents}
-                  sectionTitle="Recent Problems"
-                  eyebrow="Crash & Maintenance Log"
-                />
-              ) : null}
-            </div>
-
-            <div className="space-y-8">
               {steamAppId ? (
                 <SteamStoreWidget steamAppId={steamAppId} gameName={gameName} />
               ) : null}
               <GameExternalLinks links={externalLinks} />
-              <GameMediaSidebar gameName={gameName} gameSlug={slug} media={gameMedia} />
-              <NewsFeedPanel
-                news={news}
-                fillHeight
-                gameSlug={slug}
-                sectionTitle="Game News & Updates"
-                eyebrow="Latest Alerts"
-              />
-              <AdSlot
-                format="skyscraper"
-                slotId={`status-${slug}-skyscraper`}
-                className="sticky top-24"
-              />
-            </div>
+              <AdSlot format="skyscraper" slotId={`status-${slug}-skyscraper`} />
+            </aside>
           </div>
         </PageShell>
       </>

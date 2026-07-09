@@ -1,5 +1,6 @@
 package com.statustimer.service;
 
+import com.statustimer.config.CatalogMatureContentPolicy;
 import com.statustimer.config.CatalogNoisePolicy;
 import com.statustimer.config.GameAssetPolicy;
 import com.statustimer.config.CacheConfig;
@@ -190,6 +191,21 @@ public class GameCatalogService {
         if (metadata.adultContent()) {
             game.setSteamAdultContent(true);
         }
+
+        CatalogMatureContentPolicy.applyQuarantineIfMature(game);
+    }
+
+    private void refreshSteamAdultContentFlag(Game game) {
+        Integer appId = game.getSteamAppId();
+        if (appId == null || appId <= 0) {
+            CatalogMatureContentPolicy.applyQuarantineIfMature(game);
+            return;
+        }
+
+        steamStoreAppDetailsClient.fetchMetadata(appId).ifPresentOrElse(
+                metadata -> applySteamMetadata(game, metadata),
+                () -> CatalogMatureContentPolicy.applyQuarantineIfMature(game)
+        );
     }
 
     private SteamStoreListingResponse toSteamStoreListing(Game game) {
@@ -279,12 +295,21 @@ public class GameCatalogService {
 
         String persisted = tracked.map(Game::getLogoUrl).orElse(null);
         String resolved = GameAssetPolicy.resolveLogoUrl(canonicalSlug, persisted);
-        if (GameAssetPolicy.isRenderableLogo(resolved)) {
+        if (GameAssetPolicy.isRenderableLogo(resolved)
+                && GameAssetPolicy.isSuitableHeroUrl(resolved)) {
             return resolved;
         }
 
+        Optional<String> pinnedHero = PinnedGamePolicy.findBySlug(canonicalSlug)
+                .map(PinnedGamePolicy.Pin::fallbackLogoUrl)
+                .map(GameAssetPolicy::sanitizeImageUrl)
+                .filter(GameAssetPolicy::isSuitableHeroUrl);
+        if (pinnedHero.isPresent()) {
+            return pinnedHero.get();
+        }
+
         String fallback = GameAssetPolicy.sanitizeImageUrl(fallbackLogoUrl);
-        if (fallback != null) {
+        if (fallback != null && GameAssetPolicy.isSuitableHeroUrl(fallback)) {
             return fallback;
         }
 
@@ -323,7 +348,8 @@ public class GameCatalogService {
                 for (IgdbGameMatch match : igdbSearchClient.search(trimmed, remaining)) {
                     try {
                         Game discovered = upsertFromIgdbDiscovery(match);
-                        if (discovered == null) {
+                        if (discovered == null
+                                || CatalogNoisePolicy.shouldSkipCatalogSurfacing(discovered)) {
                             continue;
                         }
 
@@ -435,6 +461,15 @@ public class GameCatalogService {
 
         slug = gameSlugMapper.resolveCanonicalSlug(slug);
 
+        if (CatalogMatureContentPolicy.isMatureIgdbMatch(match)) {
+            return null;
+        }
+
+        if (CatalogNoisePolicy.isTwitchCategoryNoise(slug, match.name())) {
+            gameRepository.findBySlug(slug).ifPresent(CatalogNoisePolicy::applyQuarantineIfNoise);
+            return null;
+        }
+
         if (PinnedGamePolicy.isPinned(slug) && !PinnedGamePolicy.matchesIgdbGame(slug, match)) {
             return gameRepository.findBySlug(slug).orElse(null);
         }
@@ -485,7 +520,15 @@ public class GameCatalogService {
             game.setLogoUrl(GameAssetPolicy.LOGO_NONE);
         }
 
-        return gameRepository.save(game);
+        refreshSteamAdultContentFlag(game);
+        CatalogMatureContentPolicy.applyQuarantineIfMature(game);
+
+        Game saved = gameRepository.save(game);
+        if (CatalogNoisePolicy.shouldSkipCatalogSurfacing(saved)) {
+            return null;
+        }
+
+        return saved;
     }
 
     private GameCatalogSearchResponse toSearchResponse(Game game) {
@@ -616,6 +659,12 @@ public class GameCatalogService {
 
             if (!Boolean.TRUE.equals(game.getManualLock())) {
                 resolveAllSteamAppIds(game);
+                refreshSteamAdultContentFlag(game);
+            }
+
+            if (CatalogMatureContentPolicy.applyQuarantineIfMature(game)) {
+                gameRepository.save(game);
+                continue;
             }
 
             boolean needsIgdbEnrichment = igdbSearchClient.isConfigured()

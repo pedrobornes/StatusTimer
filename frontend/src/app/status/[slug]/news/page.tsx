@@ -1,31 +1,25 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowRight, CalendarDays } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import GameNewsIndexList from "@/components/GameNewsIndexList";
 import GameStatusSubNav from "@/components/GameStatusSubNav";
 import PageShell from "@/components/PageShell";
-import GameAssetImage from "@/components/ui/GameAssetImage";
 import { APP_ROUTES } from "@/config/routes";
 import { resolveGameDisplayName } from "@/lib/gameAssets";
 import { resolveCanonicalGameSlug } from "@/lib/gameSlugs";
-import {
-  buildNewsExcerpt,
-  classifyIntelArticle,
-  cleanNewsDisplayTitle,
-  getIntelArticleAccent,
-  resolveNewsGameName,
-} from "@/lib/intelFeed";
-import { resolveCatalogImageUrl } from "@/lib/gameAssets";
+import { resolveNewsGameName } from "@/lib/intelFeed";
 import { hasGameMedia, resolveGameMedia } from "@/lib/gameMedia";
+import { buildNewsIndexMetadata } from "@/lib/seo/newsMetadata";
 import { getGamingNewsByGame } from "@/services/newsService";
 import { getGameStatusDetail } from "@/services/telemetryService";
 import type { GameTelemetry } from "@/types/telemetry";
-import { formatRelativeTime } from "@/utils/dateFormatter";
 
 export const revalidate = 60;
 
 interface GameNewsIndexPageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ page?: string }>;
 }
 
 export async function generateMetadata({
@@ -33,17 +27,21 @@ export async function generateMetadata({
 }: GameNewsIndexPageProps): Promise<Metadata> {
   const { slug } = await params;
   const canonicalSlug = resolveCanonicalGameSlug(slug);
+  const gameName = resolveGameDisplayName(canonicalSlug);
 
-  return {
-    title: `${resolveGameDisplayName(canonicalSlug)} News & Patch Notes | StatusTimer`,
-    description: `Latest news, updates, and patch notes.`,
-  };
+  return buildNewsIndexMetadata({
+    gameName,
+    indexPath: APP_ROUTES.gameNews(canonicalSlug),
+    description: `Browse patch notes, updates, and developer announcements for ${gameName}.`,
+  });
 }
 
 export default async function GameNewsIndexPage({
   params,
+  searchParams,
 }: GameNewsIndexPageProps) {
   const { slug } = await params;
+  const { page: pageParam } = await searchParams;
   const canonicalSlug = resolveCanonicalGameSlug(slug);
 
   if (canonicalSlug !== slug) {
@@ -51,7 +49,7 @@ export default async function GameNewsIndexPage({
   }
 
   const [news, detail] = await Promise.all([
-    getGamingNewsByGame(canonicalSlug).catch(() => null),
+    getGamingNewsByGame(canonicalSlug, 100).catch(() => null),
     getGameStatusDetail(canonicalSlug).catch(() => null),
   ]);
 
@@ -76,6 +74,7 @@ export default async function GameNewsIndexPage({
         ),
       )
     : false;
+  const currentPage = Math.max(1, Number.parseInt(pageParam ?? "1", 10) || 1);
 
   return (
     <PageShell
@@ -84,82 +83,17 @@ export default async function GameNewsIndexPage({
       subtitle={`Patch notes, updates, and developer announcements for ${gameName}.`}
     >
       <GameStatusSubNav slug={canonicalSlug} hasNews hasMedia={hasMedia} />
-      <div className="space-y-4">
-        {news.map((article) => {
-          const accent = getIntelArticleAccent(classifyIntelArticle(article.title));
-          const displayTitle = cleanNewsDisplayTitle(
-            article.title,
-            article.gameTag,
-          );
-          const coverSrc = resolveCatalogImageUrl(
-            article.gameCoverUrl ?? null,
-            null,
-          );
+      <GameNewsIndexList news={news} currentPage={currentPage} />
 
-          return (
-            <Link
-              key={article.id}
-              href={APP_ROUTES.gameNewsArticle(canonicalSlug, article.slug)}
-              className="block"
-            >
-              <article
-                className={`rounded-2xl border border-white/8 bg-white/[0.04] p-5 transition hover:border-violet-400/25 hover:bg-white/[0.06] ${accent.borderClass}`}
-              >
-                <div className="flex flex-wrap items-start gap-4">
-                  <GameAssetImage
-                    name={gameName}
-                    src={coverSrc}
-                    className="h-16 w-12 shrink-0"
-                    imageClassName="object-cover"
-                  />
-
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-2 flex flex-wrap items-center gap-2">
-                      <span
-                        className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${accent.badgeClass}`}
-                      >
-                        {accent.label}
-                      </span>
-                      <span className="inline-flex items-center gap-1 text-xs text-slate-400">
-                        <CalendarDays className="h-3.5 w-3.5" aria-hidden />
-                        <time
-                          dateTime={article.publishedAt ?? article.createdAt}
-                        >
-                          {formatRelativeTime(
-                            article.publishedAt ?? article.createdAt,
-                          )}
-                        </time>
-                      </span>
-                    </div>
-
-                    <h2 className="text-lg font-bold leading-snug text-white">
-                      {displayTitle}
-                    </h2>
-
-                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-400">
-                      {buildNewsExcerpt(article.content)}
-                    </p>
-
-                    <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-violet-200/80">
-                      Read article
-                      <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-                    </span>
-                  </div>
-                </div>
-              </article>
-            </Link>
-          );
-        })}
-      </div>
-
-      <p className="mt-8 text-center text-xs text-slate-400">
+      <nav className="mt-10 flex justify-center border-t border-white/8 pt-6">
         <Link
           href={APP_ROUTES.status(canonicalSlug)}
-          className="transition hover:text-violet-200/70"
+          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-slate-300 transition hover:border-violet-400/30 hover:bg-violet-500/10 hover:text-violet-100"
         >
-          Back to {gameName} server status
+          <ArrowLeft className="h-4 w-4" aria-hidden />
+          Return to monitor
         </Link>
-      </p>
+      </nav>
     </PageShell>
   );
 }

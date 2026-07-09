@@ -8,7 +8,7 @@ from clients.igdb_client import IgdbClient, is_igdb_configured
 from config.game_slug_registry import canonical_catalog_slug, get_pinned_game
 from config.settings import settings
 from models.catalog_schemas import GameCatalogEntryPayload
-from scrapers.igdb_media import resolve_catalog_image_urls
+from scrapers.igdb_media import prefer_hero_url, resolve_catalog_image_urls
 from scrapers.platform_images import sanitize_igdb_image_url
 
 logger = logging.getLogger(__name__)
@@ -89,8 +89,10 @@ def enrich_catalog_entries_with_igdb(
         enriched.append(
             working_entry.model_copy(
                 update={
-                    "logo_url": sanitize_igdb_image_url(hero_url)
-                    or sanitize_igdb_image_url(working_entry.logo_url),
+                    "logo_url": prefer_hero_url(
+                        working_entry.logo_url,
+                        sanitize_igdb_image_url(hero_url),
+                    ),
                     "cover_url": sanitize_igdb_image_url(cover_url)
                     or sanitize_igdb_image_url(working_entry.cover_url),
                     "steam_app_id": steam_app_id or working_entry.steam_app_id,

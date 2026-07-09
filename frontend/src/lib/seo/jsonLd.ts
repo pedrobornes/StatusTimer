@@ -163,6 +163,159 @@ export function buildStatusPageJsonLd(input: StatusPageJsonLdInput): Record<stri
   };
 }
 
+interface NewsArticleJsonLdInput {
+  headline: string;
+  description: string;
+  pageUrl: string;
+  siteUrl: string;
+  gameName: string;
+  gameStatusUrl: string;
+  publishedAt: string;
+  modifiedAt: string;
+}
+
+export function buildNewsArticleJsonLd(
+  input: NewsArticleJsonLdInput,
+): Record<string, unknown> {
+  const organizationId = `${input.siteUrl}/#organization`;
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": organizationId,
+        name: "StatusTimer",
+        url: input.siteUrl,
+      },
+      {
+        "@type": "NewsArticle",
+        headline: input.headline,
+        description: input.description,
+        url: input.pageUrl,
+        datePublished: input.publishedAt,
+        dateModified: input.modifiedAt,
+        inLanguage: "en-US",
+        author: {
+          "@type": "Organization",
+          name: "StatusTimer",
+        },
+        publisher: {
+          "@type": "Organization",
+          name: "StatusTimer",
+          url: input.siteUrl,
+        },
+        about: {
+          "@type": "VideoGame",
+          name: input.gameName,
+        },
+        isPartOf: {
+          "@type": "WebPage",
+          url: input.gameStatusUrl,
+          name: `${input.gameName} Server Status`,
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: input.siteUrl,
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: `${input.gameName} Server Status`,
+            item: input.gameStatusUrl,
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: input.headline,
+            item: input.pageUrl,
+          },
+        ],
+      },
+    ],
+  };
+}
+
+interface ReleasePageJsonLdInput {
+  gameName: string;
+  releaseDate: string | null;
+  pageUrl: string;
+  siteUrl: string;
+  platforms: string[];
+}
+
+export function buildReleasePageJsonLd(
+  input: ReleasePageJsonLdInput,
+): Record<string, unknown> {
+  const organizationId = `${input.siteUrl}/#organization`;
+  const releasesHubUrl = `${input.siteUrl}${APP_ROUTES.releases}`;
+
+  const videoGame: Record<string, unknown> = {
+    "@type": "VideoGame",
+    name: input.gameName,
+    url: input.pageUrl,
+  };
+
+  if (input.releaseDate) {
+    videoGame.releaseDate = input.releaseDate;
+  }
+
+  if (input.platforms.length > 0) {
+    videoGame.gamePlatform = input.platforms;
+  }
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": organizationId,
+        name: "StatusTimer",
+        url: input.siteUrl,
+      },
+      {
+        "@type": "WebPage",
+        url: input.pageUrl,
+        name: `${input.gameName} Release Date & Countdown`,
+        description: input.releaseDate
+          ? `Release date and countdown for ${input.gameName}.`
+          : `Upcoming release tracker for ${input.gameName}.`,
+        about: videoGame,
+      },
+      videoGame,
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: input.siteUrl,
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Upcoming Releases",
+            item: releasesHubUrl,
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: input.gameName,
+            item: input.pageUrl,
+          },
+        ],
+      },
+    ],
+  };
+}
+
 /** @deprecated Use buildStatusPageJsonLd instead. */
 export function buildServiceStatusJsonLd(
   input: Omit<StatusPageJsonLdInput, "siteUrl" | "incidentCount"> & {

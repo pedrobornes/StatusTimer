@@ -35,16 +35,19 @@ export const APP_ROUTES = {
   howItWorks: "/how-it-works",
   faq: "/faq",
   contact: "/contact",
+  legalNotice: "/legal-notice",
   privacy: "/privacy",
   terms: "/terms",
   cookies: "/cookies",
   /** @deprecated Global news feed removed — redirects to home */
   intel: "/intel",
   release: (slug: string) => `/release/${slug}`,
+  releaseNews: (slug: string) => `/release/${slug}/news`,
   status: (slug: string) => `/status/${slug}`,
   gameNews: (gameSlug: string) => `/status/${gameSlug}/news`,
   gameNewsArticle: (gameSlug: string, newsSlug: string) =>
     `/status/${gameSlug}/news/${newsSlug}`,
+  newsArticle: (newsSlug: string) => `/news/${newsSlug}`,
   gameMedia: (gameSlug: string) => `/status/${gameSlug}/media`,
 } as const;
 

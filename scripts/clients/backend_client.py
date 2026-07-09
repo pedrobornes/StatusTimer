@@ -10,6 +10,7 @@ from clients.http_result import PushResult
 from config.settings import settings
 from models.catalog_schemas import SyncGameCatalogRequest
 from models.schemas import GameReleasePayload, PatchNotePayload, SyncGamesRequest
+from pipeline.deduplication import within_lookback_window
 from models.service_status import ServiceStatusPayload
 from models.telemetry import SyncTelemetryRequest
 
@@ -136,6 +137,17 @@ class BackendClient:
 
     def push_patch_note(self, patch_note: PatchNotePayload) -> PushResult:
         """POST tactical patch-note intel to the gaming news feed."""
+        if not within_lookback_window(
+            patch_note.published_at,
+            lookback_days=settings.news_max_ingest_age_days,
+        ):
+            logger.info(
+                "Skipping stale news ingest (%sd): %s",
+                settings.news_max_ingest_age_days,
+                patch_note.title,
+            )
+            return PushResult(success=True, status_code=204)
+
         return self._post(
             self.INTERNAL_NEWS_PATH,
             patch_note.model_dump(mode="json", by_alias=True),

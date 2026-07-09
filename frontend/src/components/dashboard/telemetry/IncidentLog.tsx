@@ -17,6 +17,7 @@ import { formatLocalizedTimestamp } from "@/utils/dateFormatter";
 interface IncidentLogProps {
   incidents: TelemetryIncident[];
   platformAlerts?: ServerStatus[];
+  excludedGameSlugs?: readonly string[];
   embedded?: boolean;
   sidebar?: boolean;
   sectionTitle?: string;
@@ -26,12 +27,21 @@ interface IncidentLogProps {
 export default function IncidentLog({
   incidents,
   platformAlerts = [],
+  excludedGameSlugs = [],
   embedded = false,
   sidebar = false,
   sectionTitle = sidebar ? "Recent Issues" : "Recent Problems",
   eyebrow = sidebar ? "Crash & Maintenance" : "Crash & Maintenance Log",
 }: IncidentLogProps) {
-  const hasIssues = incidents.length > 0 || platformAlerts.length > 0;
+  const excludedSlugs = new Set(excludedGameSlugs.map((slug) => slug.toLowerCase()));
+  const filteredIncidents = incidents.filter((incident) => {
+    if (incident.status === "UPCOMING") {
+      return false;
+    }
+    return !excludedSlugs.has(incident.gameSlug.toLowerCase());
+  });
+
+  const hasIssues = filteredIncidents.length > 0 || platformAlerts.length > 0;
   const sectionClass = embedded
     ? ""
     : sidebar
@@ -122,7 +132,7 @@ export default function IncidentLog({
             );
           })}
 
-          {incidents.map((incident, index) => {
+          {filteredIncidents.map((incident, index) => {
             const publishedIso = resolveIncidentDateIso(incident);
 
             return (

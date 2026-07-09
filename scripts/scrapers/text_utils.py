@@ -16,11 +16,17 @@ _BLANK_LINES_PATTERN = re.compile(r"\n{3,}")
 
 _PLACEHOLDER_PHRASES = (
     "read the full announcement",
+    "read the full announcement here",
     "click here to read",
     "read more on steam",
     "read more here",
     "view the full patch notes",
 )
+
+_MARKDOWN_IMAGE_PATTERN = re.compile(r"!\[[^\]]*\]\([^)]+\)")
+_MARKDOWN_LINK_PATTERN = re.compile(r"\[([^\]]+)\]\([^)]+\)")
+_MARKDOWN_HEADING_PATTERN = re.compile(r"^#{1,6}\s+", re.MULTILINE)
+_MARKDOWN_EMPHASIS_PATTERN = re.compile(r"\*\*([^*]+)\*\*|\*([^*]+)\*")
 
 _BB_CODE_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\[h([1-6])\](.*?)\[/h\1\]", re.IGNORECASE | re.DOTALL), r"<h\1>\2</h\1>"),
@@ -196,14 +202,23 @@ class _MarkdownExtractor(HTMLParser):
             self._append("*")
             return
 
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag.lower() == "img":
+            self.handle_starttag(tag, attrs)
+
     def handle_data(self, data: str) -> None:
-        text = unescape(data).replace("\xa0", " ").strip()
+        text = unescape(data).replace("\xa0", " ")
         if not text:
+            return
+
+        if not text.strip():
+            if self._chunks and not self._chunks[-1].endswith(("\n\n", "\n", " ", "[")):
+                self._append(" ")
             return
 
         if self._heading_level is not None:
             level = min(self._heading_level, 3)
-            self._append(f"{'#' * level} {text}")
+            self._append(f"{'#' * level} {text.strip()}")
             self._heading_level = None
             return
 
@@ -353,6 +368,11 @@ def _drop_decorative_image_lines(markdown: str) -> str:
     return "\n".join(lines)
 
 
+def _normalize_link_spacing(markdown: str) -> str:
+    spaced = re.sub(r"([A-Za-z0-9])(\[)", r"\1 \2", markdown)
+    return re.sub(r"(\))([A-Za-z0-9])", r"\1 \2", spaced)
+
+
 def _normalize_bold_spacing(markdown: str) -> str:
     def wrap(match: re.Match[str]) -> str:
         return f"**{match.group(1).strip()}**"
@@ -367,6 +387,7 @@ def _finalize_markdown(markdown: str) -> str:
     normalized = _strip_empty_bullets(normalized)
     normalized = _promote_image_links(normalized)
     normalized = _drop_decorative_image_lines(normalized)
+    normalized = _normalize_link_spacing(normalized)
     normalized = _normalize_bold_spacing(normalized)
     return normalized.strip()
 
@@ -421,6 +442,40 @@ def normalize_plain_text(value: str) -> str:
     return _WHITESPACE_PATTERN.sub(" ", unescape(value)).strip()
 
 
+def _strip_leading_game_name(title: str, game_name: str) -> str:
+    """Strip a leading game name even when punctuation or casing differs."""
+    if not game_name.strip():
+        return title
+
+    game_alnum = [char for char in game_name.lower() if char.isalnum()]
+    if not game_alnum:
+        return title
+
+    title_idx = 0
+    game_idx = 0
+
+    while title_idx < len(title) and game_idx < len(game_alnum):
+        char = title[title_idx]
+        if not char.isalnum():
+            title_idx += 1
+            continue
+
+        if char.lower() != game_alnum[game_idx]:
+            return title
+
+        game_idx += 1
+        title_idx += 1
+
+    if game_idx < len(game_alnum):
+        return title
+
+    while title_idx < len(title) and title[title_idx] in " :—-":
+        title_idx += 1
+
+    stripped = title[title_idx:].strip()
+    return stripped or title
+
+
 def clean_news_title(raw_title: str, game_name: str | None = None) -> str:
     """Remove source tags and duplicate game-name prefixes from feed titles."""
     title = _SOURCE_TAG_PATTERN.sub("", raw_title).strip()
@@ -443,34 +498,58 @@ def clean_news_title(raw_title: str, game_name: str | None = None) -> str:
                 lowered_title = title.lower()
                 break
 
+    title = _strip_leading_game_name(title, game_name)
+
     return title or raw_title.strip()
+
+
+def substantive_news_text(text: str) -> str:
+    """Readable article text with markdown images/links stripped for validation."""
+    if not text.strip():
+        return ""
+
+    stripped = text.strip()
+    stripped = _MARKDOWN_IMAGE_PATTERN.sub(" ", stripped)
+    stripped = _MARKDOWN_LINK_PATTERN.sub(r"\1", stripped)
+    stripped = _MARKDOWN_HEADING_PATTERN.sub("", stripped)
+    stripped = _MARKDOWN_EMPHASIS_PATTERN.sub(
+        lambda match: (match.group(1) or match.group(2) or "").strip(),
+        stripped,
+    )
+
+    return _WHITESPACE_PATTERN.sub(" ", unescape(stripped)).strip()
 
 
 def is_placeholder_news_content(text: str, *, min_chars: int) -> bool:
     """Detect teaser-only posts that redirect users to an external announcement."""
-    normalized = normalize_plain_text(text)
-    if not normalized:
+    substantive = substantive_news_text(text)
+    if not substantive:
         return True
 
-    if len(normalized) < min_chars:
-        lowered = normalized.lower().rstrip("!.")
-        if any(phrase in lowered for phrase in _PLACEHOLDER_PHRASES):
+    lowered = substantive.lower().rstrip("!.")
+    if any(phrase in lowered for phrase in _PLACEHOLDER_PHRASES):
+        remainder = lowered
+        for phrase in _PLACEHOLDER_PHRASES:
+            remainder = remainder.replace(phrase, " ")
+        remainder = _WHITESPACE_PATTERN.sub(" ", remainder).strip()
+        if len(remainder) < max(40, min_chars // 3):
             return True
-        if len(normalized) < max(40, min_chars // 2):
-            return True
+
+    if len(substantive) < min_chars and len(substantive) < max(40, min_chars // 2):
+        return True
 
     return False
 
 
 def is_usable_news_content(text: str, *, min_chars: int) -> bool:
-    normalized = normalize_plain_text(text)
-    if not normalized:
+    substantive = substantive_news_text(text)
+    if not substantive:
         return False
 
-    if is_placeholder_news_content(normalized, min_chars=min_chars):
+    if is_placeholder_news_content(text, min_chars=min_chars):
         return False
 
-    return len(normalized) >= min_chars
+    return len(substantive) >= min_chars
 
 
 _ALLOW_NEWS_PATTERNS: tuple[re.Pattern[str], ...] = (
@@ -518,6 +597,13 @@ def is_relevant_gaming_news(title: str, content: str) -> bool:
     Patch/update content is always kept, even when it mentions cheats or
     countermeasures. Surveys, ban roundups, and discussion prompts are rejected.
     """
+    title_lower = title.lower()
+    if any(phrase in title_lower for phrase in _REJECT_NEWS_PHRASES):
+        return False
+
+    if is_placeholder_news_content(content, min_chars=80):
+        return False
+
     haystack = f"{title}\n{content}".lower()
 
     for pattern in _ALLOW_NEWS_PATTERNS:

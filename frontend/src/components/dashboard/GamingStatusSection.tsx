@@ -4,6 +4,7 @@ import GameTelemetryCard from "@/components/dashboard/GameTelemetryCard";
 import PaginationControls from "@/components/ui/PaginationControls";
 import type { PlatformDetail } from "@/types/api";
 import type { GameTelemetry, TelemetryHistorySnapshot } from "@/types/telemetry";
+import { GAMING_SECTION_SUBTITLE } from "@/config/seo";
 
 interface GamingStatusSectionProps {
   games: GameTelemetry[];
@@ -37,7 +38,7 @@ export default memo(function GamingStatusSection({
         <div>
           <h2 className="heading-section text-2xl text-white">Gaming</h2>
           <p className="mt-1 text-sm text-slate-400">
-            Live status, player counts, and Twitch viewership for tracked titles.
+            {GAMING_SECTION_SUBTITLE}
           </p>
         </div>
       </div>

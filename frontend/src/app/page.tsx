@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import Dashboard from "@/components/dashboard/Dashboard";
 import DashboardError from "@/components/dashboard/DashboardError";
 import { FEATURED_GAME_SLUGS } from "@/config/routes";
+import {
+  HOME_PAGE_DESCRIPTION,
+  HOME_PAGE_OG_TITLE,
+} from "@/config/seo";
 import type { ApiRequestOptions } from "@/services/api";
 import { getGamingNews } from "@/services/newsService";
 import { getUpcomingReleases } from "@/services/releasesService";
@@ -17,15 +21,13 @@ import type { GameTelemetry, TelemetryHistorySnapshot } from "@/types/telemetry"
 
 export const metadata: Metadata = {
   title: "StatusTimer | Live Gaming Server Status Monitor",
-  description:
-    "Track live multiplayer server status, outages, and release countdowns for top games. Real-time telemetry and incident logs in one dashboard.",
+  description: HOME_PAGE_DESCRIPTION,
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "StatusTimer | Live Gaming Server Status & Game News",
-    description:
-      "Track live multiplayer server status, outages, and release countdowns for top games.",
+    title: HOME_PAGE_OG_TITLE,
+    description: HOME_PAGE_DESCRIPTION,
     url: "/",
     type: "website",
   },
@@ -101,6 +103,7 @@ export default async function HomePage() {
         gameTelemetry={gameTelemetry}
         historyBySlug={historyBySlug}
         releases={releases.slice(0, 4)}
+        unreleasedSlugs={releases.map((release) => release.slug)}
         incidents={incidents}
         statuses={statuses}
         news={selectFeaturedNews(news)}

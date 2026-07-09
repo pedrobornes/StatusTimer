@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import PageShell from "@/components/PageShell";
 import TelemetryStatusHub from "@/components/dashboard/TelemetryStatusHub";
 import DashboardError from "@/components/dashboard/DashboardError";
+import { GAMES_PAGE_SUBTITLE } from "@/config/seo";
 import { buildPlatformsBySlug } from "@/lib/releases";
 import { getCatalogGames } from "@/services/catalogService";
 import { getUpcomingReleases } from "@/services/releasesService";
@@ -11,7 +12,7 @@ import { getTelemetryIncidents } from "@/services/telemetryService";
 export const metadata: Metadata = {
   title: "Game Server Live Status",
   description:
-    "Browse gaming server status, player counts, and recent outages for tracked games in one place.",
+    "Browse live game server status — online, down, or maintenance — with player counts and recent outages for every tracked title.",
 };
 
 export const revalidate = 120;
@@ -36,7 +37,7 @@ export default async function GamesPage() {
     return (
       <PageShell
         title="Game server live status"
-        subtitle="Gaming telemetry, player activity, and recent outages for every tracked game."
+        subtitle={GAMES_PAGE_SUBTITLE}
         badge="Games"
       >
         <TelemetryStatusHub
@@ -45,6 +46,7 @@ export default async function GamesPage() {
           telemetryHistoryBySlug={{}}
           platformsBySlug={platformsBySlug}
           incidents={incidents}
+          unreleasedSlugs={releases.map((release) => release.slug)}
           catalogTotal={catalogPage.totalElements}
         />
       </PageShell>

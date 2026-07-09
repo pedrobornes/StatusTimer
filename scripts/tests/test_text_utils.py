@@ -7,6 +7,7 @@ from scrapers.text_utils import (
     is_usable_news_content,
     markdown_from_html,
     plain_text_from_html,
+    substantive_news_text,
 )
 
 
@@ -78,12 +79,35 @@ class TextUtilsTests(unittest.TestCase):
         markdown = markdown_from_html(raw_html)
         self.assertIn("Great news! **BOMBANANA Demo** now officially supports **macOS**!", markdown)
 
+    def test_markdown_from_html_spaces_inline_links(self) -> None:
+        raw_html = (
+            "<p>We're pulling back the curtain on "
+            '<a class="bb_link" href="http://dota2.com/darkcarnival">the Dark Carnival</a>, '
+            "a new ongoing event. There's "
+            '<a class="bb_link" href="http://dota2.com/darkcarnivalcomic">a comic</a>'
+            "if you're into that.</p>"
+        )
+        markdown = markdown_from_html(raw_html)
+        self.assertIn("on [the Dark Carnival](http://dota2.com/darkcarnival),", markdown)
+        self.assertIn("There's [a comic](http://dota2.com/darkcarnivalcomic) if you're", markdown)
+
+    def test_markdown_from_html_emits_steam_rss_hero_image(self) -> None:
+        raw_html = (
+            '<img src="https://clan.fastly.steamstatic.com/images/3703047/'
+            '7942925df6ae43659acf60f2d2ff827461c02485/english.png">'
+            "<br><br>Event announcement body."
+        )
+        markdown = markdown_from_html(raw_html)
+        self.assertIn("![Patch notes image](https://clan.fastly.steamstatic.com/images/3703047/", markdown)
+        self.assertIn("/english.png)", markdown)
+        self.assertIn("Event announcement body.", markdown)
+
     def test_clean_news_title_removes_source_tag_and_duplicate_game_name(self) -> None:
         title = clean_news_title(
             "[STEAM NEWS] PUBG: Battlegrounds: PUBG: BATTLEGROUNDS Weekly Bans Notice",
             "PUBG: Battlegrounds",
         )
-        self.assertEqual(title, "PUBG: BATTLEGROUNDS Weekly Bans Notice")
+        self.assertEqual(title, "Weekly Bans Notice")
 
     def test_is_usable_news_content_rejects_placeholder_teasers(self) -> None:
         self.assertFalse(
@@ -91,6 +115,20 @@ class TextUtilsTests(unittest.TestCase):
                 "Read the full announcement here!",
                 min_chars=120,
             )
+        )
+        self.assertFalse(
+            is_usable_news_content(
+                "![Patch notes image](https://clan.fastly.steamstatic.com/images/27971017/example.png)\n\n"
+                "## Read the full announcement here!",
+                min_chars=120,
+            )
+        )
+        self.assertEqual(
+            substantive_news_text(
+                "![Patch notes image](https://example.com/banner.png)\n\n"
+                "## Read the full announcement here!"
+            ),
+            "Read the full announcement here!",
         )
         self.assertTrue(
             is_usable_news_content(

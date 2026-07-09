@@ -173,6 +173,10 @@ public class SteamStoreAppDetailsClient {
     }
 
     private boolean detectAdultContent(JsonNode data) {
+        if (parseRequiredAge(data.path("required_age").asText("")) >= 18) {
+            return true;
+        }
+
         for (JsonNode genre : data.path("genres")) {
             String description = genre.path("description").asText("").toLowerCase(Locale.ROOT);
             if (containsAdultKeyword(description)) {
@@ -187,16 +191,48 @@ public class SteamStoreAppDetailsClient {
             }
         }
 
+        for (JsonNode descriptorId : data.path("content_descriptors").path("ids")) {
+            int id = descriptorId.asInt(0);
+            if (id == 1 || id == 3 || id == 4 || id == 5) {
+                return true;
+            }
+        }
+
         String descriptorNotes = data.path("content_descriptors").path("notes").asText("")
                 .toLowerCase(Locale.ROOT);
         return containsAdultKeyword(descriptorNotes);
     }
 
+    private int parseRequiredAge(String value) {
+        if (value == null || value.isBlank()) {
+            return 0;
+        }
+
+        String digits = value.replaceAll("\\D+", "");
+        if (digits.isEmpty()) {
+            return 0;
+        }
+
+        try {
+            return Integer.parseInt(digits);
+        } catch (NumberFormatException ignored) {
+            return 0;
+        }
+    }
+
     private boolean containsAdultKeyword(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+
         return value.contains("sexual")
                 || value.contains("nudity")
                 || value.contains("hentai")
-                || value.contains("adult only");
+                || value.contains("adult only")
+                || value.contains("nsfw")
+                || value.contains("pornographic")
+                || value.contains("mature content")
+                || value.equals("adult");
     }
 
     private Integer parsePriceCents(JsonNode value) {

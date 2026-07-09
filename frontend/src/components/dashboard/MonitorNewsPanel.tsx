@@ -8,9 +8,8 @@ import RelativeTime from "@/components/ui/RelativeTime";
 import { APP_ROUTES } from "@/config/routes";
 import {
   buildNewsExcerpt,
-  classifyIntelArticle,
   cleanNewsDisplayTitle,
-  getIntelArticleAccent,
+  getDashboardNewsAccent,
   resolveNewsGameName,
 } from "@/lib/intelFeed";
 import { resolveCatalogImageUrl } from "@/lib/gameAssets";
@@ -35,8 +34,7 @@ export default function MonitorNewsPanel({ news }: MonitorNewsPanelProps) {
       ) : (
         <div className="space-y-3">
           {news.map((article) => {
-            const kind = classifyIntelArticle(article.title);
-            const accent = getIntelArticleAccent(kind);
+            const accent = getDashboardNewsAccent(article.title);
             const displayTitle = cleanNewsDisplayTitle(
               article.title,
               article.gameTag,
@@ -50,7 +48,7 @@ export default function MonitorNewsPanel({ news }: MonitorNewsPanelProps) {
             return (
               <Link
                 key={article.id}
-                href={APP_ROUTES.gameNewsArticle(article.gameTag, article.slug)}
+                href={APP_ROUTES.newsArticle(article.slug)}
                 className="block"
               >
                 <article
@@ -66,11 +64,13 @@ export default function MonitorNewsPanel({ news }: MonitorNewsPanelProps) {
 
                     <div className="min-w-0 flex-1">
                       <div className="mb-1.5 flex flex-wrap items-center gap-2">
-                        <span
-                          className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${accent.badgeClass}`}
-                        >
-                          {accent.label}
-                        </span>
+                        {accent.label ? (
+                          <span
+                            className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${accent.badgeClass}`}
+                          >
+                            {accent.label}
+                          </span>
+                        ) : null}
                         <span className="inline-flex items-center gap-1 text-[10px] text-slate-500">
                           <CalendarDays className="h-3 w-3" />
                           <RelativeTime

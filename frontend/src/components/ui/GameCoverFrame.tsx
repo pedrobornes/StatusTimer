@@ -72,23 +72,13 @@ export default function GameCoverFrame({
           <img
             src={src}
             alt=""
-            aria-hidden
             loading={imageLoading}
             decoding="async"
-            className="absolute inset-0 h-full w-full scale-[1.35] object-cover object-center blur-2xl saturate-[1.2]"
+            className="absolute inset-0 h-full w-full object-cover object-[center_42%] transition duration-300"
           />
-          <div className="pointer-events-none absolute inset-0 bg-zinc-950/45" />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-zinc-950/60 via-transparent to-zinc-950/60" />
-          <img
-            src={src}
-            alt=""
-            loading={imageLoading}
-            decoding="async"
-            className="absolute inset-0 h-full w-full scale-[1.12] object-cover object-center transition duration-300"
-          />
-          <div className="pointer-events-none absolute inset-0 bg-zinc-950/10" />
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-zinc-950/55 to-transparent" />
-          <div className="pointer-events-none absolute bottom-0 h-24 w-full bg-gradient-to-b from-transparent to-zinc-950/95" />
+          <div className="pointer-events-none absolute inset-0 bg-zinc-950/15" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-zinc-950/50 to-transparent" />
+          <div className="pointer-events-none absolute bottom-0 h-20 w-full bg-gradient-to-b from-transparent to-zinc-950/90" />
         </div>
       );
     }
@@ -100,7 +90,7 @@ export default function GameCoverFrame({
           alt=""
           loading={imageLoading}
           decoding="async"
-          className="absolute inset-0 h-full w-full object-cover object-center transition duration-300"
+          className="absolute inset-0 h-full w-full object-cover object-[center_42%] transition duration-300"
         />
         <div className="pointer-events-none absolute inset-0 bg-zinc-950/15" />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-zinc-950/50 to-transparent" />

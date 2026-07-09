@@ -19,6 +19,12 @@ class CatalogNoisePolicyTest {
     }
 
     @Test
+    void detectsAmericanIdolAsTwitchNoise() {
+        assertThat(CatalogNoisePolicy.isTwitchCategoryNoise("american-idol", "American Idol"))
+                .isTrue();
+    }
+
+    @Test
     void ignoresRealGames() {
         assertThat(CatalogNoisePolicy.isTwitchCategoryNoise("valorant", "VALORANT"))
                 .isFalse();

@@ -3,6 +3,7 @@ import {
   parseIntelInlineParts,
   type IntelInlinePart,
 } from "@/lib/intelFeed";
+import NewsArticleImage from "@/components/dashboard/NewsArticleImage";
 
 interface IntelFeedContentProps {
   content: string;
@@ -10,7 +11,7 @@ interface IntelFeedContentProps {
 
 function inlinePartClassName(part: IntelInlinePart): string {
   if (part.type === "link") {
-    return "font-medium text-violet-200 underline decoration-violet-400/40 underline-offset-2 transition hover:text-violet-100";
+    return "font-semibold text-orange-300 underline decoration-orange-400/60 underline-offset-[3px] decoration-2 transition-colors hover:text-orange-200 hover:decoration-orange-300/80 focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-400/50";
   }
 
   if (part.type === "image") {
@@ -52,11 +53,10 @@ function IntelInlineText({ text }: { text: string }) {
       {parts.map((part, index) => {
         if (part.type === "image") {
           return (
-            <img
+            <NewsArticleImage
               key={`image-inline-${index}`}
               src={part.src}
               alt={part.alt}
-              loading="lazy"
               className="my-3 max-w-full rounded-xl border border-white/10"
             />
           );
@@ -90,15 +90,14 @@ export default function IntelFeedContent({ content }: IntelFeedContentProps) {
   const blocks = parseIntelContentBlocks(content);
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto max-w-3xl space-y-6">
       {blocks.map((block, index) => {
         if (block.kind === "image") {
           return (
             <figure key={`image-${index}`} className="my-2">
-              <img
+              <NewsArticleImage
                 src={block.src}
                 alt={block.alt}
-                loading="lazy"
                 className="max-w-full rounded-xl border border-white/10"
               />
             </figure>
@@ -123,10 +122,10 @@ export default function IntelFeedContent({ content }: IntelFeedContentProps) {
           return (
             <ul
               key={`ul-${index}`}
-              className="list-disc space-y-2 pl-5 text-sm leading-7 text-slate-300 marker:text-fuchsia-300"
+              className="list-disc space-y-2.5 pl-6 text-[15px] leading-8 text-slate-200/90 marker:text-fuchsia-300"
             >
               {block.items.map((item, itemIndex) => (
-                <li key={`ul-item-${index}-${itemIndex}`}>
+                <li key={`ul-item-${index}-${itemIndex}`} className="whitespace-pre-wrap">
                   <IntelInlineText text={item} />
                 </li>
               ))}
@@ -138,10 +137,10 @@ export default function IntelFeedContent({ content }: IntelFeedContentProps) {
           return (
             <ol
               key={`ol-${index}`}
-              className="list-decimal space-y-2 pl-5 text-sm leading-7 text-slate-300 marker:text-fuchsia-300"
+              className="list-decimal space-y-2.5 pl-6 text-[15px] leading-8 text-slate-200/90 marker:text-fuchsia-300"
             >
               {block.items.map((item, itemIndex) => (
-                <li key={`ol-item-${index}-${itemIndex}`}>
+                <li key={`ol-item-${index}-${itemIndex}`} className="whitespace-pre-wrap">
                   <IntelInlineText text={item} />
                 </li>
               ))}
@@ -150,7 +149,10 @@ export default function IntelFeedContent({ content }: IntelFeedContentProps) {
         }
 
         return (
-          <p key={`paragraph-${index}`} className="text-sm leading-7 text-slate-300">
+          <p
+            key={`paragraph-${index}`}
+            className="whitespace-pre-wrap text-[15px] leading-8 text-slate-200/90"
+          >
             <IntelInlineText text={block.text} />
           </p>
         );

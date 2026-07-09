@@ -22,6 +22,24 @@ class NewsRelevanceFilterTests(unittest.TestCase):
             )
         )
 
+    def test_rejects_weekly_ban_notices_with_patch_image_teaser(self) -> None:
+        self.assertFalse(
+            is_relevant_gaming_news(
+                "PUBG: BATTLEGROUNDS Weekly Bans Notice (06/22~06/28)",
+                "![Patch notes image](https://example.com/banner.png)\n\n"
+                "## Read the full announcement here!",
+            )
+        )
+
+    def test_rejects_steam_placeholder_teaser_with_image(self) -> None:
+        self.assertFalse(
+            is_relevant_gaming_news(
+                "New Blue Zone Ruleset: Rondo",
+                "![Patch notes image](https://clan.fastly.steamstatic.com/images/27971017/example.png)\n\n"
+                "## Read the full announcement here!",
+            )
+        )
+
     def test_allows_patch_notes_even_with_cheat_mentions(self) -> None:
         self.assertTrue(
             is_relevant_gaming_news(

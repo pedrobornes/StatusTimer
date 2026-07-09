@@ -1,6 +1,8 @@
 package com.statustimer.integration;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.statustimer.config.GameAssetPolicy;
+import com.statustimer.config.CatalogMatureContentPolicy;
 import com.statustimer.config.IgdbProperties;
 import com.statustimer.util.IgdbExternalLinksSupport;
 import com.statustimer.util.IgdbPlatformSupport;
@@ -24,8 +26,8 @@ public class IgdbSearchClient {
 
     private static final int STEAM_EXTERNAL_CATEGORY = 1;
     private static final String GAME_FIELDS =
-            "id,name,slug,category,game_type,first_release_date,platforms,cover.image_id,artworks.image_id,screenshots.image_id,"
-                    + "hypes,rating,aggregated_rating,genres.name,videos.video_id,websites.url,websites.category,"
+            "id,name,slug,category,game_type,first_release_date,platforms,cover.image_id,artworks.image_id,artworks.width,artworks.height,screenshots.image_id,screenshots.width,screenshots.height,"
+                    + "hypes,rating,aggregated_rating,genres.name,themes.name,videos.video_id,websites.url,websites.category,"
                     + "external_games.uid,external_games.category,external_games.url";
 
     private final IgdbApiClient apiClient;
@@ -138,6 +140,13 @@ public class IgdbSearchClient {
                 youtubeData.channelUrl()
         );
 
+        List<String> genreNames = parseNames(row.path("genres"));
+        List<String> themeNames = parseNames(row.path("themes"));
+        if (CatalogMatureContentPolicy.hasMatureLabels(genreNames)
+                || CatalogMatureContentPolicy.hasMatureLabels(themeNames)) {
+            return Optional.empty();
+        }
+
         return Optional.of(new IgdbGameMatch(
                 igdbId,
                 name,
@@ -147,7 +156,8 @@ public class IgdbSearchClient {
                 resolveSteamAppId(row.path("external_games")),
                 normalizeRating(row.path("rating")),
                 normalizeRating(row.path("aggregated_rating")),
-                parseNames(row.path("genres")),
+                genreNames,
+                themeNames,
                 row.path("hypes").asInt(0),
                 parseFirstReleaseDate(row.path("first_release_date")),
                 screenshotUrls,
@@ -158,29 +168,76 @@ public class IgdbSearchClient {
     }
 
     private String resolveLogoUrl(JsonNode row, String coverImageId) {
-        JsonNode artworks = row.path("artworks");
-        if (artworks.isArray()) {
-            for (JsonNode artwork : artworks) {
-                String imageId = artwork.path("image_id").asText(null);
-                String hero = IgdbImageUrls.screenshotHuge(imageId);
-                if (hero != null) {
-                    return hero;
-                }
+        String bestArtworkHero = resolveBestLandscapeHero(row.path("artworks"));
+        if (bestArtworkHero != null) {
+            return bestArtworkHero;
+        }
+
+        return resolveFirstHero(row.path("artworks"));
+    }
+
+    private String resolveBestLandscapeHero(JsonNode imageNodes) {
+        if (!imageNodes.isArray()) {
+            return null;
+        }
+
+        String bestLandscape = null;
+        long bestLandscapeArea = -1L;
+
+        for (JsonNode node : imageNodes) {
+            String imageId = node.path("image_id").asText(null);
+            if (!GameAssetPolicy.isArtworkImageId(imageId)) {
+                continue;
+            }
+
+            String heroUrl = IgdbImageUrls.screenshotHuge(imageId);
+            if (heroUrl == null) {
+                continue;
+            }
+
+            int width = node.path("width").asInt(0);
+            int height = node.path("height").asInt(0);
+            if (!GameAssetPolicy.meetsHeroDimensionThreshold(width, height)) {
+                continue;
+            }
+
+            long area = (long) width * height;
+
+            if (bestLandscape == null || area > bestLandscapeArea) {
+                bestLandscape = heroUrl;
+                bestLandscapeArea = area;
             }
         }
 
-        JsonNode screenshots = row.path("screenshots");
-        if (screenshots.isArray()) {
-            for (JsonNode screenshot : screenshots) {
-                String imageId = screenshot.path("image_id").asText(null);
-                String hero = IgdbImageUrls.screenshotHuge(imageId);
-                if (hero != null) {
-                    return hero;
-                }
-            }
+        return bestLandscape;
+    }
+
+    private String resolveFirstHero(JsonNode imageNodes) {
+        if (!imageNodes.isArray()) {
+            return null;
         }
 
-        return IgdbImageUrls.coverBig(coverImageId);
+        for (JsonNode node : imageNodes) {
+            String imageId = node.path("image_id").asText(null);
+            if (!GameAssetPolicy.isArtworkImageId(imageId)) {
+                continue;
+            }
+
+            String heroUrl = IgdbImageUrls.screenshotHuge(imageId);
+            if (heroUrl == null) {
+                continue;
+            }
+
+            int width = node.path("width").asInt(0);
+            int height = node.path("height").asInt(0);
+            if (!GameAssetPolicy.meetsHeroDimensionThreshold(width, height)) {
+                continue;
+            }
+
+            return heroUrl;
+        }
+
+        return null;
     }
 
     private Integer resolveSteamAppId(JsonNode externalGames) {
@@ -337,6 +394,7 @@ public class IgdbSearchClient {
             Integer userRating,
             Integer criticRating,
             List<String> genreNames,
+            List<String> themeNames,
             int hypeCount,
             LocalDate firstReleaseDate,
             List<String> screenshotUrls,

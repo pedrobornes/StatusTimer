@@ -32,6 +32,7 @@ from pipeline.skill_router import SkillRouter
 from pipeline.sync_router import dispatch_skill_result
 from pipeline.tier_trends import TierTrendReport, run_tier_maintenance
 from scrapers.on_demand_jobs import run_on_demand_scrape_jobs
+from scrapers.igdb_media import prefer_hero_url
 from scrapers.scheduled_harvest import run_scheduled_harvest_workload
 from clients.resilient_http import resilient_http
 from scrapers.platform_feeds import fetch_all_platform_feed_events
@@ -459,7 +460,7 @@ def _merge_dynamic_catalog_entries(
         merged[entry.slug] = existing.model_copy(
             update={
                 "steam_app_id": existing.steam_app_id or entry.steam_app_id,
-                "logo_url": existing.logo_url or entry.logo_url,
+                "logo_url": prefer_hero_url(existing.logo_url, entry.logo_url),
                 "cover_url": existing.cover_url or entry.cover_url,
                 "igdb_game_id": existing.igdb_game_id or entry.igdb_game_id,
                 "genre_name": existing.genre_name or entry.genre_name,

@@ -111,6 +111,20 @@ export function formatLocalizedTimestamp(
   }).format(date);
 }
 
+export function formatReleaseDate(
+  input: BackendDateInput,
+  locale = "en-US",
+): string {
+  const date = parseBackendDate(input);
+  if (!date) {
+    return "TBA";
+  }
+
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "long",
+  }).format(date);
+}
+
 export function formatRelativeTime(
   input: BackendDateInput,
   nowMs = Date.now(),

@@ -10,7 +10,7 @@ from pathlib import Path
 from clients.backend_client import BackendClient
 from config.settings import settings
 from models.feed_events import FeedEventKind, FeedSource, ScrapedFeedEvent
-from scrapers.text_utils import is_relevant_gaming_news
+from scrapers.text_utils import is_relevant_gaming_news, is_usable_news_content
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +92,17 @@ def push_news_events(
         if not is_relevant_gaming_news(event.title, event.plain_text):
             logger.info(
                 "Skipping low-signal news for %s: %s",
+                event.game_tag,
+                event.title,
+            )
+            continue
+
+        if not is_usable_news_content(
+            event.plain_text,
+            min_chars=settings.steam_news_min_content_chars,
+        ):
+            logger.info(
+                "Skipping thin Steam news for %s: %s",
                 event.game_tag,
                 event.title,
             )

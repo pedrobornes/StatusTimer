@@ -2,13 +2,10 @@ import type { Metadata } from "next";
 import PageShell from "@/components/PageShell";
 import ReleasesHub from "@/components/ReleasesHub";
 import DashboardError from "@/components/dashboard/DashboardError";
+import { buildReleasesHubMetadata } from "@/lib/seo/releaseMetadata";
 import { getUpcomingReleases } from "@/services/releasesService";
 
-export const metadata: Metadata = {
-  title: "Upcoming Releases",
-  description:
-    "Full game countdown grid with release dates, hype counters, and genre filters.",
-};
+export const metadata: Metadata = buildReleasesHubMetadata();
 
 export const revalidate = 60;
 

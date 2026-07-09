@@ -40,6 +40,31 @@ export function classifyIntelArticle(title: string): IntelArticleKind {
   return "GENERAL";
 }
 
+export function isIncidentNews(title: string): boolean {
+  return classifyIntelArticle(title) === "INCIDENT";
+}
+
+export function getDashboardNewsAccent(title: string): {
+  borderClass: string;
+  badgeClass: string;
+  label: string | null;
+} {
+  if (isIncidentNews(title)) {
+    return {
+      label: "Incident",
+      badgeClass:
+        "border-rose-400/30 bg-rose-500/10 text-rose-100",
+      borderClass: "hover:border-rose-400/30",
+    };
+  }
+
+  return {
+    label: null,
+    badgeClass: "",
+    borderClass: "hover:border-violet-400/25",
+  };
+}
+
 export function getIntelArticleAccent(kind: IntelArticleKind): {
   badgeClass: string;
   borderClass: string;
@@ -135,9 +160,13 @@ export function cleanNewsDisplayTitle(title: string, gameTag?: string | null): s
 }
 
 /** Plain-text preview for news cards (no markdown artifacts). */
-/** Ensures inline **bold** markers have word boundaries when HTML conversion glues them. */
+/** Ensures inline **bold** and [link](url) markers have word boundaries when HTML conversion glues them. */
 export function normalizeBoldSpacing(text: string): string {
-  const normalized = text.replace(/\*\*([^*]+)\*\*/g, (_, inner: string) => {
+  const unescaped = text
+    .replace(/\\([\[\]])/g, "$1")
+    .replace(/\\t/g, "\t");
+
+  const normalized = unescaped.replace(/\*\*([^*]+)\*\*/g, (_, inner: string) => {
     return `**${inner.trim()}**`;
   });
 
@@ -146,8 +175,15 @@ export function normalizeBoldSpacing(text: string): string {
     .replace(/(\*\*[^*]+\*\*)([A-Za-z0-9])/g, "$1 $2");
 }
 
+export function normalizeMarkdownSpacing(text: string): string {
+  const boldFixed = normalizeBoldSpacing(text);
+  return boldFixed
+    .replace(/([A-Za-z0-9])(\[([^\]]+)\]\([^)]+\))/g, "$1 $2")
+    .replace(/(\[([^\]]+)\]\([^)]+\))([A-Za-z0-9])/g, "$1 $2");
+}
+
 export function buildNewsExcerpt(content: string, maxLength = 180): string {
-  const plain = normalizeBoldSpacing(content)
+  const plain = normalizeMarkdownSpacing(content)
     .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
     .replace(/^#{1,3}\s+/gm, "")
     .replace(/^[-*•·]\s+/gm, "")
@@ -239,11 +275,21 @@ export function isDecorativeNewsImage(url: string): boolean {
 
 export function resolveNewsImageUrl(url: string): string {
   const decoded = decodeSteamLinkfilter(url);
-  return isImageUrl(decoded) ? decoded : url;
+  if (!isImageUrl(decoded)) {
+    return url;
+  }
+
+  if (/steamstatic\.com/i.test(decoded) && /\/english\.png$/i.test(decoded)) {
+    return decoded.replace(/\/english\.png$/i, ".png");
+  }
+
+  return decoded;
 }
 
 function sanitizeNewsContent(content: string): string {
   return content
+    .replace(/\\([\[\]])/g, "$1")
+    .replace(/\\t/g, "\t")
     .split(/\r?\n/)
     .filter((line) => line.trim() !== "-" && line.trim() !== "*")
     .join("\n");
@@ -263,7 +309,7 @@ function reflowWallOfText(content: string): string[] {
 function normalizeContentLines(content: string): string[] {
   const rawLines = content
     .split(/\r?\n/)
-    .map((line) => line.trim())
+    .map((line) => line.trimEnd())
     .filter(Boolean);
 
   if (rawLines.length > 1) {
@@ -335,14 +381,14 @@ function parseLineKind(line: string): {
 
   return {
     kind: "paragraph",
-    text: normalizeBoldSpacing(line).trim(),
+    text: normalizeMarkdownSpacing(line).trim(),
   };
 }
 
 const combinedPattern = /!\[([^\]]*)\]\(([^)]+)\)|\[([^\]]+)\]\(([^)]+)\)/g;
 
 export function parseIntelContentBlocks(content: string): IntelContentBlock[] {
-  const lines = normalizeContentLines(sanitizeNewsContent(normalizeBoldSpacing(content)));
+  const lines = normalizeContentLines(sanitizeNewsContent(normalizeMarkdownSpacing(content)));
   const blocks: IntelContentBlock[] = [];
   let bulletBuffer: string[] = [];
   let numberedBuffer: string[] = [];
@@ -462,7 +508,7 @@ function splitTextInlineParts(text: string): IntelInlinePart[] {
 export function parseIntelInlineParts(text: string): IntelInlinePart[] {
   const parts: IntelInlinePart[] = [];
   let lastIndex = 0;
-  const normalizedText = normalizeBoldSpacing(text);
+  const normalizedText = normalizeMarkdownSpacing(text);
 
   for (const match of normalizedText.matchAll(combinedPattern)) {
     const index = match.index ?? 0;

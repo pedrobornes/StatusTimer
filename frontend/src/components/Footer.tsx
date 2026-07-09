@@ -17,6 +17,7 @@ const SUPPORT_LINKS = [
 ] as const;
 
 const LEGAL_LINKS = [
+  { href: APP_ROUTES.legalNotice, label: "Legal Notice" },
   { href: APP_ROUTES.privacy, label: "Privacy Policy" },
   { href: APP_ROUTES.terms, label: "Terms of Service" },
   { href: APP_ROUTES.cookies, label: "Cookie Policy" },
@@ -63,8 +64,8 @@ export default function Footer() {
                 {SITE_NAME}
               </p>
               <p className="mt-3 text-sm leading-relaxed text-slate-400">
-                Independent live server monitoring, release tracking, and
-                game-specific updates.
+                Independent live game server monitoring, social platform
+                connectivity checks, release tracking, and game-specific updates.
               </p>
             </div>
 

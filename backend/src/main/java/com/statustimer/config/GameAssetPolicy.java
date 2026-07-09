@@ -2,11 +2,24 @@ package com.statustimer.config;
 
 import com.statustimer.entity.Game;
 import java.util.Locale;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public final class GameAssetPolicy {
 
     public static final String LOGO_NONE = "none";
     private static final String IGDB_IMAGE_HOST = "images.igdb.com";
+    private static final int HERO_MIN_WIDTH = 1920;
+    private static final int HERO_MIN_HEIGHT = 720;
+    private static final Pattern IGDB_IMAGE_ID_PATTERN = Pattern.compile(
+            "/t_[^/]+/([^/.]+)\\.jpg",
+            Pattern.CASE_INSENSITIVE
+    );
+    private static final Set<String> BLOCKED_HERO_IMAGE_IDS = Set.of(
+            // 256x256 logo artwork previously pinned for GTA V.
+            "ar667x"
+    );
 
     private GameAssetPolicy() {
     }
@@ -18,7 +31,12 @@ public final class GameAssetPolicy {
     ) {
         String sanitizedLogo = sanitizeImageUrl(logoUrl);
         if (sanitizedLogo != null) {
-            game.setLogoUrl(sanitizedLogo);
+            String currentLogo = sanitizeImageUrl(game.getLogoUrl());
+            if (currentLogo == null
+                    || !isSuitableHeroUrl(currentLogo)
+                    || isSuitableHeroUrl(sanitizedLogo)) {
+                game.setLogoUrl(sanitizedLogo);
+            }
         }
 
         String sanitizedCover = sanitizeImageUrl(coverUrl);
@@ -59,9 +77,67 @@ public final class GameAssetPolicy {
     }
 
     public static boolean needsIgdbAssets(Game game) {
-        return !isIgdbImageUrl(game.getLogoUrl())
-                || !isIgdbImageUrl(game.getCoverUrl())
-                || isVerticalCoverAsset(game.getLogoUrl());
+        return !isSuitableHeroUrl(game.getLogoUrl())
+                || !isIgdbImageUrl(game.getCoverUrl());
+    }
+
+    public static boolean isSuitableHeroUrl(String url) {
+        String sanitized = sanitizeImageUrl(url);
+        if (sanitized == null) {
+            return false;
+        }
+
+        if (isVerticalCoverAsset(sanitized)) {
+            return false;
+        }
+
+        String imageId = extractIgdbImageId(sanitized);
+        if (imageId != null && BLOCKED_HERO_IMAGE_IDS.contains(imageId)) {
+            return false;
+        }
+
+        if (imageId != null && isBoxArtImageId(imageId)) {
+            return false;
+        }
+
+        if (imageId != null && !isArtworkImageId(imageId)) {
+            return false;
+        }
+
+        return !isGameplayScreenshotHero(sanitized);
+    }
+
+    public static boolean isArtworkImageId(String imageId) {
+        return imageId != null
+                && imageId.toLowerCase(Locale.ROOT).startsWith("ar");
+    }
+
+    public static boolean isBoxArtImageId(String imageId) {
+        return imageId != null
+                && imageId.toLowerCase(Locale.ROOT).startsWith("co");
+    }
+
+    public static boolean isGameplayScreenshotHero(String url) {
+        String imageId = extractIgdbImageId(url);
+        return imageId != null && imageId.toLowerCase(Locale.ROOT).startsWith("sc");
+    }
+
+    public static String extractIgdbImageId(String url) {
+        String sanitized = sanitizeImageUrl(url);
+        if (sanitized == null) {
+            return null;
+        }
+
+        Matcher matcher = IGDB_IMAGE_ID_PATTERN.matcher(sanitized);
+        if (!matcher.find()) {
+            return null;
+        }
+
+        return matcher.group(1);
+    }
+
+    public static boolean meetsHeroDimensionThreshold(int width, int height) {
+        return width >= HERO_MIN_WIDTH && height >= HERO_MIN_HEIGHT && width > height;
     }
 
     public static boolean isVerticalCoverAsset(String url) {

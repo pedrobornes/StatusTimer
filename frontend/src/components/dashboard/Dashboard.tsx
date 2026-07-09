@@ -8,6 +8,7 @@ import UpcomingReleasesPanel from "@/components/dashboard/UpcomingReleasesPanel"
 import GameSearchBar from "@/components/ui/GameSearchBar";
 import StatusTimerSonarLogo from "@/components/ui/StatusTimerSonarLogo";
 import { APP_ROUTES } from "@/config/routes";
+import { HOME_HERO_SUBTITLE } from "@/config/seo";
 import type { GamingNews, ServerStatus, UpcomingRelease } from "@/types/api";
 import type { GameTelemetry, TelemetryHistorySnapshot, TelemetryIncident } from "@/types/telemetry";
 
@@ -15,6 +16,7 @@ interface DashboardProps {
   gameTelemetry: GameTelemetry[];
   historyBySlug: Record<string, TelemetryHistorySnapshot[]>;
   releases: UpcomingRelease[];
+  unreleasedSlugs?: string[];
   incidents: TelemetryIncident[];
   statuses: ServerStatus[];
   news: GamingNews[];
@@ -24,10 +26,14 @@ export default function Dashboard({
   gameTelemetry,
   historyBySlug,
   releases,
+  unreleasedSlugs = [],
   incidents,
   statuses,
   news,
 }: DashboardProps) {
+  const upcomingReleaseSlugs = unreleasedSlugs.length > 0
+    ? unreleasedSlugs
+    : releases.map((release) => release.slug);
   const socialPlatformAlerts = statuses.filter(
     (status) => status.category === "SOCIAL" && status.isUp === false,
   );
@@ -45,8 +51,7 @@ export default function Dashboard({
             </div>
           </div>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300 md:text-base">
-            Live server status, player counts, Twitch viewership, incident
-            reports, and release dates — all in one place.
+            {HOME_HERO_SUBTITLE}
           </p>
 
           <div className="mt-6">
@@ -76,6 +81,7 @@ export default function Dashboard({
             <IncidentLog
               incidents={incidents}
               platformAlerts={socialPlatformAlerts}
+              excludedGameSlugs={upcomingReleaseSlugs}
               sidebar
             />
             <MonitorNewsPanel news={news} />

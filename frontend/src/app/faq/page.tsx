@@ -7,7 +7,7 @@ import { SITE_FAQ_ITEMS } from "@/lib/siteFaq";
 export const metadata: Metadata = {
   title: "Frequently Asked Questions",
   description:
-    "Answers about StatusTimer server monitoring, data sources, accuracy, and game-specific news.",
+    "Answers about StatusTimer game server monitoring, social platform status, release countdowns, data sources, and accuracy.",
 };
 
 export default function FaqPage() {
@@ -15,7 +15,7 @@ export default function FaqPage() {
     <PageShell
       badge="Support"
       title="Frequently Asked Questions"
-      subtitle="Common questions about monitoring, data accuracy, and how StatusTimer works."
+      subtitle="Common questions about game monitoring, social platform checks, releases, and data accuracy."
     >
       <div className="space-y-3">
         {SITE_FAQ_ITEMS.map((item) => (

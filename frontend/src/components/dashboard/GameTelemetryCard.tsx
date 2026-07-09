@@ -31,6 +31,10 @@ interface GameTelemetryCardProps {
   serverStatusPending?: boolean;
   /** Catalog-only titles show Twitch/IGDB data without server uptime. */
   catalogOnly?: boolean;
+  /** Applies a unified accent color to playing/watching metrics. */
+  unifiedMetricsColors?: boolean;
+  /** Controls the status legend layout under the timeline. */
+  timelineLegendLayout?: "inline" | "stacked";
 }
 
 export default memo(function GameTelemetryCard({
@@ -41,6 +45,8 @@ export default memo(function GameTelemetryCard({
   platforms = [],
   serverStatusPending = false,
   catalogOnly = false,
+  unifiedMetricsColors = false,
+  timelineLegendLayout = "inline",
 }: GameTelemetryCardProps) {
   const title = resolveGameDisplayName(telemetry.gameSlug, telemetry);
   const statusHref = APP_ROUTES.status(telemetry.gameSlug);
@@ -72,6 +78,7 @@ export default memo(function GameTelemetryCard({
             twitchViewers={telemetry.twitchViewers}
             orientation="vertical"
             className="mt-0"
+            unifiedColors={unifiedMetricsColors}
           />
         </div>
 
@@ -164,7 +171,7 @@ export default memo(function GameTelemetryCard({
           ) : null}
         </div>
       ) : (
-        <StatusTimeline snapshots={history} />
+        <StatusTimeline snapshots={history} legendLayout={timelineLegendLayout} />
       )}
 
       {!serverStatusPending ? (

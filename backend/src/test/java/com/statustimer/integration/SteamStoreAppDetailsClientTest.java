@@ -78,6 +78,30 @@ class SteamStoreAppDetailsClientTest {
         assertTrue(metadata.get().freeToPlay());
     }
 
+    @Test
+    void parseMetadataDetectsAdultOnlySteamListing() throws Exception {
+        String body = """
+                {
+                  "1234": {
+                    "success": true,
+                    "data": {
+                      "required_age": "18",
+                      "release_date": {
+                        "coming_soon": false,
+                        "date": "1 Jan, 2024"
+                      },
+                      "genres": [{"description": "Simulation"}]
+                    }
+                  }
+                }
+                """;
+
+        var metadata = invokeParse(body, 1234);
+
+        assertTrue(metadata.isPresent());
+        assertTrue(metadata.get().adultContent());
+    }
+
     private java.util.Optional<SteamStoreAppDetailsClient.SteamAppMetadata> invokeParse(
             String body,
             int appId

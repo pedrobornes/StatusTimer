@@ -9,6 +9,26 @@ import org.junit.jupiter.api.Test;
 class GameAssetPolicyTest {
 
     @Test
+    void applyIgdbAssetsUpgradesUnsuitableHero() {
+        Game game = Game.builder()
+                .slug("grand-theft-auto-vi")
+                .gameName("Grand Theft Auto VI")
+                .logoUrl("https://images.igdb.com/igdb/image/upload/t_screenshot_huge/sc10vlj.jpg")
+                .build();
+
+        GameAssetPolicy.applyIgdbAssets(
+                game,
+                "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/ar52fz.jpg",
+                "https://images.igdb.com/igdb/image/upload/t_cover_big/cocaa5.jpg"
+        );
+
+        assertEquals(
+                "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/ar52fz.jpg",
+                game.getLogoUrl()
+        );
+    }
+
+    @Test
     void applyIgdbAssetsPersistsLogoAndCoverUrls() {
         Game game = Game.builder()
                 .slug("grand-theft-auto-vi")
@@ -79,6 +99,51 @@ class GameAssetPolicyTest {
         assertEquals(
                 GameAssetPolicy.LOGO_NONE,
                 GameAssetPolicy.resolveLogoUrl("unknown-game", null)
+        );
+    }
+
+    @Test
+    void isSuitableHeroUrlRejectsTinyPinnedArtwork() {
+        org.junit.jupiter.api.Assertions.assertFalse(
+                GameAssetPolicy.isSuitableHeroUrl(
+                        "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/ar667x.jpg"
+                )
+        );
+    }
+
+    @Test
+    void isSuitableHeroUrlAcceptsLandscapeArtwork() {
+        org.junit.jupiter.api.Assertions.assertTrue(
+                GameAssetPolicy.isSuitableHeroUrl(
+                        "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/ar4kon.jpg"
+                )
+        );
+    }
+
+    @Test
+    void isSuitableHeroUrlRejectsBoxArtImageId() {
+        org.junit.jupiter.api.Assertions.assertFalse(
+                GameAssetPolicy.isSuitableHeroUrl(
+                        "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/cocaa5.jpg"
+                )
+        );
+    }
+
+    @Test
+    void isSuitableHeroUrlRejectsNonArtworkImageId() {
+        org.junit.jupiter.api.Assertions.assertFalse(
+                GameAssetPolicy.isSuitableHeroUrl(
+                        "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/hjnzngnrtwr82jzmmkef.jpg"
+                )
+        );
+    }
+
+    @Test
+    void isSuitableHeroUrlRejectsGameplayScreenshot() {
+        org.junit.jupiter.api.Assertions.assertFalse(
+                GameAssetPolicy.isSuitableHeroUrl(
+                        "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/sc10f95.jpg"
+                )
         );
     }
 

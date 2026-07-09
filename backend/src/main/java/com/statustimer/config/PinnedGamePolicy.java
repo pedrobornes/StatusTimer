@@ -31,7 +31,7 @@ public final class PinnedGamePolicy {
             730,
             Set.of(10),
             Set.of("counter-strike"),
-            "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/ar439t.jpg",
+            "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/ar4kon.jpg",
             "https://images.igdb.com/igdb/image/upload/t_cover_big/coaczd.jpg"
     );
 
@@ -42,7 +42,7 @@ public final class PinnedGamePolicy {
             3240220,
             Set.of(271590),
             Set.of(),
-            "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/ar667x.jpg",
+            "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/ar4cy.jpg",
             "https://images.igdb.com/igdb/image/upload/t_cover_big/co2lbd.jpg"
     );
 
@@ -139,6 +139,7 @@ public final class PinnedGamePolicy {
         }
 
         return !GameAssetPolicy.isRenderableLogo(game.getLogoUrl())
+                || !GameAssetPolicy.isSuitableHeroUrl(game.getLogoUrl())
                 || !GameAssetPolicy.isIgdbImageUrl(game.getCoverUrl());
     }
 

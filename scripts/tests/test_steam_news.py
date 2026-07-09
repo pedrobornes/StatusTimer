@@ -25,8 +25,8 @@ RICH_RSS = """<?xml version="1.0" encoding="UTF-8"?>
   <channel>
     <title>Steam News</title>
     <item>
-      <title>PUBG: BATTLEGROUNDS Weekly Bans Notice</title>
-      <guid>steam-news-bans</guid>
+      <title>PUBG: BATTLEGROUNDS July Update</title>
+      <guid>steam-news-update</guid>
       <pubDate>Mon, 30 Jun 2025 12:00:00 +0000</pubDate>
       <contents><![CDATA[
         <p>Intro paragraph with enough detail to pass the minimum content threshold for news ingestion.</p>
@@ -101,7 +101,7 @@ class SteamNewsScraperTests(unittest.TestCase):
 
         self.assertEqual(len(events), 1)
         event = events[0]
-        self.assertEqual(event.title, "PUBG: BATTLEGROUNDS Weekly Bans Notice")
+        self.assertEqual(event.title, "July Update")
         self.assertIn("## What's New?", event.plain_text)
         self.assertIn("- Fixed an issue where players could not reconnect.", event.plain_text)
 

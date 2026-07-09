@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BrainCircuit, CalendarDays, Sparkles } from "lucide-react";
+import { ArrowRight, BrainCircuit, CalendarDays } from "lucide-react";
 import IntelFeedContent from "@/components/dashboard/IntelFeedContent";
 import SidebarPanelHeader, {
   SidebarEmptyState,
@@ -9,9 +9,8 @@ import RelativeTime from "@/components/ui/RelativeTime";
 import { APP_ROUTES } from "@/config/routes";
 import {
   buildNewsExcerpt,
-  classifyIntelArticle,
   cleanNewsDisplayTitle,
-  getIntelArticleAccent,
+  getDashboardNewsAccent,
   resolveNewsGameName,
 } from "@/lib/intelFeed";
 import { resolveCatalogImageUrl } from "@/lib/gameAssets";
@@ -47,8 +46,7 @@ export default function NewsFeedPanel({
   const showViewMore = Boolean(resolvedViewMoreHref);
 
   const resolveArticleHref = (article: GamingNews) => {
-    const articleGameSlug = gameSlug ?? article.gameTag;
-    return APP_ROUTES.gameNewsArticle(articleGameSlug, article.slug);
+    return APP_ROUTES.newsArticle(article.slug);
   };
   const panelClass = fillHeight
     ? "glass-panel flex min-h-0 flex-col self-start rounded-3xl p-6 md:p-8 xl:sticky xl:top-24 xl:max-h-[calc(100vh-7rem)]"
@@ -131,8 +129,7 @@ export default function NewsFeedPanel({
         ) : (
           <div className={sidebar ? "space-y-3" : "space-y-4"}>
             {visibleNews.map((article) => {
-              const kind = classifyIntelArticle(article.title);
-              const accent = getIntelArticleAccent(kind);
+              const accent = getDashboardNewsAccent(article.title);
               const displayTitle = cleanNewsDisplayTitle(
                 article.title,
                 article.gameTag,
@@ -163,11 +160,13 @@ export default function NewsFeedPanel({
 
                           <div className="min-w-0 flex-1">
                             <div className="mb-2 flex flex-wrap items-center gap-2">
-                              <span
-                                className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${accent.badgeClass}`}
-                              >
-                                {accent.label}
-                              </span>
+                              {accent.label ? (
+                                <span
+                                  className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${accent.badgeClass}`}
+                                >
+                                  {accent.label}
+                                </span>
+                              ) : null}
                               <RelativeTime
                                 value={article.publishedAt ?? article.createdAt}
                                 className="text-[10px] text-slate-500"
@@ -196,12 +195,13 @@ export default function NewsFeedPanel({
                       {isGameScoped ? (
                         <>
                           <div className="mb-3 flex flex-wrap items-center gap-2">
-                            <span
-                              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${accent.badgeClass}`}
-                            >
-                              <Sparkles className="h-3 w-3" />
-                              {accent.label}
-                            </span>
+                            {accent.label ? (
+                              <span
+                                className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${accent.badgeClass}`}
+                              >
+                                {accent.label}
+                              </span>
+                            ) : null}
                             <RelativeTime
                               value={article.publishedAt ?? article.createdAt}
                               className="inline-flex items-center gap-1 text-xs text-slate-400"
@@ -230,12 +230,13 @@ export default function NewsFeedPanel({
 
                             <div className="min-w-0 flex-1">
                               <div className="mb-3 flex flex-wrap items-center gap-2">
-                                <span
-                                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${accent.badgeClass}`}
-                                >
-                                  <Sparkles className="h-3 w-3" />
-                                  {accent.label}
-                                </span>
+                                {accent.label ? (
+                                  <span
+                                    className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${accent.badgeClass}`}
+                                  >
+                                    {accent.label}
+                                  </span>
+                                ) : null}
                                 <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-slate-300">
                                   {gameLabel}
                                 </span>

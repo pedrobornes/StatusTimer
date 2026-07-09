@@ -60,6 +60,7 @@ class Settings(BaseSettings):
     tier_rebalance_interval_days: int = 3
     tier_rebalance_force_monday: bool = True
     feed_lookback_days: int = 7
+    news_max_ingest_age_days: int = 30
     steam_news_max_items: int = 10
     steam_news_top_n: int = 15
     steam_news_min_content_chars: int = 120

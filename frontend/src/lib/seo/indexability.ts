@@ -30,3 +30,15 @@ export function buildRobotsDirective(indexable: boolean) {
     },
   };
 }
+
+/** Listing/hub pages that should pass link equity but not rank themselves. */
+export function buildNoindexFollowRobots() {
+  return {
+    index: false,
+    follow: true,
+    googleBot: {
+      index: false,
+      follow: true,
+    },
+  };
+}

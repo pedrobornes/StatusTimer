@@ -14,6 +14,7 @@ public record IndexabilityProperties(
     public static final String STALE_REASON_API_OUTAGE = "API_OUTAGE";
     public static final String STALE_REASON_STALE_TELEMETRY = "STALE_TELEMETRY";
     public static final String STALE_REASON_TWITCH_CATEGORY = "TWITCH_CATEGORY";
+    public static final String STALE_REASON_MATURE_CONTENT = "MATURE_CONTENT";
 
     public IndexabilityProperties {
         if (monitoringAgeHours <= 0) {

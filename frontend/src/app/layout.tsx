@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Footer from "@/components/Footer";
 import Navigation from "@/components/Navigation";
+import {
+  SITE_DEFAULT_DESCRIPTION,
+  SITE_DEFAULT_KEYWORDS,
+} from "@/config/seo";
 import "./globals.css";
 
 const inter = Inter({
@@ -18,34 +22,11 @@ export const metadata: Metadata = {
     default: "StatusTimer | Live Gaming Server Status Monitor",
     template: "%s | StatusTimer",
   },
-  description:
-    "Check live gaming server status, player counts, outages, and upcoming releases. Independent monitoring for multiplayer games.",
-  keywords: [
-    "gaming server status",
-    "platform uptime",
-    "Steam status",
-    "Discord status",
-    "gaming news",
-    "live server monitor",
-    "Fortnite status tracker",
-    "live countdowns",
-    "Valorant network status",
-    "multiplayer server monitor",
-    "upcoming game release dates",
-    "Fortnite server status",
-    "Valorant server status",
-    "League of Legends server status",
-    "Call of Duty server status",
-    "Apex Legends server status",
-    "Minecraft server status",
-    "Roblox server status",
-    "gaming platform monitor",
-    "live gaming server status",
-  ],
+  description: SITE_DEFAULT_DESCRIPTION,
+  keywords: [...SITE_DEFAULT_KEYWORDS],
   openGraph: {
-    title: "StatusTimer | Live Gaming Server Status & Game News",
-    description:
-      "Check live gaming server status, player counts, outages, and upcoming releases. Independent monitoring for multiplayer games.",
+    title: "StatusTimer | Live Game & Social Platform Status",
+    description: SITE_DEFAULT_DESCRIPTION,
     url: siteUrl,
     siteName: "StatusTimer",
     locale: "en_US",
@@ -53,9 +34,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "StatusTimer | Live Gaming Server Status & Game News",
-    description:
-      "Check live gaming server status, player counts, outages, and upcoming releases. Independent monitoring for multiplayer games.",
+    title: "StatusTimer | Live Game & Social Platform Status",
+    description: SITE_DEFAULT_DESCRIPTION,
   },
   robots: {
     index: true,

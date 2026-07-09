@@ -16,6 +16,7 @@ interface TelemetryStatusHubProps {
   telemetryHistoryBySlug: Record<string, TelemetryHistorySnapshot[]>;
   platformsBySlug: Record<string, PlatformDetail[]>;
   incidents: TelemetryIncident[];
+  unreleasedSlugs?: string[];
   catalogTotal?: number;
 }
 
@@ -25,8 +26,17 @@ export default function TelemetryStatusHub({
   telemetryHistoryBySlug,
   platformsBySlug,
   incidents,
+  unreleasedSlugs = [],
   catalogTotal,
 }: TelemetryStatusHubProps) {
+  const upcomingGameSlugs = useMemo(() => {
+    const fromTelemetry = gameTelemetry
+      .filter((entry) => entry.isUpcoming === true || entry.status === "UPCOMING")
+      .map((entry) => entry.gameSlug);
+
+    return [...new Set([...fromTelemetry, ...unreleasedSlugs])];
+  }, [gameTelemetry, unreleasedSlugs]);
+
   const socialPlatformAlerts = useMemo(
     () =>
       statuses.filter(
@@ -47,6 +57,7 @@ export default function TelemetryStatusHub({
       <IncidentLog
         incidents={incidents}
         platformAlerts={socialPlatformAlerts}
+        excludedGameSlugs={upcomingGameSlugs}
         sectionTitle="Recent Problems"
         eyebrow="Down & Maintenance"
       />

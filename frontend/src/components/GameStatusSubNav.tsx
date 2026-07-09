@@ -69,7 +69,7 @@ export default function GameStatusSubNav({
   return (
     <nav
       aria-label="Game sections"
-      className="mb-8 flex flex-wrap gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-1.5"
+      className="mx-auto mb-8 flex w-fit flex-wrap justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-1.5"
     >
       {tabs.map(({ key, href, label, icon: Icon }) => {
         const active = isActive(href, key);

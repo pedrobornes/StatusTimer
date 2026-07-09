@@ -4,47 +4,80 @@ import { useEffect, useState } from "react";
 import { getCountdownParts } from "@/lib/countdown";
 import type { CountdownParts } from "@/types/api";
 
+type ReleaseCountdownVariant = "default" | "compact" | "sidebar";
+
 interface ReleaseCountdownProps {
   releaseDate: string | null;
   compact?: boolean;
+  variant?: ReleaseCountdownVariant;
 }
 
 interface CountdownUnitProps {
   label: string;
   value: number;
-  compact?: boolean;
+  variant: ReleaseCountdownVariant;
 }
 
-function CountdownUnit({ label, value, compact = false }: CountdownUnitProps) {
+const COUNTDOWN_LABELS: Record<
+  ReleaseCountdownVariant,
+  [string, string, string]
+> = {
+  default: ["Days", "Hours", "Minutes"],
+  compact: ["Days", "Hrs", "Min"],
+  sidebar: ["Days", "Hrs", "Min"],
+};
+
+function resolveVariant(
+  compact: boolean,
+  variant?: ReleaseCountdownVariant,
+): ReleaseCountdownVariant {
+  if (variant) {
+    return variant;
+  }
+
+  return compact ? "compact" : "default";
+}
+
+function CountdownUnit({ label, value, variant }: CountdownUnitProps) {
+  const unitClass =
+    variant === "sidebar"
+      ? "px-2.5 py-2.5"
+      : variant === "compact"
+        ? "px-2 py-2"
+        : "px-4 py-3";
+
+  const valueClass =
+    variant === "sidebar"
+      ? "text-xl"
+      : variant === "compact"
+        ? "text-lg"
+        : "text-2xl";
+
+  const labelClass =
+    variant === "sidebar" || variant === "compact"
+      ? "text-[10px] uppercase tracking-[0.14em]"
+      : "text-[11px] uppercase tracking-[0.25em]";
+
   return (
     <div
-      className={`rounded-2xl border border-cyan-400/15 bg-cyan-500/5 text-center ${
-        compact ? "px-2 py-2" : "px-4 py-3"
-      }`}
+      className={`rounded-2xl border border-cyan-400/15 bg-cyan-500/5 text-center ${unitClass}`}
     >
-      <p
-        className={`font-bold tabular-nums text-white ${
-          compact ? "text-lg" : "text-2xl"
-        }`}
-      >
+      <p className={`font-bold tabular-nums text-white ${valueClass}`}>
         {String(value).padStart(2, "0")}
       </p>
-      <p className="mt-1 text-[11px] uppercase tracking-[0.25em] text-cyan-200/60">
-        {label}
-      </p>
+      <p className={`mt-1 text-cyan-200/60 ${labelClass}`}>{label}</p>
     </div>
   );
 }
 
-function CountdownPlaceholder({ compact = false }: { compact?: boolean }) {
+function CountdownPlaceholder({ variant }: { variant: ReleaseCountdownVariant }) {
+  const [daysLabel, hoursLabel, minutesLabel] = COUNTDOWN_LABELS[variant];
+
   return (
-    <div
-      className="grid grid-cols-3 gap-3"
-      aria-hidden
-    >
-      <CountdownUnit label="Days" value={0} compact={compact} />
-      <CountdownUnit label="Hours" value={0} compact={compact} />
-      <CountdownUnit label="Minutes" value={0} compact={compact} />
+    <div className="grid grid-cols-3 gap-2" aria-hidden>
+      <CountdownUnit label={daysLabel} value={0} variant={variant} />
+      <CountdownUnit label={hoursLabel} value={0} variant={variant} />
+      <CountdownUnit label={minutesLabel} value={0} variant={variant} />
     </div>
   );
 }
@@ -52,7 +85,11 @@ function CountdownPlaceholder({ compact = false }: { compact?: boolean }) {
 export default function ReleaseCountdown({
   releaseDate,
   compact = false,
+  variant,
 }: ReleaseCountdownProps) {
+  const resolvedVariant = resolveVariant(compact, variant);
+  const [daysLabel, hoursLabel, minutesLabel] =
+    COUNTDOWN_LABELS[resolvedVariant];
   const [countdown, setCountdown] = useState<CountdownParts | null>(null);
 
   useEffect(() => {
@@ -82,7 +119,7 @@ export default function ReleaseCountdown({
   }
 
   if (countdown === null) {
-    return <CountdownPlaceholder compact={compact} />;
+    return <CountdownPlaceholder variant={resolvedVariant} />;
   }
 
   if (countdown.isReleased) {
@@ -95,16 +132,24 @@ export default function ReleaseCountdown({
 
   return (
     <div
-      className="grid grid-cols-3 gap-3"
+      className={`grid grid-cols-3 ${resolvedVariant === "default" ? "gap-3" : "gap-2"}`}
       aria-live="polite"
       aria-label="Release countdown"
     >
-      <CountdownUnit label="Days" value={countdown.days} compact={compact} />
-      <CountdownUnit label="Hours" value={countdown.hours} compact={compact} />
       <CountdownUnit
-        label="Minutes"
+        label={daysLabel}
+        value={countdown.days}
+        variant={resolvedVariant}
+      />
+      <CountdownUnit
+        label={hoursLabel}
+        value={countdown.hours}
+        variant={resolvedVariant}
+      />
+      <CountdownUnit
+        label={minutesLabel}
         value={countdown.minutes}
-        compact={compact}
+        variant={resolvedVariant}
       />
     </div>
   );

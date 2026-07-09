@@ -8,7 +8,10 @@ import com.statustimer.repository.GameRepository;
 import com.statustimer.repository.GamingNewsRepository;
 import com.statustimer.util.SlugUtils;
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.Pageable;
@@ -20,13 +23,27 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class GamingNewsService {
 
+    private static final int MAX_ITEMS_PER_GAME_IN_LATEST = 2;
+
     private final GamingNewsRepository gamingNewsRepository;
     private final GameRepository gameRepository;
     private final GameCatalogService gameCatalogService;
 
     @Transactional(readOnly = true)
     public List<GamingNewsResponse> findLatest() {
+        Map<String, Integer> perGameCount = new HashMap<>();
+
         return gamingNewsRepository.findAllByOrderByCreatedAtDesc().stream()
+                .sorted(Comparator.comparing(this::resolveSortTime).reversed())
+                .filter(entity -> {
+                    String key = resolveGroupingKey(entity);
+                    int current = perGameCount.getOrDefault(key, 0);
+                    if (current >= MAX_ITEMS_PER_GAME_IN_LATEST) {
+                        return false;
+                    }
+                    perGameCount.put(key, current + 1);
+                    return true;
+                })
                 .map(entity -> GamingNewsResponse.fromEntity(entity, gameCatalogService))
                 .toList();
     }
@@ -41,6 +58,7 @@ public class GamingNewsService {
 
         if (!linked.isEmpty()) {
             return linked.stream()
+                .sorted(Comparator.comparing(this::resolveSortTime).reversed())
                 .map(entity -> GamingNewsResponse.fromEntity(entity, gameCatalogService))
                 .toList();
         }
@@ -48,6 +66,7 @@ public class GamingNewsService {
         return gamingNewsRepository
                 .findByGameTagOrderByCreatedAtDesc(canonicalSlug, Pageable.ofSize(limit))
                 .stream()
+                .sorted(Comparator.comparing(this::resolveSortTime).reversed())
                 .map(entity -> GamingNewsResponse.fromEntity(entity, gameCatalogService))
                 .toList();
     }
@@ -55,7 +74,7 @@ public class GamingNewsService {
     @Transactional
     public GamingNewsResponse create(CreateGamingNewsRequest request) {
         LocalDateTime ingestedAt = LocalDateTime.now();
-        String baseSlug = SlugUtils.toSlug(request.gameTag() + "-" + request.title());
+        String baseSlug = buildNewsBaseSlug(request.gameTag(), request.title());
         String resolvedSlug = reserveUniqueNewsSlug(baseSlug);
         Game linkedGame = resolveLinkedGame(request.gameTag());
 
@@ -86,6 +105,27 @@ public class GamingNewsService {
                 ));
 
         return GamingNewsResponse.fromEntity(entity, gameCatalogService);
+    }
+
+    private String buildNewsBaseSlug(String gameTag, String title) {
+        String normalizedTag = gameTag == null ? "" : gameTag.trim();
+        String normalizedTitle = title == null ? "" : title.trim();
+        String tagSlug = SlugUtils.toSlug(normalizedTag);
+        String titleSlug = SlugUtils.toSlug(normalizedTitle);
+
+        if (tagSlug.isBlank()) {
+            return titleSlug.isBlank() ? "news" : titleSlug;
+        }
+
+        if (titleSlug.isBlank()) {
+            return tagSlug;
+        }
+
+        if (titleSlug.equals(tagSlug) || titleSlug.startsWith(tagSlug + "-")) {
+            return titleSlug;
+        }
+
+        return tagSlug + "-" + titleSlug;
     }
 
     private String reserveUniqueNewsSlug(String baseSlug) {
@@ -121,5 +161,21 @@ public class GamingNewsService {
         }
 
         return gameRepository.findBySlug(normalized).orElse(null);
+    }
+
+    private LocalDateTime resolveSortTime(GamingNews entity) {
+        return entity.getPublishedAt() != null ? entity.getPublishedAt() : entity.getCreatedAt();
+    }
+
+    private String resolveGroupingKey(GamingNews entity) {
+        if (entity.getGame() != null && entity.getGame().getSlug() != null) {
+            return entity.getGame().getSlug();
+        }
+
+        if (entity.getGameTag() != null && !entity.getGameTag().isBlank()) {
+            return SlugUtils.toSlug(entity.getGameTag());
+        }
+
+        return "unknown";
     }
 }

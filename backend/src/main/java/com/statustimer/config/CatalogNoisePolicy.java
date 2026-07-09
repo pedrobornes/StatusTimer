@@ -25,7 +25,8 @@ public final class CatalogNoisePolicy {
             "software and game development",
             "games + demos",
             "animals, aquariums,and zoos",
-            "animals, aquariums, and zoos"
+            "animals, aquariums, and zoos",
+            "american idol"
     );
 
     private static final Set<String> QUARANTINED_SLUGS = Set.of(
@@ -41,7 +42,8 @@ public final class CatalogNoisePolicy {
             "pools-hot-tubs-and-beaches",
             "sports",
             "special-events",
-            "software-and-game-development"
+            "software-and-game-development",
+            "american-idol"
     );
 
     private CatalogNoisePolicy() {
@@ -73,7 +75,9 @@ public final class CatalogNoisePolicy {
     }
 
     public static boolean shouldSkipCatalogSurfacing(Game game) {
-        return isQuarantined(game) || isTwitchCategoryNoise(game);
+        return isQuarantined(game)
+                || isTwitchCategoryNoise(game)
+                || CatalogMatureContentPolicy.shouldSkipCatalogSurfacing(game);
     }
 
     /**

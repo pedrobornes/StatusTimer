@@ -11,7 +11,8 @@ from models.feed_events import ScrapedFeedEvent
 from models.schemas import PatchNotePayload
 from models.telemetry import GameTelemetryPayload, SyncTelemetryRequest, TelemetrySource, TelemetryStatus
 from pipeline.skill_models import SkillExecutionResult, SkillType
-from scrapers.text_utils import clean_news_title, is_relevant_gaming_news
+from scrapers.text_utils import clean_news_title, is_relevant_gaming_news, is_usable_news_content
+from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +113,17 @@ def _dispatch_patch_note_skill(
         )
         return SkillDispatchReport(skipped=True, skip_reason="low_signal_news")
 
+    if not is_usable_news_content(
+        news_payload.content,
+        min_chars=settings.steam_news_min_content_chars,
+    ):
+        logger.info(
+            "Skipping thin patch note for %s: %s",
+            output.game_tag,
+            news_payload.title,
+        )
+        return SkillDispatchReport(skipped=True, skip_reason="thin_news_content")
+
     return SkillDispatchReport(news_push=client.push_patch_note(news_payload))
 
 
@@ -153,6 +165,17 @@ def _dispatch_release_skill(
             news_payload.title,
         )
         return SkillDispatchReport(skipped=True, skip_reason="low_signal_news")
+
+    if not is_usable_news_content(
+        news_payload.content,
+        min_chars=settings.steam_news_min_content_chars,
+    ):
+        logger.info(
+            "Skipping thin release news for %s: %s",
+            output.game_tag,
+            news_payload.title,
+        )
+        return SkillDispatchReport(skipped=True, skip_reason="thin_news_content")
 
     return SkillDispatchReport(news_push=client.push_patch_note(news_payload))
 

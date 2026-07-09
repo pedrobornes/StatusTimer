@@ -29,6 +29,30 @@ logger = logging.getLogger(__name__)
 STEAM_NEWS_RSS_TEMPLATE = "https://store.steampowered.com/feeds/news/app/{app_id}/"
 
 
+def _prepend_rss_enclosure_image(
+    item: ET.Element,
+    title: str,
+    formatted_content: str,
+) -> str:
+    """Ensure hero art is present when RSS only exposes it via <enclosure>."""
+    if "![" in formatted_content[:500]:
+        return formatted_content
+
+    enclosure = item.find("enclosure")
+    if enclosure is None:
+        return formatted_content
+
+    url = (enclosure.get("url") or "").strip()
+    if not url:
+        return formatted_content
+
+    lowered = url.lower().split("?")[0]
+    if not lowered.endswith((".png", ".jpg", ".jpeg", ".gif", ".webp", ".avif")):
+        return formatted_content
+
+    return f"![{title}]({url})\n\n{formatted_content}"
+
+
 @dataclass(frozen=True)
 class SteamNewsTarget:
     app_id: int
@@ -184,12 +208,13 @@ class SteamNewsScraper:
                 break
 
             raw_title = (item.findtext("title") or "").strip()
+            title = clean_news_title(raw_title, game_name)
             raw_body = item.findtext("contents") or item.findtext("description") or ""
             formatted_content = markdown_from_html(raw_body)
+            formatted_content = _prepend_rss_enclosure_image(item, title, formatted_content)
             link = (item.findtext("link") or "").strip() or None
             guid = (item.findtext("guid") or link or f"{app_id}:{raw_title}").strip()
             published_at = _parse_pub_date(item.findtext("pubDate"))
-            title = clean_news_title(raw_title, game_name)
 
             if not title or not formatted_content:
                 continue

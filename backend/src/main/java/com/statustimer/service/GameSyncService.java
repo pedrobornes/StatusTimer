@@ -64,8 +64,12 @@ public class GameSyncService {
 
         game.setGameName(payload.gameName());
         IgdbMetadataSupport.applyGenreNames(game, payload.genreNames());
+        GameAssetPolicy.applyIgdbAssets(
+                game,
+                sanitizeIgdbUrl(payload.logoUrl(), "logoUrl"),
+                sanitizeIgdbUrl(payload.imageUrl(), "imageUrl")
+        );
         game.setImageUrl(sanitizeIgdbUrl(payload.imageUrl(), "imageUrl"));
-        game.setLogoUrl(sanitizeIgdbUrl(payload.logoUrl(), "logoUrl"));
 
         if (payload.steamAppId() != null && payload.steamAppId() > 0) {
             game.setSteamAppId(payload.steamAppId());

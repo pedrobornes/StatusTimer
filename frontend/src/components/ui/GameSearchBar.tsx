@@ -9,6 +9,7 @@ import { APP_ROUTES } from "@/config/routes";
 import { resolveCatalogImageUrl } from "@/lib/gameAssets";
 import { getUserFacingErrorMessage } from "@/services/api";
 import { activateGame, searchGames } from "@/services/catalogService";
+import { getUpcomingReleases } from "@/services/releasesService";
 import type { GameCatalogSearchResult } from "@/services/catalogService";
 
 export default function GameSearchBar() {
@@ -24,6 +25,7 @@ export default function GameSearchBar() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [upcomingSlugs, setUpcomingSlugs] = useState<Set<string>>(new Set());
 
   const normalizedQuery = query.trim();
 
@@ -36,6 +38,14 @@ export default function GameSearchBar() {
       setActiveIndex(0);
       inputRef.current?.blur();
 
+      const normalizedSlug = slug.toLowerCase();
+      const isUpcoming = upcomingSlugs.has(normalizedSlug);
+
+      if (isUpcoming) {
+        router.push(APP_ROUTES.release(slug));
+        return;
+      }
+
       try {
         await activateGame(slug);
       } catch {
@@ -44,8 +54,31 @@ export default function GameSearchBar() {
 
       router.push(APP_ROUTES.status(slug));
     },
-    [router],
+    [router, upcomingSlugs],
   );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void getUpcomingReleases()
+      .then((releases) => {
+        if (cancelled) {
+          return;
+        }
+        setUpcomingSlugs(
+          new Set(releases.map((release) => release.slug.toLowerCase())),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setUpcomingSlugs(new Set());
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     setActiveIndex(0);

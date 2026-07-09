@@ -1,5 +1,7 @@
 package com.statustimer.dto.response;
 
+import com.statustimer.config.GameAssetPolicy;
+import com.statustimer.config.PinnedGamePolicy;
 import com.statustimer.entity.Game;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -39,7 +41,7 @@ public record UpcomingReleaseResponse(
                         .orElse(null),
                 entity.getHypeCount(),
                 resolveReleaseImageUrl(entity),
-                entity.getLogoUrl(),
+                resolveReleaseHeroUrl(entity),
                 entity.getIgdbGameId(),
                 entity.getUserRating(),
                 entity.getCriticRating(),
@@ -65,11 +67,24 @@ public record UpcomingReleaseResponse(
     }
 
     private static String resolveReleaseImageUrl(Game entity) {
-        String coverUrl = com.statustimer.config.GameAssetPolicy.sanitizeImageUrl(entity.getCoverUrl());
+        String coverUrl = GameAssetPolicy.sanitizeImageUrl(entity.getCoverUrl());
         if (coverUrl != null) {
             return coverUrl;
         }
 
-        return com.statustimer.config.GameAssetPolicy.sanitizeImageUrl(entity.getImageUrl());
+        return GameAssetPolicy.sanitizeImageUrl(entity.getImageUrl());
+    }
+
+    private static String resolveReleaseHeroUrl(Game entity) {
+        String persisted = GameAssetPolicy.sanitizeImageUrl(entity.getLogoUrl());
+        if (GameAssetPolicy.isSuitableHeroUrl(persisted)) {
+            return persisted;
+        }
+
+        return PinnedGamePolicy.findBySlug(entity.getSlug())
+                .map(PinnedGamePolicy.Pin::fallbackLogoUrl)
+                .map(GameAssetPolicy::sanitizeImageUrl)
+                .filter(GameAssetPolicy::isSuitableHeroUrl)
+                .orElse(null);
     }
 }

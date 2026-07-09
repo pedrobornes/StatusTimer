@@ -11,6 +11,7 @@ const DEFAULT_BLOCK_COUNT = 12;
 interface StatusTimelineProps {
   snapshots: TelemetryHistorySnapshot[];
   blockCount?: number;
+  legendLayout?: "inline" | "stacked";
 }
 
 type TimelineSlot = TelemetryHistorySnapshot | null;
@@ -32,6 +33,7 @@ function buildTimelineSlots(
 export default function StatusTimeline({
   snapshots,
   blockCount = DEFAULT_BLOCK_COUNT,
+  legendLayout = "inline",
 }: StatusTimelineProps) {
   const slots = buildTimelineSlots(snapshots, blockCount);
   const hasData = snapshots.length > 0;
@@ -94,20 +96,39 @@ export default function StatusTimeline({
         check details.
       </p>
 
-      <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs uppercase tracking-wider text-zinc-400">
-        <span className="inline-flex items-center gap-2">
-          <span className={`inline-block h-3 w-3 rounded-[3px] ${getTimelineBlockClass("ONLINE")}`} />
-          Online
-        </span>
-        <span className="inline-flex items-center gap-2">
-          <span className={`inline-block h-3 w-3 rounded-[3px] ${getTimelineBlockClass("MAINTENANCE")}`} />
-          Maintenance
-        </span>
-        <span className="inline-flex items-center gap-2">
-          <span className={`inline-block h-3 w-3 rounded-[3px] ${getTimelineBlockClass("DOWN")}`} />
-          Down
-        </span>
-      </div>
+      {legendLayout === "stacked" ? (
+        <div className="mt-2 flex flex-col items-center gap-1 text-xs uppercase tracking-wider text-zinc-400">
+          <div className="flex items-center justify-center gap-x-6">
+            <span className="inline-flex items-center gap-2">
+              <span className={`inline-block h-3 w-3 rounded-[3px] ${getTimelineBlockClass("ONLINE")}`} />
+              Online
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className={`inline-block h-3 w-3 rounded-[3px] ${getTimelineBlockClass("DOWN")}`} />
+              Down
+            </span>
+          </div>
+          <span className="inline-flex items-center gap-2">
+            <span className={`inline-block h-3 w-3 rounded-[3px] ${getTimelineBlockClass("MAINTENANCE")}`} />
+            Maintenance
+          </span>
+        </div>
+      ) : (
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs uppercase tracking-wider text-zinc-400">
+          <span className="inline-flex items-center gap-2">
+            <span className={`inline-block h-3 w-3 rounded-[3px] ${getTimelineBlockClass("ONLINE")}`} />
+            Online
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <span className={`inline-block h-3 w-3 rounded-[3px] ${getTimelineBlockClass("MAINTENANCE")}`} />
+            Maintenance
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <span className={`inline-block h-3 w-3 rounded-[3px] ${getTimelineBlockClass("DOWN")}`} />
+            Down
+          </span>
+        </div>
+      )}
     </div>
   );
 }

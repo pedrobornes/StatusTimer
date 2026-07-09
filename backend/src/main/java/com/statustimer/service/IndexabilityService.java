@@ -1,6 +1,7 @@
 package com.statustimer.service;
 
 import com.statustimer.config.CacheConfig;
+import com.statustimer.config.CatalogMatureContentPolicy;
 import com.statustimer.config.IndexabilityProperties;
 import com.statustimer.dto.response.IndexabilityStatusResponse;
 import com.statustimer.entity.Game;
@@ -77,6 +78,18 @@ public class IndexabilityService {
             Game game,
             Optional<GameTelemetry> telemetry
     ) {
+        if (CatalogMatureContentPolicy.shouldSkipCatalogSurfacing(game)) {
+            return negativeStatus(
+                    game,
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    IndexabilityProperties.STALE_REASON_MATURE_CONTENT
+            );
+        }
+
         if (game.getLifecycleState() == LifecycleState.CATALOG) {
             return negativeStatus(game, false, false, false, false, false, game.getStaleReason());
         }
