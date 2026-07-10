@@ -37,6 +37,8 @@ interface GameTelemetryCardProps {
   unifiedMetricsColors?: boolean;
   /** Controls the status legend layout under the timeline. */
   timelineLegendLayout?: "inline" | "stacked";
+  /** Sidebar/status page: single glass panel without nested card chrome. */
+  embedded?: boolean;
 }
 
 export default memo(function GameTelemetryCard({
@@ -49,6 +51,7 @@ export default memo(function GameTelemetryCard({
   catalogOnly = false,
   unifiedMetricsColors = false,
   timelineLegendLayout = "inline",
+  embedded = false,
 }: GameTelemetryCardProps) {
   const title = resolveGameDisplayName(telemetry.gameSlug, telemetry);
   const statusHref = APP_ROUTES.status(telemetry.gameSlug);
@@ -141,7 +144,13 @@ export default memo(function GameTelemetryCard({
   );
 
   return (
-    <article className="flex flex-col rounded-2xl border border-white/8 bg-white/[0.04] p-6 transition hover:border-violet-400/25 hover:bg-white/[0.06]">
+    <article
+      className={
+        embedded
+          ? "glass-panel flex flex-col rounded-3xl p-6"
+          : "flex flex-col rounded-2xl border border-white/8 bg-white/[0.04] p-6 transition hover:border-violet-400/25 hover:bg-white/[0.06]"
+      }
+    >
       <header className="mb-4">
         {headerHref ? (
           <Link href={headerHref} className="group block">

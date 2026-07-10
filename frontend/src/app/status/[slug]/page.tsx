@@ -155,23 +155,19 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
           <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="space-y-8">
               <section aria-labelledby="server-status-heading">
-                <h2
-                  id="server-status-heading"
-                  className="heading-section mb-2 text-2xl uppercase text-white"
-                >
-                  Live Server Report
+                <h2 id="server-status-heading" className="sr-only">
+                  {gameName} server status
                 </h2>
                 <PendingTelemetryGate gameSlug={slug} />
                 {hasPartialTelemetry ? (
-                  <div className="mt-6">
-                    <GameTelemetryCard
-                      telemetry={telemetry}
-                      linkToStatusPage={false}
-                      linkToProfile={false}
-                      platforms={releasePlatforms}
-                      serverStatusPending
-                    />
-                  </div>
+                  <GameTelemetryCard
+                    telemetry={telemetry}
+                    linkToStatusPage={false}
+                    linkToProfile={false}
+                    platforms={releasePlatforms}
+                    serverStatusPending
+                    embedded
+                  />
                 ) : null}
               </section>
 
@@ -244,23 +240,17 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
           <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="space-y-8">
               <section aria-labelledby="server-status-heading">
-                <h2
-                  id="server-status-heading"
-                  className="heading-section mb-2 text-2xl uppercase text-white"
-                >
-                  Live Server Report
+                <h2 id="server-status-heading" className="sr-only">
+                  {gameName} server status
                 </h2>
                 <TelemetryRefreshBanner gameSlug={slug} />
-                <p className="mb-6 text-sm leading-6 text-slate-400">
-                  Live status data compiled from official game status pages and
-                  player networks.
-                </p>
                 <GameTelemetryCard
                   telemetry={telemetry}
                   linkToStatusPage={false}
                   linkToProfile={false}
                   platforms={releasePlatforms}
                   serverStatusPending
+                  embedded
                 />
               </section>
 
@@ -327,13 +317,9 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
       : isSinglePlayerProfile
         ? `Latest news and live audience data for ${gameName}.`
         : buildStatusPageSubtitle(gameName, telemetry.status);
-    const reportHeading = isCatalogProfile
-      ? "Live Audience"
-      : "Live Server Report";
-    const reportDescription = isCatalogProfile
-      ? "We track Twitch viewership and catalog data for this title. Server uptime is not monitored because it is not available on Steam or a supported probe."
-      : "Live status data compiled from official game status pages and player networks.";
-    const showReportIntro = !isSinglePlayerProfile;
+    const sidebarStatusLabel = isCatalogProfile
+      ? `${gameName} live audience`
+      : `${gameName} server status`;
 
     return (
       <>
@@ -414,24 +400,10 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
                 hasNews={hasNews}
                 hasMedia={hasMedia}
               />
-              <section aria-labelledby="server-status-heading" className="glass-panel rounded-3xl p-6">
-                {showReportIntro ? (
-                  <>
-                    <h2
-                      id="server-status-heading"
-                      className="heading-section mb-2 text-2xl uppercase text-white"
-                    >
-                      {reportHeading}
-                    </h2>
-                    <p className="mb-6 text-sm leading-6 text-slate-400">
-                      {reportDescription}
-                    </p>
-                  </>
-                ) : (
-                  <h2 id="server-status-heading" className="sr-only">
-                    {gameName} overview
-                  </h2>
-                )}
+              <section aria-labelledby="server-status-heading">
+                <h2 id="server-status-heading" className="sr-only">
+                  {sidebarStatusLabel}
+                </h2>
                 <GameTelemetryCard
                   telemetry={telemetry}
                   linkToStatusPage={false}
@@ -440,6 +412,7 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
                   platforms={releasePlatforms}
                   catalogOnly={isCatalogProfile}
                   timelineLegendLayout="stacked"
+                  embedded
                 />
               </section>
               {steamAppId ? (

@@ -37,6 +37,24 @@ function isBackendDateParts(value: unknown): value is BackendDateParts {
   );
 }
 
+function hasExplicitTimezone(value: string): boolean {
+  return /([zZ]|[+-]\d{2}:\d{2})$/.test(value);
+}
+
+/** Jackson LocalDateTime from the API is UTC wall-clock without an offset suffix. */
+function normalizeBackendDateString(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return trimmed;
+  }
+
+  if (trimmed.includes("T") && !hasExplicitTimezone(trimmed)) {
+    return `${trimmed}Z`;
+  }
+
+  return trimmed;
+}
+
 export function parseBackendDate(input: BackendDateInput): Date | null {
   if (input == null) {
     return null;
@@ -50,13 +68,7 @@ export function parseBackendDate(input: BackendDateInput): Date | null {
         ? Math.floor(nano / 1_000_000)
         : 0;
     const date = new Date(
-      year,
-      month - 1,
-      day,
-      hour,
-      minute,
-      second,
-      milliseconds,
+      Date.UTC(year, month - 1, day, hour, minute, second, milliseconds),
     );
     return Number.isNaN(date.getTime()) ? null : date;
   }
@@ -67,7 +79,7 @@ export function parseBackendDate(input: BackendDateInput): Date | null {
       return null;
     }
 
-    const date = new Date(trimmed);
+    const date = new Date(normalizeBackendDateString(trimmed));
     return Number.isNaN(date.getTime()) ? null : date;
   }
 
