@@ -76,7 +76,7 @@ public class CloudDatabaseEnvironmentPostProcessor implements EnvironmentPostPro
         String username = decode(credentialParts[0]);
         String password = credentialParts.length > 1 ? decode(credentialParts[1]) : "";
         String jdbcUrl = "jdbc:mysql://" + hostAndDatabase
-                + "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+                + "?useSSL=true&requireSSL=true&serverTimezone=UTC";
 
         return new ParsedMysqlUrl(jdbcUrl, username, password);
     }

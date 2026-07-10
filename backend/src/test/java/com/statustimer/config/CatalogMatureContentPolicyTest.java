@@ -23,9 +23,49 @@ class CatalogMatureContentPolicyTest {
     }
 
     @Test
-    void detectsMatureGenreLabels() {
+    void detectsExplicitMatureGenreLabels() {
         assertThat(CatalogMatureContentPolicy.containsMatureLabel("Sexual Content")).isTrue();
+        assertThat(CatalogMatureContentPolicy.containsMatureLabel("Erotic")).isTrue();
         assertThat(CatalogMatureContentPolicy.containsMatureLabel("Shooter")).isFalse();
+    }
+
+    @Test
+    void allowsNonSexualNudityTheme() {
+        assertThat(CatalogMatureContentPolicy.containsMatureLabel("Non-sexual nudity")).isFalse();
+    }
+
+    @Test
+    void steamExplicitSexualListingRequiresAdultOnlyDescriptors() {
+        assertThat(CatalogMatureContentPolicy.isSteamExplicitSexualListing(List.of(5))).isFalse();
+        assertThat(CatalogMatureContentPolicy.isSteamExplicitSexualListing(List.of(1, 2, 5))).isFalse();
+        assertThat(CatalogMatureContentPolicy.isSteamExplicitSexualListing(List.of(3))).isTrue();
+        assertThat(CatalogMatureContentPolicy.isSteamExplicitSexualListing(List.of(4))).isTrue();
+    }
+
+    @Test
+    void bansWholeWordGayInSlug() {
+        assertThat(CatalogMatureContentPolicy.containsBannedWord("gay-nation-a-gay-game-for-gays-gays-only"))
+                .isTrue();
+        assertThat(CatalogMatureContentPolicy.containsBannedWord("A Gay Game For Gays")).isTrue();
+    }
+
+    @Test
+    void doesNotBanGayAsSubstring() {
+        assertThat(CatalogMatureContentPolicy.containsBannedWord("pagay")).isFalse();
+        assertThat(CatalogMatureContentPolicy.containsBannedWord("pagay-adventure")).isFalse();
+        assertThat(CatalogMatureContentPolicy.containsBannedWord("opagay")).isFalse();
+    }
+
+    @Test
+    void quarantinesBannedTitleGames() {
+        Game game = Game.builder()
+                .slug("gay-nation-a-gay-game-for-gays-gays-only")
+                .gameName("Gay Nation")
+                .lifecycleState(LifecycleState.CATALOG)
+                .build();
+
+        assertThat(CatalogMatureContentPolicy.applyQuarantineIfMature(game)).isTrue();
+        assertThat(CatalogMatureContentPolicy.shouldSkipCatalogSurfacing(game)).isTrue();
     }
 
     @Test
@@ -41,6 +81,21 @@ class CatalogMatureContentPolicyTest {
         assertThat(game.getStaleReason())
                 .isEqualTo(IndexabilityProperties.STALE_REASON_MATURE_CONTENT);
         assertThat(game.getIsIndexable()).isFalse();
+    }
+
+    @Test
+    void clearsStaleMatureQuarantineWhenGameIsClean() {
+        Game game = Game.builder()
+                .slug("forza-horizon-5")
+                .gameName("Forza Horizon 5")
+                .steamAdultContent(false)
+                .staleReason(IndexabilityProperties.STALE_REASON_MATURE_CONTENT)
+                .lifecycleState(LifecycleState.CATALOG)
+                .build();
+
+        assertThat(CatalogMatureContentPolicy.applyQuarantineIfMature(game)).isFalse();
+        assertThat(game.getStaleReason()).isNull();
+        assertThat(CatalogMatureContentPolicy.shouldSkipCatalogSurfacing(game)).isFalse();
     }
 
     @Test

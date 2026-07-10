@@ -23,6 +23,8 @@ import { buildGameStatusFaq } from "@/lib/seo/gameFaq";
 import { buildStatusPageJsonLd } from "@/lib/seo/jsonLd";
 import { buildStatusPageMetadata } from "@/lib/seo/metadata";
 import { resolveCanonicalGameSlug } from "@/lib/gameSlugs";
+import { isUpcomingGameTelemetry } from "@/lib/gameLifecycle";
+import { isSinglePlayerGame } from "@/lib/gameType";
 import { resolveGenres } from "@/lib/genres";
 import { hasGameMedia, resolveGameMedia } from "@/lib/gameMedia";
 import { getConfirmedPlatforms, resolveReleaseBoxArtUrl } from "@/lib/releases";
@@ -101,12 +103,13 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
     const hasNews = news.length > 0;
     const hasMedia = hasGameMedia(gameMedia);
 
-    if (isUnreleasedGame(telemetry)) {
-      notFound();
+    if (isUpcomingGameTelemetry(telemetry)) {
+      redirect(APP_ROUTES.release(canonicalSlug));
     }
 
     const isCatalogProfile = catalogOnly === true;
-    const isPendingTelemetry = !telemetryReady && !isCatalogProfile;
+    const isSinglePlayerProfile = isSinglePlayerGame(telemetry);
+    const isPendingTelemetry = !telemetryReady && !isCatalogProfile && !isSinglePlayerProfile;
     const hasPartialTelemetry = telemetry !== null;
     const isInitialProbe = isPendingTelemetry && !hasPartialTelemetry;
     const isCatalogBootstrap = isPendingTelemetry && hasPartialTelemetry;
@@ -306,16 +309,21 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
       faqItems: showIndexableContent ? faqItems : undefined,
     });
 
-    const pageTitle = isCatalogProfile
+    const pageTitle = isCatalogProfile || isSinglePlayerProfile
       ? gameName
       : `Is ${gameName} Down?`;
     const pageSubtitle = isCatalogProfile
       ? `Live Twitch audience, IGDB ratings, trailers, and news for ${gameName}.`
-      : buildStatusPageSubtitle(gameName, telemetry.status);
-    const reportHeading = isCatalogProfile ? "Live Audience" : "Live Server Report";
+      : isSinglePlayerProfile
+        ? `Latest news and live audience data for ${gameName}.`
+        : buildStatusPageSubtitle(gameName, telemetry.status);
+    const reportHeading = isCatalogProfile
+      ? "Live Audience"
+      : "Live Server Report";
     const reportDescription = isCatalogProfile
       ? "We track Twitch viewership and catalog data for this title. Server uptime is not monitored because it is not available on Steam or a supported probe."
       : "Live status data compiled from official game status pages and player networks.";
+    const showReportIntro = !isSinglePlayerProfile;
 
     return (
       <>
@@ -365,11 +373,11 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
           />
           <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="space-y-8">
-              {!isCatalogProfile && showIndexableContent ? (
+              {!isCatalogProfile && !isSinglePlayerProfile && showIndexableContent ? (
                 <GameStatusFaq items={faqItems} />
               ) : null}
 
-              {!isCatalogProfile && showIndexableContent ? (
+              {!isCatalogProfile && !isSinglePlayerProfile && showIndexableContent ? (
                 <IncidentLog
                   incidents={incidents}
                   sectionTitle="Recent Problems"
@@ -392,20 +400,28 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
 
             <aside className="space-y-6 xl:sticky xl:top-24 xl:self-start">
               <section aria-labelledby="server-status-heading" className="glass-panel rounded-3xl p-6">
-                <h2
-                  id="server-status-heading"
-                  className="heading-section mb-2 text-2xl uppercase text-white"
-                >
-                  {reportHeading}
-                </h2>
-                <p className="mb-6 text-sm leading-6 text-slate-400">
-                  {reportDescription}
-                </p>
+                {showReportIntro ? (
+                  <>
+                    <h2
+                      id="server-status-heading"
+                      className="heading-section mb-2 text-2xl uppercase text-white"
+                    >
+                      {reportHeading}
+                    </h2>
+                    <p className="mb-6 text-sm leading-6 text-slate-400">
+                      {reportDescription}
+                    </p>
+                  </>
+                ) : (
+                  <h2 id="server-status-heading" className="sr-only">
+                    {gameName} overview
+                  </h2>
+                )}
                 <GameTelemetryCard
                   telemetry={telemetry}
                   linkToStatusPage={false}
                   linkToProfile={false}
-                  history={isCatalogProfile ? [] : history}
+                  history={isCatalogProfile || isSinglePlayerProfile ? [] : history}
                   platforms={releasePlatforms}
                   catalogOnly={isCatalogProfile}
                   timelineLegendLayout="stacked"
@@ -443,22 +459,4 @@ function buildStatusPageSubtitle(
   }
 
   return `See if ${gameName} servers are up, check recent outages, and read the latest game news.`;
-}
-
-function isUnreleasedGame(telemetry: GameTelemetry | null): boolean {
-  if (!telemetry) {
-    return false;
-  }
-
-  if (telemetry.status === "UPCOMING" || telemetry.isUpcoming === true) {
-    return true;
-  }
-
-  const now = Date.now();
-  const futureDates = [telemetry.releaseDate, telemetry.steamReleaseDate]
-    .filter((value): value is string => Boolean(value))
-    .map((value) => new Date(value).getTime())
-    .filter((timestamp) => Number.isFinite(timestamp));
-
-  return futureDates.some((timestamp) => timestamp > now);
 }

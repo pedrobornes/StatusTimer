@@ -23,7 +23,7 @@ class CloudDatabaseEnvironmentPostProcessorTest {
 
         assertThat(environment.getProperty("spring.datasource.url"))
                 .isEqualTo("jdbc:mysql://db.railway.internal:3306/statustimer"
-                        + "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC");
+                        + "?useSSL=true&requireSSL=true&serverTimezone=UTC");
         assertThat(environment.getProperty("spring.datasource.username")).isEqualTo("statustimer");
         assertThat(environment.getProperty("spring.datasource.password")).isEqualTo("secret");
     }

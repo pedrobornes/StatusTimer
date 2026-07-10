@@ -41,6 +41,9 @@ public class CatalogLifecycleMigrationRunner implements CommandLineRunner {
 
         indexabilityService.recalculateAll();
         gameCatalogService.enforceAllPinnedGamePolicies();
+        gameCatalogService.reconcileSteamAdultContentFlags();
+        gameCatalogService.reconcileSteamAppIds();
+        gameCatalogService.reconcileGameTypes();
 
         if (migrated > 0) {
             log.info("Backfilled lifecycle fields for {} tracked games", migrated);

@@ -15,9 +15,9 @@ from clients.http_result import PushResult
 from config.database import get_engine
 from config.settings import settings
 from models.catalog_schemas import GameCatalogEntryPayload, SyncGameCatalogRequest
+from models.feed_events import FeedEventKind
 from models.schemas import SyncGamesRequest
 from models.telemetry import SyncTelemetryRequest
-from pipeline.context_pipeline import ingest_events_into_context_store
 from pipeline.cycle_resilience import (
     CycleDegradationTracker,
     HarvestPhaseCircuitBreaker,
@@ -27,9 +27,8 @@ from pipeline.cycle_resilience import (
     resolve_phase_criticality,
 )
 from pipeline.deduplication import DedupStore, filter_new_events, filter_recent_events
-from pipeline.news_push import NewsPushStore, is_direct_news_event, push_news_events
-from pipeline.skill_router import SkillRouter
-from pipeline.sync_router import dispatch_skill_result
+from pipeline.incident_dispatch import dispatch_incident_event
+from pipeline.news_push import NewsPushStore, push_news_events
 from pipeline.tier_trends import TierTrendReport, run_tier_maintenance
 from scrapers.on_demand_jobs import run_on_demand_scrape_jobs
 from scrapers.igdb_media import prefer_hero_url
@@ -943,38 +942,31 @@ def _sync_prefetched_platform_intel(
         len(new_events),
     )
 
-    indexed_chunks, context_store = ingest_events_into_context_store(recent_events)
     news_push_store = NewsPushStore.from_settings()
     news_pushed = push_news_events(client, recent_events, news_push_store)
-    skill_router = SkillRouter(context_store=context_store)
 
     if news_pushed > 0:
-        logger.info("Stored %s raw news item(s) from platform feeds", news_pushed)
+        logger.info("Stored %s official news item(s) from platform feeds", news_pushed)
 
-    if not new_events:
-        logger.info("No new platform intel events after deduplication")
-        return len(scraped_events), 0, indexed_chunks, PushResult(success=True, status_code=200)
-
-    pushed_count = 0
-    last_result = PushResult(success=False, error_message="No platform intel pushes attempted")
+    pushed_count = news_pushed
+    last_result = PushResult(
+        success=news_pushed > 0,
+        status_code=200 if news_pushed > 0 else 204,
+        error_message=None if news_pushed > 0 else "No platform news pushes attempted",
+    )
 
     for event in new_events:
-        if is_direct_news_event(event):
-            logger.debug(
-                "Skill router skipped for [%s]: Steam/Reddit news handled by direct push",
-                event.game_tag,
-            )
+        if event.kind != FeedEventKind.INCIDENT:
             continue
 
         preloaded_game_id = catalog_preload.resolve_game_id(event.game_tag)
         if preloaded_game_id is None:
             logger.debug("No preloaded game_id for slug=%s", event.game_tag)
-        execution = skill_router.execute(event)
-        dispatch_report = dispatch_skill_result(client, event, execution)
 
+        dispatch_report = dispatch_incident_event(client, event)
         if dispatch_report.skipped:
             logger.info(
-                "Skill dispatch skipped for [%s]: %s",
+                "Incident dispatch skipped for [%s]: %s",
                 event.game_tag,
                 dispatch_report.skip_reason,
             )
@@ -982,12 +974,12 @@ def _sync_prefetched_platform_intel(
 
         if dispatch_report.telemetry_push is not None:
             _log_push_result(
-                f"Incident telemetry ({execution.skill_type.value})",
+                f"Incident telemetry ({event.source.value})",
                 dispatch_report.telemetry_push,
             )
         if dispatch_report.news_push is not None:
             _log_push_result(
-                f"Skill news ({execution.skill_type.value})",
+                f"Incident news ({event.source.value})",
                 dispatch_report.news_push,
             )
 
@@ -1003,7 +995,7 @@ def _sync_prefetched_platform_intel(
         attempts=last_result.attempts,
         error_message=last_result.error_message,
     )
-    return len(scraped_events), pushed_count, indexed_chunks, aggregate_result
+    return len(scraped_events), pushed_count, 0, aggregate_result
 
 
 def _resolve_prefetched_result(

@@ -15,6 +15,7 @@ class FeedSource(str, Enum):
     REDDIT = "REDDIT"
     RIOT = "RIOT"
     EPIC = "EPIC"
+    BLIZZARD = "BLIZZARD"
 
 
 class FeedEventKind(str, Enum):

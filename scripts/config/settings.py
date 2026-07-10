@@ -64,15 +64,16 @@ class Settings(BaseSettings):
     steam_news_max_items: int = 10
     steam_news_top_n: int = 15
     steam_news_min_content_chars: int = 120
+    riot_news_max_items: int = 10
+    riot_news_min_content_chars: int = 120
+    blizzard_news_max_items: int = 10
+    blizzard_news_min_content_chars: int = 120
+    epic_news_max_items: int = 10
+    epic_news_min_content_chars: int = 120
     enable_reddit_news: bool = False
     reddit_news_max_items: int = 8
     reddit_news_top_n: int = 12
     reddit_news_min_content_chars: int = 80
-    context_store_dir: str = ".harvest_state/context"
-    context_chunk_max_chars: int = 480
-    context_chunk_overlap_chars: int = 80
-    context_max_chunks_per_game: int = 200
-    context_search_limit: int = 8
 
     igdb_client_id: str = ""
     igdb_client_secret: str = ""
@@ -89,16 +90,11 @@ class Settings(BaseSettings):
     twitch_client_secret: str = ""
     twitch_top_n: int = 100
 
-    ollama_base_url: str = "http://localhost:11434"
-    ollama_model: str = "deepseek-coder-v2:16b"
-    ollama_enabled: bool = True
-    ollama_timeout_seconds: int = 120
-    incident_fallback_message: str = "NO_ACTIONABLE_STATUS_INFO"
-
     model_config = SettingsConfigDict(
         env_file=str(_ENV_FILE),
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
     @cached_property

@@ -2,6 +2,8 @@ package com.statustimer.integration;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.statustimer.config.CatalogMatureContentPolicy;
+import com.statustimer.config.GameTypeResolver;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -10,6 +12,8 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -97,6 +101,7 @@ public class SteamStoreAppDetailsClient {
             boolean windows = platforms.path("windows").asBoolean(false);
             boolean mac = platforms.path("mac").asBoolean(false);
             boolean linux = platforms.path("linux").asBoolean(false);
+            List<Integer> categoryIds = parseCategoryIds(data);
 
             return Optional.of(new SteamAppMetadata(
                     releaseDate,
@@ -109,7 +114,8 @@ public class SteamStoreAppDetailsClient {
                     windows,
                     mac,
                     linux,
-                    freeToPlay
+                    freeToPlay,
+                    categoryIds
             ));
         } catch (Exception exception) {
             log.warn("Unable to parse Steam appdetails for app {}", appId, exception);
@@ -173,66 +179,23 @@ public class SteamStoreAppDetailsClient {
     }
 
     private boolean detectAdultContent(JsonNode data) {
-        if (parseRequiredAge(data.path("required_age").asText("")) >= 18) {
-            return true;
-        }
-
-        for (JsonNode genre : data.path("genres")) {
-            String description = genre.path("description").asText("").toLowerCase(Locale.ROOT);
-            if (containsAdultKeyword(description)) {
-                return true;
-            }
-        }
-
-        for (JsonNode category : data.path("categories")) {
-            String description = category.path("description").asText("").toLowerCase(Locale.ROOT);
-            if (containsAdultKeyword(description)) {
-                return true;
-            }
-        }
-
+        java.util.List<Integer> descriptorIds = new java.util.ArrayList<>();
         for (JsonNode descriptorId : data.path("content_descriptors").path("ids")) {
-            int id = descriptorId.asInt(0);
-            if (id == 1 || id == 3 || id == 4 || id == 5) {
-                return true;
+            descriptorIds.add(descriptorId.asInt(0));
+        }
+
+        return CatalogMatureContentPolicy.isSteamExplicitSexualListing(descriptorIds);
+    }
+
+    private List<Integer> parseCategoryIds(JsonNode data) {
+        List<Integer> categoryIds = new ArrayList<>();
+        for (JsonNode category : data.path("categories")) {
+            int id = category.path("id").asInt(0);
+            if (id > 0) {
+                categoryIds.add(id);
             }
         }
-
-        String descriptorNotes = data.path("content_descriptors").path("notes").asText("")
-                .toLowerCase(Locale.ROOT);
-        return containsAdultKeyword(descriptorNotes);
-    }
-
-    private int parseRequiredAge(String value) {
-        if (value == null || value.isBlank()) {
-            return 0;
-        }
-
-        String digits = value.replaceAll("\\D+", "");
-        if (digits.isEmpty()) {
-            return 0;
-        }
-
-        try {
-            return Integer.parseInt(digits);
-        } catch (NumberFormatException ignored) {
-            return 0;
-        }
-    }
-
-    private boolean containsAdultKeyword(String value) {
-        if (value == null || value.isBlank()) {
-            return false;
-        }
-
-        return value.contains("sexual")
-                || value.contains("nudity")
-                || value.contains("hentai")
-                || value.contains("adult only")
-                || value.contains("nsfw")
-                || value.contains("pornographic")
-                || value.contains("mature content")
-                || value.equals("adult");
+        return List.copyOf(categoryIds);
     }
 
     private Integer parsePriceCents(JsonNode value) {
@@ -259,7 +222,8 @@ public class SteamStoreAppDetailsClient {
             boolean windows,
             boolean mac,
             boolean linux,
-            boolean freeToPlay
+            boolean freeToPlay,
+            List<Integer> categoryIds
     ) {
     }
 }

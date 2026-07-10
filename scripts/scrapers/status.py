@@ -1,4 +1,4 @@
-"""Live game server telemetry harvester (multi-platform probes + Ollama)."""
+"""Live game server telemetry harvester (multi-platform probes)."""
 
 from __future__ import annotations
 
@@ -13,7 +13,6 @@ import requests
 
 from config.settings import settings
 from models.telemetry import GameTelemetryPayload, TelemetrySource, TelemetryStatus
-from pipeline.telemetry_analyzer import TelemetryAnalyzer
 from scrapers.epic_lightswitch import probe_fortnite_status
 from scrapers.parallel_utils import PARALLEL_HTTP_MAX_WORKERS
 from scrapers.probe_models import ProbeOutcome
@@ -312,9 +311,8 @@ MONITORED_GAME_TARGETS: tuple[MonitoredGameTarget, ...] = (
 class StatusHarvester:
     """Collects telemetry from structured platform APIs with graceful degradation."""
 
-    def __init__(self, analyzer: TelemetryAnalyzer | None = None) -> None:
+    def __init__(self) -> None:
         self._timeout = settings.request_timeout_seconds
-        self._analyzer = analyzer or TelemetryAnalyzer()
         self._session = requests.Session()
         self._session.headers.update(
             {
@@ -357,7 +355,7 @@ class StatusHarvester:
         target: MonitoredGameTarget,
     ) -> GameTelemetryPayload | None:
         """Thread-safe probe: each worker gets its own HTTP session."""
-        worker = StatusHarvester(analyzer=self._analyzer)
+        worker = StatusHarvester()
         return worker._collect_target(target)
 
     def _collect_target(self, target: MonitoredGameTarget) -> GameTelemetryPayload | None:
@@ -381,17 +379,14 @@ class StatusHarvester:
         if outcome is None:
             return None
 
-        resolved = self._analyzer.resolve_probe(
-            game_name=target.display_name,
-            platform=target.strategy.value,
-            outcome=outcome,
-        )
+        resolved = outcome
 
         return GameTelemetryPayload(
             gameSlug=target.slug,
             status=resolved.status,
             latencyMs=resolved.latency_ms,
             dataSource=resolved.data_source,
+            isUpcoming=resolved.status == TelemetryStatus.UPCOMING,
         )
 
     def _run_primary_probe(self, target: MonitoredGameTarget) -> ProbeOutcome | None:

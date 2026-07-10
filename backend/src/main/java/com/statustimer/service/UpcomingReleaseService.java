@@ -7,6 +7,7 @@ import com.statustimer.repository.GameRepository;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,19 @@ public class UpcomingReleaseService {
                 ))
                 .map(UpcomingReleaseResponse::fromEntity)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<UpcomingReleaseResponse> findBySlug(String slug) {
+        if (slug == null || slug.isBlank()) {
+            return Optional.empty();
+        }
+
+        LocalDate today = LocalDate.now();
+        return gameRepository.findBySlug(slug.trim())
+                .filter(game -> !CatalogMatureContentPolicy.shouldSkipCatalogSurfacing(game))
+                .filter(game -> game.isUpcomingRelease(today))
+                .map(UpcomingReleaseResponse::fromEntity);
     }
 
     @Transactional

@@ -17,6 +17,8 @@ import {
 } from "@/lib/gameAssets";
 import { formatProbeSource } from "@/lib/telemetry";
 import { formatReleaseDate } from "@/lib/countdown";
+import { canTrackSteamPlayers, isSinglePlayerGame } from "@/lib/gameType";
+import { resolveGenres } from "@/lib/genres";
 import { getConfirmedPlatforms } from "@/lib/releases";
 import type { PlatformDetail } from "@/types/api";
 import type { GameTelemetry, TelemetryHistorySnapshot } from "@/types/telemetry";
@@ -60,6 +62,11 @@ export default memo(function GameTelemetryCard({
     : "TBA";
   const userRating = formatIgdbRating(telemetry.userRating ?? null);
   const criticRating = formatIgdbRating(telemetry.criticRating ?? null);
+  const genreBadges = resolveGenres(telemetry);
+  const isSinglePlayer = isSinglePlayerGame(telemetry);
+  const showLivePlayers = canTrackSteamPlayers(telemetry);
+  const showServerStatus = !catalogOnly && !isSinglePlayer;
+  const showTimeline = showServerStatus && !serverStatusPending && !upcoming;
 
   const headerHref = linkToStatusPage
     ? statusHref
@@ -79,11 +86,16 @@ export default memo(function GameTelemetryCard({
             orientation="vertical"
             className="mt-0"
             unifiedColors={unifiedMetricsColors}
+            showLivePlayers={showLivePlayers}
           />
         </div>
 
         <div className="shrink-0 self-start">
-          {catalogOnly ? (
+          {isSinglePlayer ? (
+            <div className="rounded-full border border-slate-400/25 bg-slate-500/10 px-3 py-1 text-xs font-medium text-slate-100">
+              Single Player
+            </div>
+          ) : catalogOnly ? (
             <div className="rounded-full border border-cyan-400/25 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-100">
               Live profile
             </div>
@@ -102,13 +114,16 @@ export default memo(function GameTelemetryCard({
         <h3 className="line-clamp-2 break-words whitespace-normal text-2xl font-bold tracking-tight text-white transition-colors duration-200 group-hover:text-emerald-400">
           {title}
         </h3>
-        {(userRating || criticRating || telemetry.genreName) && (
+        {(userRating || criticRating || genreBadges.length > 0) && (
           <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-300">
-            {telemetry.genreName ? (
-              <span className="rounded-full border border-white/10 px-2 py-0.5 uppercase tracking-[0.12em]">
-                {telemetry.genreName}
+            {genreBadges.map((genre) => (
+              <span
+                key={genre}
+                className="rounded-full border border-white/10 px-2 py-0.5 uppercase tracking-[0.12em]"
+              >
+                {genre}
               </span>
-            ) : null}
+            ))}
             {userRating ? (
               <span className="rounded-full border border-cyan-400/20 px-2 py-0.5 text-cyan-100">
                 Players {userRating}
@@ -170,11 +185,11 @@ export default memo(function GameTelemetryCard({
             </div>
           ) : null}
         </div>
-      ) : (
+      ) : showTimeline ? (
         <StatusTimeline snapshots={history} legendLayout={timelineLegendLayout} />
-      )}
+      ) : null}
 
-      {!serverStatusPending ? (
+      {!serverStatusPending && showServerStatus ? (
         <>
           <hr className="mt-4 border-white/5" />
 

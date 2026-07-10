@@ -9,6 +9,7 @@ import PageShell from "@/components/PageShell";
 import { APP_ROUTES } from "@/config/routes";
 import { resolveGameDisplayName } from "@/lib/gameAssets";
 import { hasGameMedia, resolveGameMedia } from "@/lib/gameMedia";
+import { buildNoindexFollowRobots } from "@/lib/seo/indexability";
 import { resolveCanonicalGameSlug } from "@/lib/gameSlugs";
 import { getGameStatusDetail } from "@/services/telemetryService";
 import type { GameTelemetry } from "@/types/telemetry";
@@ -28,6 +29,7 @@ export async function generateMetadata({
   return {
     title: `${resolveGameDisplayName(canonicalSlug)} Trailers & Screenshots | StatusTimer`,
     description: `Official trailers, gameplay videos, and screenshots.`,
+    robots: buildNoindexFollowRobots(),
   };
 }
 

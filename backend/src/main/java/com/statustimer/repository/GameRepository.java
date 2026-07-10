@@ -33,6 +33,12 @@ public interface GameRepository extends JpaRepository<Game, Long> {
             String slug
     );
 
+    List<Game> findBySteamAdultContentTrueAndSteamAppIdIsNotNull();
+
+    List<Game> findBySteamAppIdIsNotNull();
+
+    List<Game> findBySteamAppIdIsNull();
+
     List<Game> findByIsIndexableTrueOrderBySlugAsc();
 
     List<Game> findByLifecycleStateInAndNextTelemetryAtLessThanEqualOrderByScrapeTierAsc(

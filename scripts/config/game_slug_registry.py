@@ -13,9 +13,23 @@ CANONICAL_CATALOG_SLUGS: dict[str, str] = {
     "grand-theft-auto-v-enhanced": "grand-theft-auto-v",
     # Canonicalize Overwatch 2 into the IGDB slug.
     "overwatch-2": "overwatch",
+    # IGDB uses diablo-iv; Blizzard news feed uses diablo-4.
+    "diablo-iv": "diablo-4",
 }
 
 MANUAL_PROTECTED_SLUGS = frozenset({"valorant", "fortnite", "counter-strike-2"})
+
+NON_STEAM_PLAYER_TRACKING_SLUGS = frozenset({
+    "minecraft",
+    "roblox",
+    "fortnite",
+    "valorant",
+    "league-of-legends",
+})
+
+BLOCKED_STEAM_APP_IDS_BY_SLUG: dict[str, frozenset[int]] = {
+    "minecraft": frozenset({1928870}),
+}
 
 
 class PinnedGame(TypedDict):
@@ -93,9 +107,16 @@ def get_pinned_game(slug: str) -> PinnedGame | None:
     return PINNED_GAMES.get(slug)
 
 
+def suppresses_steam_player_tracking(slug: str) -> bool:
+    return canonical_catalog_slug(slug) in NON_STEAM_PLAYER_TRACKING_SLUGS
+
+
 def resolve_harvest_steam_app_id(slug: str, db_app_id: int | None = None) -> int | None:
     """Prefer pinned/monitored Steam app ids over stale catalog rows."""
     canonical_slug = canonical_catalog_slug(slug)
+
+    if suppresses_steam_player_tracking(canonical_slug):
+        return None
 
     pinned = get_pinned_game(canonical_slug)
     if pinned is not None:
@@ -109,6 +130,7 @@ def resolve_harvest_steam_app_id(slug: str, db_app_id: int | None = None) -> int
 
     if isinstance(db_app_id, int) and db_app_id > 0:
         blocked = pinned["blocked_steam_app_ids"] if pinned is not None else frozenset()
+        blocked = blocked | BLOCKED_STEAM_APP_IDS_BY_SLUG.get(canonical_slug, frozenset())
         if db_app_id not in blocked:
             return db_app_id
 

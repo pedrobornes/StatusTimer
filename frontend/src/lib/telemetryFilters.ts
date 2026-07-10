@@ -1,11 +1,12 @@
 import type { GameTelemetry } from "@/types/telemetry";
+import { resolveGenres } from "@/lib/genres";
 
 export function collectTelemetryGenres(games: GameTelemetry[]): string[] {
   const genres = new Set<string>();
 
   for (const game of games) {
-    if (game.genreName?.trim()) {
-      genres.add(game.genreName.trim());
+    for (const genre of resolveGenres(game)) {
+      genres.add(genre);
     }
   }
 
@@ -20,7 +21,7 @@ export function filterTelemetryByGenre(
     return games;
   }
 
-  return games.filter((game) => game.genreName === genre);
+  return games.filter((game) => resolveGenres(game).includes(genre));
 }
 
 export function filterTelemetryByMinRating(

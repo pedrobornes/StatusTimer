@@ -18,5 +18,5 @@ class ProbeOutcome:
     ambiguous: bool = False
 
     @property
-    def needs_ollama_review(self) -> bool:
+    def is_ambiguous(self) -> bool:
         return self.ambiguous and bool(self.context and self.context.strip())

@@ -2,6 +2,8 @@ import type { GamingNews } from "@/types/api";
 
 export type TelemetryStatus = "ONLINE" | "MAINTENANCE" | "DOWN" | "UPCOMING";
 
+export type GameType = "multiplayer" | "single_player";
+
 export type TelemetrySource = "STEAM_API" | "NETWORK_PROBE" | "STATUS_PAGE";
 
 export interface GameTelemetry {
@@ -29,6 +31,8 @@ export interface GameTelemetry {
   criticRating?: number | null;
   genreName?: string | null;
   genreNames?: string[];
+  type?: GameType;
+  playersTrackable?: boolean;
   screenshotUrls?: string[];
   trailerVideoIds?: string[];
   youtubeChannelUrl?: string | null;

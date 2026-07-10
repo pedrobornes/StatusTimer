@@ -94,7 +94,7 @@ def _query_app_details(
     )
     if coming_soon:
         return ProbeOutcome(
-            status=TelemetryStatus.MAINTENANCE,
+            status=TelemetryStatus.UPCOMING,
             latency_ms=latency_ms,
             data_source=TelemetrySource.STEAM_API,
             context=(

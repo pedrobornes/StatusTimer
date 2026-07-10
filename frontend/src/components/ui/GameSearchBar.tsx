@@ -7,6 +7,8 @@ import GameLiveMetricsRow from "@/components/dashboard/GameLiveMetricsRow";
 import GameAssetImage from "@/components/ui/GameAssetImage";
 import { APP_ROUTES } from "@/config/routes";
 import { resolveCatalogImageUrl } from "@/lib/gameAssets";
+import { resolveGenres } from "@/lib/genres";
+import { canTrackSteamPlayers } from "@/lib/gameType";
 import { getUserFacingErrorMessage } from "@/services/api";
 import { activateGame, searchGames } from "@/services/catalogService";
 import { getUpcomingReleases } from "@/services/releasesService";
@@ -30,7 +32,7 @@ export default function GameSearchBar() {
   const normalizedQuery = query.trim();
 
   const navigateToGame = useCallback(
-    async (slug: string) => {
+    async (game: GameCatalogSearchResult) => {
       setQuery("");
       setMatches([]);
       setIsOpen(false);
@@ -38,21 +40,22 @@ export default function GameSearchBar() {
       setActiveIndex(0);
       inputRef.current?.blur();
 
-      const normalizedSlug = slug.toLowerCase();
-      const isUpcoming = upcomingSlugs.has(normalizedSlug);
+      const normalizedSlug = game.slug.toLowerCase();
+      const isUpcoming =
+        game.upcomingRelease === true || upcomingSlugs.has(normalizedSlug);
 
       if (isUpcoming) {
-        router.push(APP_ROUTES.release(slug));
+        router.push(APP_ROUTES.release(game.slug));
         return;
       }
 
       try {
-        await activateGame(slug);
+        await activateGame(game.slug);
       } catch {
         // Navigation still proceeds; the status page triggers activation again.
       }
 
-      router.push(APP_ROUTES.status(slug));
+      router.push(APP_ROUTES.status(game.slug));
     },
     [router, upcomingSlugs],
   );
@@ -171,7 +174,7 @@ export default function GameSearchBar() {
       event.preventDefault();
       const selected = matches[activeIndex] ?? matches[0];
       if (selected) {
-        navigateToGame(selected.slug);
+        navigateToGame(selected);
       }
       return;
     }
@@ -249,6 +252,7 @@ export default function GameSearchBar() {
             <ul className="max-h-72 overflow-y-auto py-2">
               {matches.map((game, index) => {
                 const isActive = index === activeIndex;
+                const genreLabels = resolveGenres(game);
 
                 return (
                   <li key={game.slug} role="presentation">
@@ -260,7 +264,7 @@ export default function GameSearchBar() {
                       onMouseEnter={() => setActiveIndex(index)}
                       onMouseDown={(event) => {
                         event.preventDefault();
-                        navigateToGame(game.slug);
+                        navigateToGame(game);
                       }}
                       className={`flex w-full items-center gap-3 px-4 py-2.5 text-left transition ${
                         isActive
@@ -276,9 +280,9 @@ export default function GameSearchBar() {
                       />
                       <div className="min-w-0 flex-1">
                         <span className="block text-sm font-medium">{game.gameName}</span>
-                        {game.genreName ? (
+                        {genreLabels.length > 0 ? (
                           <span className="mt-0.5 block text-[11px] uppercase tracking-[0.12em] text-slate-400">
-                            {game.genreName}
+                            {genreLabels.join(" · ")}
                           </span>
                         ) : null}
                         {game.livePlayers != null || game.twitchViewers != null ? (
@@ -286,6 +290,9 @@ export default function GameSearchBar() {
                             livePlayers={game.livePlayers}
                             twitchViewers={game.twitchViewers}
                             className="mt-1"
+                            showLivePlayers={canTrackSteamPlayers({
+                              appId: game.steamAppId,
+                            })}
                           />
                         ) : null}
                       </div>

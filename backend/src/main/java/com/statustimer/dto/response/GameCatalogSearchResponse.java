@@ -1,5 +1,7 @@
 package com.statustimer.dto.response;
 
+import java.util.List;
+
 public record GameCatalogSearchResponse(
         Long id,
         String slug,
@@ -10,7 +12,9 @@ public record GameCatalogSearchResponse(
         Integer userRating,
         Integer criticRating,
         String genreName,
+        List<String> genreNames,
         Long livePlayers,
-        Long twitchViewers
+        Long twitchViewers,
+        Boolean upcomingRelease
 ) {
 }

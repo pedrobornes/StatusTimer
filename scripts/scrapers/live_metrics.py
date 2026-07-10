@@ -364,7 +364,7 @@ def fetch_monitored_steam_live_metrics() -> list:
 
 def fetch_scheduled_steam_metrics(targets: list[dict[str, object]]) -> list:
     """Build Steam live-player patches for scheduler-selected targets."""
-    from config.game_slug_registry import get_pinned_game
+    from config.game_slug_registry import get_pinned_game, suppresses_steam_player_tracking
     from scrapers.status import MONITORED_GAME_TARGETS, MonitoredGameTarget, ProbeStrategy
 
     if not targets:
@@ -376,6 +376,9 @@ def fetch_scheduled_steam_metrics(targets: list[dict[str, object]]) -> list:
     for entry in targets:
         slug = str(entry.get("slug") or "")
         if not slug:
+            continue
+
+        if suppresses_steam_player_tracking(slug):
             continue
 
         known = monitored_by_slug.get(slug)

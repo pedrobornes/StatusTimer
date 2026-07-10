@@ -47,7 +47,7 @@ class IgdbCategoryPolicyTests(unittest.TestCase):
 
         query = post_mock.call_args[0][1]
         self.assertIn("category", query)
-        self.assertIn("where game_type = 0;", query)
+        self.assertIn("where game_type = (0,8,9,10,11);", query)
         self.assertIn('search "Rust";', query)
 
 

@@ -30,6 +30,20 @@ EPIC_STORE_URL_PATTERN = re.compile(r"epicgames\.com/(?:store|en-US)", re.IGNORE
 REDDIT_SUBREDDIT_PATTERN = re.compile(r"reddit\.com/r/([\w_]+)", re.IGNORECASE)
 MAIN_GAME_CATEGORY = 0
 MAIN_GAME_TYPE = 0
+REMAKE_GAME_TYPE = 8
+REMASTER_GAME_TYPE = 9
+EXPANDED_GAME_TYPE = 10
+PORT_GAME_TYPE = 11
+CATALOG_GAME_TYPES = frozenset(
+    {
+        MAIN_GAME_TYPE,
+        REMAKE_GAME_TYPE,
+        REMASTER_GAME_TYPE,
+        EXPANDED_GAME_TYPE,
+        PORT_GAME_TYPE,
+    }
+)
+CATALOG_GAME_TYPE_FILTER = "(0,8,9,10,11)"
 HERO_MIN_WIDTH = 1920
 HERO_MIN_HEIGHT = 720
 BLOCKED_HERO_IMAGE_IDS = frozenset({"ar667x"})
@@ -101,16 +115,20 @@ def igdb_image_url(image_id: str, size: str = "t_cover_big") -> str:
     return f"{IGDB_IMAGE_BASE}/{size}/{normalized}.jpg"
 
 
-def is_main_game(raw_game: dict[str, Any]) -> bool:
+def is_catalog_game(raw_game: dict[str, Any]) -> bool:
     game_type = raw_game.get("game_type")
     if isinstance(game_type, int):
-        return game_type == MAIN_GAME_TYPE
+        return game_type in CATALOG_GAME_TYPES
 
     category = raw_game.get("category")
     if isinstance(category, int):
         return category == MAIN_GAME_CATEGORY
 
     return True
+
+
+def is_main_game(raw_game: dict[str, Any]) -> bool:
+    return is_catalog_game(raw_game)
 
 
 def parse_igdb_game_metadata(raw_game: dict[str, Any]) -> IgdbGameMetadata:

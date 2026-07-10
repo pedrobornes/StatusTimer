@@ -1,5 +1,6 @@
 package com.statustimer.controller;
 
+import com.statustimer.dto.response.HealthResponse;
 import com.statustimer.dto.response.GameActivationResponse;
 import com.statustimer.dto.response.GameCatalogPageResponse;
 import com.statustimer.dto.response.GameCatalogSearchResponse;
@@ -21,12 +22,14 @@ import com.statustimer.service.ServerStatusService;
 import com.statustimer.service.UpcomingReleaseService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -40,6 +43,11 @@ public class PublicApiController {
     private final GameStatusService gameStatusService;
     private final GamingNewsService gamingNewsService;
     private final UpcomingReleaseService upcomingReleaseService;
+
+    @GetMapping("/public/health")
+    public HealthResponse health() {
+        return new HealthResponse("UP");
+    }
 
     @GetMapping("/status")
     public List<ServerStatusResponse> getServerStatuses() {
@@ -139,6 +147,15 @@ public class PublicApiController {
     @GetMapping("/releases")
     public List<UpcomingReleaseResponse> getUpcomingReleases() {
         return upcomingReleaseService.findAll();
+    }
+
+    @GetMapping("/releases/by-slug/{slug}")
+    public UpcomingReleaseResponse getUpcomingReleaseBySlug(@PathVariable String slug) {
+        return upcomingReleaseService.findBySlug(slug)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Upcoming release not found for slug: " + slug
+                ));
     }
 
     @PostMapping("/releases/{id}/hype")

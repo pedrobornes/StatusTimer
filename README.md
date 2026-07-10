@@ -84,6 +84,20 @@ La idea del proyecto es sencilla: en lugar de revisar varias fuentes por separad
 - Tests en scripts Python (`unittest` / `pytest`).
 - Contratos tipados entre backend y frontend para reducir drift.
 
+## Deploy a producción
+
+Guía completa de despliegue, variables de entorno y checklist pre-launch: **[docs/DEPLOY.md](docs/DEPLOY.md)**.
+
+Resumen rápido:
+
+| Servicio | Build | Start |
+|----------|-------|-------|
+| Frontend | `cd frontend && npm ci && npm run build` | `npm start` |
+| Backend | `cd backend && ./mvnw.cmd -DskipTests package` | `java -jar target/*.jar` |
+| Harvester | `pip install -r scripts/requirements.txt` | `python scripts/main.py` |
+
+Variables críticas: `NEXT_PUBLIC_SITE_URL`, `APP_API_KEY` / `BACKEND_API_KEY`, `SPRING_PROFILES_ACTIVE=prod`, `RIOT_API_KEY` (incidentes Riot).
+
 ## Enfoque de portfolio
 
 Este proyecto demuestra:

@@ -3,15 +3,24 @@ spring:
     activate:
       on-profile: prod
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://${DB_HOST:${MYSQLHOST:localhost}}:${DB_PORT:${MYSQLPORT:3306}}/${DB_NAME:${MYSQLDATABASE:statustimer}}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://${DB_HOST:${MYSQLHOST:localhost}}:${DB_PORT:${MYSQLPORT:3306}}/${DB_NAME:${MYSQLDATABASE:statustimer}}?useSSL=true&requireSSL=true&serverTimezone=UTC}
     username: ${DB_USER:${MYSQLUSER:statustimer}}
     password: ${DB_PASSWORD:${MYSQLPASSWORD:}}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: false
   h2:
     console:
       enabled: false
+
+app:
+  cors:
+    allowed-origins: ${APP_CORS_ORIGINS:https://status-timer.com,https://www.status-timer.com}
+
+logging:
+  level:
+    root: INFO
+    com.statustimer: INFO

@@ -12,11 +12,14 @@ from models.catalog_schemas import SyncGameCatalogRequest
 from models.feed_events import ScrapedFeedEvent
 from models.telemetry import SyncTelemetryRequest
 from pipeline.news_push import NewsPushStore, push_news_events
+from scrapers.blizzard_news import BlizzardNewsScraper, resolve_blizzard_news_target
+from scrapers.epic_news import EpicNewsScraper, resolve_epic_news_target
 from scrapers.live_metrics import (
     fetch_scheduled_steam_metrics,
     fetch_scheduled_twitch_metrics,
 )
 from scrapers.reddit_news import RedditNewsScraper, RedditNewsTarget, parse_subreddit_from_url
+from scrapers.riot_news import RiotNewsScraper, resolve_riot_news_target
 from scrapers.steam_news import SteamNewsScraper, SteamNewsTarget
 from scrapers.status import fetch_telemetry_for_slug
 
@@ -116,6 +119,9 @@ def _run_news_due(
         return 0, PushResult(success=True, status_code=204)
 
     scraper = SteamNewsScraper()
+    riot_scraper = RiotNewsScraper()
+    blizzard_scraper = BlizzardNewsScraper()
+    epic_scraper = EpicNewsScraper()
     reddit_scraper = RedditNewsScraper() if settings.enable_reddit_news else None
     completions: list[dict[str, object]] = []
     collected_events: list[ScrapedFeedEvent] = []
@@ -175,7 +181,55 @@ def _run_news_due(
         elif reddit_url and not settings.enable_reddit_news:
             logger.debug("Skipping Reddit news for %s (ENABLE_REDDIT_NEWS=false)", slug)
 
-        if steam_app_id is None and subreddit is None:
+        riot_target = resolve_riot_news_target(slug)
+        if riot_target is not None:
+            try:
+                riot_events = riot_scraper.fetch_for_target(riot_target)
+                collected_events.extend(riot_events)
+                logger.info(
+                    "Scheduled Riot news fetch for %s returned %s events",
+                    slug,
+                    len(riot_events),
+                )
+            except Exception:
+                logger.exception("Scheduled Riot news fetch failed for slug=%s", slug)
+                news_success = False
+
+        blizzard_target = resolve_blizzard_news_target(slug)
+        if blizzard_target is not None:
+            try:
+                blizzard_events = blizzard_scraper.fetch_for_target(blizzard_target)
+                collected_events.extend(blizzard_events)
+                logger.info(
+                    "Scheduled Blizzard news fetch for %s returned %s events",
+                    slug,
+                    len(blizzard_events),
+                )
+            except Exception:
+                logger.exception("Scheduled Blizzard news fetch failed for slug=%s", slug)
+                news_success = False
+
+        epic_target = resolve_epic_news_target(slug)
+        if epic_target is not None:
+            try:
+                epic_events = epic_scraper.fetch_for_target(epic_target)
+                collected_events.extend(epic_events)
+                logger.info(
+                    "Scheduled Epic news fetch for %s returned %s events",
+                    slug,
+                    len(epic_events),
+                )
+            except Exception:
+                logger.exception("Scheduled Epic news fetch failed for slug=%s", slug)
+                news_success = False
+
+        if (
+            steam_app_id is None
+            and subreddit is None
+            and riot_target is None
+            and blizzard_target is None
+            and epic_target is None
+        ):
             completions.append(_work_result(slug, "NEWS", True))
             continue
 

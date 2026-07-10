@@ -14,7 +14,14 @@ from scrapers.text_utils import is_relevant_gaming_news, is_usable_news_content
 
 logger = logging.getLogger(__name__)
 
-_DIRECT_NEWS_SOURCES = frozenset({FeedSource.STEAM})
+_DIRECT_NEWS_SOURCES = frozenset(
+    {
+        FeedSource.STEAM,
+        FeedSource.RIOT,
+        FeedSource.BLIZZARD,
+        FeedSource.EPIC,
+    }
+)
 
 
 def is_direct_news_event(event: ScrapedFeedEvent) -> bool:

@@ -6,6 +6,7 @@ interface GameLiveMetricsRowProps {
   className?: string;
   orientation?: "horizontal" | "vertical";
   unifiedColors?: boolean;
+  showLivePlayers?: boolean;
 }
 
 function MetricSlot({
@@ -43,6 +44,7 @@ export default function GameLiveMetricsRow({
   className,
   orientation = "horizontal",
   unifiedColors = false,
+  showLivePlayers = true,
 }: GameLiveMetricsRowProps) {
   const isVertical = orientation === "vertical";
   const layoutClass = isVertical
@@ -54,15 +56,19 @@ export default function GameLiveMetricsRow({
       className={`mt-2 font-mono text-xs ${layoutClass} ${className ?? ""}`}
       aria-label="Live audience metrics"
     >
-      <MetricSlot
-        activeDotClassName="bg-green-500"
-        inactiveDotClassName="bg-zinc-600"
-        value={livePlayers}
-        label={livePlayers != null ? "playing" : "players"}
-      />
+      {showLivePlayers ? (
+        <>
+          <MetricSlot
+            activeDotClassName="bg-green-500"
+            inactiveDotClassName="bg-zinc-600"
+            value={livePlayers}
+            label={livePlayers != null ? "playing" : "players"}
+          />
 
-      {!isVertical ? (
-        <span className="h-3 border-r border-zinc-700" aria-hidden />
+          {!isVertical ? (
+            <span className="h-3 border-r border-zinc-700" aria-hidden />
+          ) : null}
+        </>
       ) : null}
 
       <MetricSlot

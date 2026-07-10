@@ -1,6 +1,7 @@
 package com.statustimer.service;
 
 import com.statustimer.config.CatalogMonitoringPolicy;
+import com.statustimer.config.CatalogMatureContentPolicy;
 import com.statustimer.config.GameSlugMapper;
 import com.statustimer.dto.response.GameActivationResponse;
 import com.statustimer.entity.Game;
@@ -24,6 +25,10 @@ public class CatalogActivationService {
     @Transactional
     public GameActivationResponse activateOnDemand(String slug) {
         String canonicalSlug = gameSlugMapper.resolveCanonicalSlug(slug);
+        if (CatalogMatureContentPolicy.containsBannedWord(canonicalSlug)) {
+            return new GameActivationResponse(canonicalSlug, false, false, false, false);
+        }
+
         Game game = gameRepository.findBySlug(canonicalSlug)
                 .orElseGet(this::createPersistedGameIfKnown);
 

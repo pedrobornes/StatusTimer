@@ -40,6 +40,7 @@ class IgdbSearchClientTest {
                     "name": "Rust",
                     "slug": "rust",
                     "category": 0,
+                    "platforms": [6],
                     "cover": { "image_id": "coabc123" }
                   },
                   {
@@ -47,6 +48,7 @@ class IgdbSearchClientTest {
                     "name": "Rust Mod",
                     "slug": "rust-mod",
                     "category": 5,
+                    "platforms": [6],
                     "cover": { "image_id": "comod123" }
                   }
                 ]
@@ -63,7 +65,7 @@ class IgdbSearchClientTest {
 
         String body = bodyCaptor.getValue();
         assertThat(body).contains("game_type");
-        assertThat(body).contains("where game_type = 0;");
+        assertThat(body).contains("where game_type = (0,8,9,10,11);");
         assertThat(body).contains("search \"Rust\";");
         assertThat(matches).hasSize(1);
         assertThat(matches.getFirst().name()).isEqualTo("Rust");
@@ -79,6 +81,7 @@ class IgdbSearchClientTest {
                     "name": "Rust",
                     "slug": "rust",
                     "category": 0,
+                    "platforms": [6],
                     "external_games": [
                       { "uid": "252490" },
                       { "uid": "0000", "category": 2 },
@@ -96,5 +99,67 @@ class IgdbSearchClientTest {
 
         assertThat(matches).hasSize(1);
         assertThat(matches.getFirst().steamAppId()).isEqualTo(252490);
+    }
+
+    @Test
+    void lookupByIdQueriesStableGameId() throws Exception {
+        String payload = """
+                [
+                  {
+                    "id": 337738,
+                    "name": "Assassin's Creed Black Flag Resynced",
+                    "slug": "assassins-creed-black-flag-resynced",
+                    "category": 0,
+                    "platforms": [6],
+                    "cover": { "image_id": "coabc123" }
+                  }
+                ]
+                """;
+
+        when(apiClient.isConfigured()).thenReturn(true);
+        when(apiClient.postGamesQuery(anyString()))
+                .thenReturn(Optional.of(new ObjectMapper().readTree(payload)));
+
+        Optional<IgdbSearchClient.IgdbGameMatch> match = searchClient.lookupById(337738);
+
+        ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
+        verify(apiClient).postGamesQuery(bodyCaptor.capture());
+
+        assertThat(bodyCaptor.getValue()).contains("where id = 337738;");
+        assertThat(match).isPresent();
+        assertThat(match.get().igdbId()).isEqualTo(337738L);
+        assertThat(match.get().igdbSlug()).isEqualTo("assassins-creed-black-flag-resynced");
+    }
+
+    @Test
+    void lookupBySteamAppIdQueriesExternalGames() throws Exception {
+        String payload = """
+                [
+                  {
+                    "id": 337738,
+                    "name": "Assassin's Creed Black Flag Resynced",
+                    "slug": "assassins-creed-black-flag-resynced",
+                    "category": 0,
+                    "platforms": [6],
+                    "external_games": [
+                      { "uid": "3751950", "category": 1 }
+                    ]
+                  }
+                ]
+                """;
+
+        when(apiClient.isConfigured()).thenReturn(true);
+        when(apiClient.postGamesQuery(anyString()))
+                .thenReturn(Optional.of(new ObjectMapper().readTree(payload)));
+
+        Optional<IgdbSearchClient.IgdbGameMatch> match = searchClient.lookupBySteamAppId(3751950);
+
+        ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
+        verify(apiClient).postGamesQuery(bodyCaptor.capture());
+
+        assertThat(bodyCaptor.getValue()).contains("external_games.category = 1");
+        assertThat(bodyCaptor.getValue()).contains("external_games.uid = \"3751950\"");
+        assertThat(match).isPresent();
+        assertThat(match.get().steamAppId()).isEqualTo(3751950);
     }
 }

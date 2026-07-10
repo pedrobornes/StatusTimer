@@ -47,7 +47,7 @@ public class IgdbSearchClient {
         int fetchLimit = Math.max(resolvedLimit * 3, resolvedLimit);
         String escaped = trimmed.replace("\"", "\\\"");
         String body = "fields " + GAME_FIELDS + "; "
-                + "where game_type = " + IgdbGameCategories.MAIN_GAME_TYPE + "; "
+                + "where game_type = " + IgdbGameCategories.CATALOG_GAME_TYPE_FILTER + "; "
                 + "search \"" + escaped + "\"; "
                 + "limit " + fetchLimit + ";";
 
@@ -60,7 +60,7 @@ public class IgdbSearchClient {
         int rawCount = payload.get().size();
         List<IgdbGameMatch> matches = new ArrayList<>();
         for (JsonNode row : payload.get()) {
-            if (!IgdbGameCategories.isMainGame(row)) {
+            if (!IgdbGameCategories.isCatalogGame(row)) {
                 continue;
             }
 
@@ -96,13 +96,42 @@ public class IgdbSearchClient {
                 + "where slug = \"" + escaped + "\"; "
                 + "limit 1;";
 
+        return fetchFirstMatch(body);
+    }
+
+    public Optional<IgdbGameMatch> lookupById(long igdbId) {
+        if (igdbId <= 0 || !apiClient.isConfigured()) {
+            return Optional.empty();
+        }
+
+        String body = "fields " + GAME_FIELDS + "; "
+                + "where id = " + igdbId + "; "
+                + "limit 1;";
+
+        return fetchFirstMatch(body);
+    }
+
+    public Optional<IgdbGameMatch> lookupBySteamAppId(int steamAppId) {
+        if (steamAppId <= 0 || !apiClient.isConfigured()) {
+            return Optional.empty();
+        }
+
+        String body = "fields " + GAME_FIELDS + "; "
+                + "where external_games.category = " + STEAM_EXTERNAL_CATEGORY + " "
+                + "& external_games.uid = \"" + steamAppId + "\"; "
+                + "limit 1;";
+
+        return fetchFirstMatch(body);
+    }
+
+    private Optional<IgdbGameMatch> fetchFirstMatch(String body) {
         Optional<JsonNode> payload = apiClient.postGamesQuery(body);
         if (payload.isEmpty() || !payload.get().isArray() || payload.get().isEmpty()) {
             return Optional.empty();
         }
 
         JsonNode row = payload.get().get(0);
-        if (!IgdbGameCategories.isMainGame(row)) {
+        if (!IgdbGameCategories.isCatalogGame(row)) {
             return Optional.empty();
         }
 
@@ -110,7 +139,7 @@ public class IgdbSearchClient {
     }
 
     private Optional<IgdbGameMatch> parseMatch(JsonNode row) {
-        if (!IgdbGameCategories.isMainGame(row)) {
+        if (!IgdbGameCategories.isCatalogGame(row)) {
             return Optional.empty();
         }
 
@@ -142,6 +171,12 @@ public class IgdbSearchClient {
 
         List<String> genreNames = parseNames(row.path("genres"));
         List<String> themeNames = parseNames(row.path("themes"));
+        String slug = row.path("slug").asText("");
+        if (CatalogMatureContentPolicy.containsBannedWord(name)
+                || CatalogMatureContentPolicy.containsBannedWord(slug)) {
+            return Optional.empty();
+        }
+
         if (CatalogMatureContentPolicy.hasMatureLabels(genreNames)
                 || CatalogMatureContentPolicy.hasMatureLabels(themeNames)) {
             return Optional.empty();

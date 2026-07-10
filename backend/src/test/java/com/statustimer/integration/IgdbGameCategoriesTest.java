@@ -35,4 +35,14 @@ class IgdbGameCategoriesTest {
 
         assertThat(IgdbGameCategories.isMainGame(row)).isTrue();
     }
+
+    @Test
+    void acceptsRemakeGameType() throws Exception {
+        var row = objectMapper.readTree("""
+                { "id": 337738, "name": "Assassin's Creed Black Flag Resynced", "game_type": 8 }
+                """);
+
+        assertThat(IgdbGameCategories.isCatalogGame(row)).isTrue();
+        assertThat(IgdbGameCategories.isMainGame(row)).isTrue();
+    }
 }

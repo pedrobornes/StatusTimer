@@ -12,7 +12,8 @@ public class KnownSteamAppRegistry {
             Map.entry("call-of-duty-warzone", 1962663),
             Map.entry("mecha-chameleon", 4704690),
             Map.entry("meccha-chameleon", 4704690),
-            Map.entry("infinity-nikki", 3164330)
+            Map.entry("infinity-nikki", 3164330),
+            Map.entry("assassin-s-creed-black-flag-resynced", 3751950)
     );
 
     public Optional<Integer> resolveAppId(String slug) {

@@ -1,11 +1,13 @@
 package com.statustimer.service;
 
+import com.statustimer.config.CatalogMatureContentPolicy;
+import com.statustimer.config.CatalogNoisePolicy;
 import com.statustimer.config.GameSlugMapper;
 import com.statustimer.dto.request.GameTelemetryPayload;
 import com.statustimer.dto.request.SyncTelemetryRequest;
-import com.statustimer.dto.response.CatalogGameListItemResponse;
 import com.statustimer.dto.response.GameCatalogPageResponse;
 import com.statustimer.dto.response.GameCatalogSearchResponse;
+import com.statustimer.dto.response.GameTelemetryResponse;
 import com.statustimer.dto.response.GameTelemetryResponse;
 import com.statustimer.dto.response.SyncTelemetryResponse;
 import com.statustimer.dto.response.TelemetryHistorySnapshotResponse;
@@ -18,6 +20,8 @@ import com.statustimer.entity.TelemetryStatus;
 import com.statustimer.entity.Game;
 import com.statustimer.repository.GameRepository;
 import com.statustimer.repository.GameTelemetryRepository;
+import com.statustimer.entity.GameTelemetryHistory;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,7 +46,9 @@ import org.springframework.web.server.ResponseStatusException;
 @Slf4j
 public class GameTelemetryService {
 
-    private static final int DASHBOARD_TELEMETRY_CANDIDATE_LIMIT = 24;
+    private static final int RECENT_INCIDENT_FETCH_LIMIT = 20;
+    private static final int RECENT_INCIDENT_RESPONSE_LIMIT = 5;
+    private static final int DASHBOARD_TELEMETRY_CANDIDATE_LIMIT = 50;
     private static final List<TelemetryStatus> INCIDENT_STATUSES = List.of(
             TelemetryStatus.DOWN,
             TelemetryStatus.MAINTENANCE
@@ -108,18 +114,16 @@ public class GameTelemetryService {
                                 (left, right) -> left
                         ));
 
-        List<CatalogGameListItemResponse> items = gamesPage.getContent().stream()
+        List<GameTelemetryResponse> items = gamesPage.getContent().stream()
                 .map(game -> {
                     GameTelemetry telemetry = telemetryBySlug.get(game.getSlug());
-                    GameTelemetryResponse response = telemetry != null
+                    return telemetry != null
                             ? GameTelemetryResponse.fromEntity(
                                     telemetry,
                                     Optional.of(game),
                                     gameCatalogService
                             )
                             : GameTelemetryResponse.fromGameCatalog(game, gameCatalogService);
-
-                    return CatalogGameListItemResponse.fromTelemetryResponse(response);
                 })
                 .toList();
 
@@ -235,10 +239,35 @@ public class GameTelemetryService {
 
     @Transactional(readOnly = true)
     public List<TelemetryIncidentResponse> findRecentIncidents() {
+        LocalDate today = LocalDate.now();
+
         return gameTelemetryRepository
-                .findRecentIncidents(INCIDENT_STATUSES, PageRequest.of(0, 5)).stream()
+                .findRecentIncidents(
+                        INCIDENT_STATUSES,
+                        PageRequest.of(0, RECENT_INCIDENT_FETCH_LIMIT)
+                )
+                .stream()
+                .filter(history -> isIncidentEligible(history, today))
+                .limit(RECENT_INCIDENT_RESPONSE_LIMIT)
                 .map(TelemetryIncidentResponse::fromEntity)
                 .toList();
+    }
+
+    private boolean isIncidentEligible(GameTelemetryHistory history, LocalDate today) {
+        Game game = history.getGame();
+        if (game == null) {
+            return false;
+        }
+
+        if (CatalogMatureContentPolicy.shouldSkipCatalogSurfacing(game)) {
+            return false;
+        }
+
+        if (CatalogNoisePolicy.shouldSkipCatalogSurfacing(game)) {
+            return false;
+        }
+
+        return !game.isUpcomingRelease(today);
     }
 
     @Transactional(readOnly = true)
@@ -362,17 +391,46 @@ public class GameTelemetryService {
         boolean isNew = telemetry.getId() == null;
         TelemetrySource dataSource = resolveDataSource(payload);
         LocalDateTime checkedAt = LocalDateTime.now();
+        TelemetryStatus resolvedStatus = resolveIncomingStatus(game, payload);
+        boolean suppressIncidentHistory = shouldSuppressIncidentHistory(game, resolvedStatus, payload);
 
-        telemetry.setStatus(payload.status());
+        telemetry.setStatus(resolvedStatus);
         telemetry.setLatencyMs(payload.latencyMs());
         telemetry.setDataSource(dataSource);
         telemetry.setLastChecked(checkedAt);
         telemetry.setGame(game);
 
         gameTelemetryRepository.save(telemetry);
-        appendHistorySnapshotIfNeeded(canonicalSlug, payload.status(), dataSource, checkedAt);
+        if (!suppressIncidentHistory) {
+            appendHistorySnapshotIfNeeded(canonicalSlug, resolvedStatus, dataSource, checkedAt);
+        }
         touchTrackedGameAfterTelemetry(canonicalSlug, checkedAt);
         return isNew;
+    }
+
+    private TelemetryStatus resolveIncomingStatus(Game game, GameTelemetryPayload payload) {
+        if (Boolean.TRUE.equals(payload.isUpcoming()) || game.isUpcomingRelease(LocalDate.now())) {
+            return TelemetryStatus.UPCOMING;
+        }
+
+        return payload.status();
+    }
+
+    private boolean shouldSuppressIncidentHistory(
+            Game game,
+            TelemetryStatus resolvedStatus,
+            GameTelemetryPayload payload
+    ) {
+        if (resolvedStatus == TelemetryStatus.UPCOMING) {
+            return true;
+        }
+
+        if (!game.isUpcomingRelease(LocalDate.now())) {
+            return false;
+        }
+
+        return payload.status() == TelemetryStatus.DOWN
+                || payload.status() == TelemetryStatus.MAINTENANCE;
     }
 
     private void touchTrackedGameAfterTelemetry(String gameSlug, LocalDateTime checkedAt) {

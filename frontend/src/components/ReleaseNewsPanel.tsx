@@ -70,11 +70,13 @@ export default function ReleaseNewsPanel({
 
   const sortedNews = sortNewsByRecency(news);
 
+  if (sortedNews.length === 0) {
+    return null;
+  }
+
   const visibleNews = sortedNews.slice(0, previewLimit);
 
   const allNewsHref = newsIndexHref ?? APP_ROUTES.gameNews(gameSlug);
-
-
 
   return (
 
@@ -110,39 +112,19 @@ export default function ReleaseNewsPanel({
 
 
 
-        {sortedNews.length > 0 ? (
-
-          <Link
-
-            href={allNewsHref}
-
-            className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.16em] text-fuchsia-200/80 transition hover:text-fuchsia-100"
-
-          >
-
-            All {gameName} news
-
-            <ArrowRight className="h-3 w-3" aria-hidden />
-
-          </Link>
-
-        ) : null}
+        <Link
+          href={allNewsHref}
+          className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.16em] text-fuchsia-200/80 transition hover:text-fuchsia-100"
+        >
+          All {gameName} news
+          <ArrowRight className="h-3 w-3" aria-hidden />
+        </Link>
 
       </div>
 
 
 
-      {visibleNews.length === 0 ? (
-
-        <p className="rounded-2xl border border-dashed border-fuchsia-400/20 px-4 py-10 text-center text-sm text-slate-400">
-
-          No new patches detected for {gameName} yet. Check back soon for updates.
-
-        </p>
-
-      ) : (
-
-        <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
 
           {visibleNews.map((article, index) => {
 
@@ -238,9 +220,7 @@ export default function ReleaseNewsPanel({
 
           })}
 
-        </div>
-
-      )}
+      </div>
 
     </section>
 

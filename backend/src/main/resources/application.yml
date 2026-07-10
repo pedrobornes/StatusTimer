@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: ${PORT:8080}
 
 spring:
   application:
@@ -12,6 +12,8 @@ spring:
 app:
   security:
     api-key: ${APP_API_KEY:your-local-secret-key}
+  cors:
+    allowed-origins: ${APP_CORS_ORIGINS:http://localhost:3000,http://localhost:5173}
 
 telemetry:
   history:

@@ -2,6 +2,7 @@ package com.statustimer.dto.response;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Lightweight catalog row for list/grid views. Omits media arrays and other
@@ -26,7 +27,8 @@ public record CatalogGameListItemResponse(
         Long twitchViewers,
         Integer userRating,
         Integer criticRating,
-        String genreName
+        String genreName,
+        List<String> genreNames
 ) {
 
     public static CatalogGameListItemResponse fromTelemetryResponse(GameTelemetryResponse source) {
@@ -49,7 +51,8 @@ public record CatalogGameListItemResponse(
                 source.twitchViewers(),
                 source.userRating(),
                 source.criticRating(),
-                source.genreName()
+                source.genreName(),
+                source.genreNames()
         );
     }
 }

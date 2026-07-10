@@ -103,6 +103,11 @@ public class Game {
     @Builder.Default
     private Boolean steamAdultContent = false;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "game_type", nullable = false)
+    @Builder.Default
+    private GameType gameType = GameType.MULTIPLAYER;
+
     @Column(name = "steam_short_description", columnDefinition = "TEXT")
     private String steamShortDescription;
 

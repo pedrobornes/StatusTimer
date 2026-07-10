@@ -85,10 +85,13 @@ class SteamStoreAppDetailsClientTest {
                   "1234": {
                     "success": true,
                     "data": {
-                      "required_age": "18",
                       "release_date": {
                         "coming_soon": false,
                         "date": "1 Jan, 2024"
+                      },
+                      "content_descriptors": {
+                        "ids": [3],
+                        "notes": null
                       },
                       "genres": [{"description": "Simulation"}]
                     }
@@ -97,6 +100,144 @@ class SteamStoreAppDetailsClientTest {
                 """;
 
         var metadata = invokeParse(body, 1234);
+
+        assertTrue(metadata.isPresent());
+        assertTrue(metadata.get().adultContent());
+    }
+
+    @Test
+    void parseMetadataDoesNotFlagViolentAgeRestrictedGames() throws Exception {
+        String body = """
+                {
+                  "1091500": {
+                    "success": true,
+                    "data": {
+                      "required_age": "18",
+                      "release_date": {
+                        "coming_soon": false,
+                        "date": "9 Dec, 2020"
+                      },
+                      "content_descriptors": {
+                        "ids": [2, 5],
+                        "notes": null
+                      },
+                      "genres": [{"description": "Action"}]
+                    }
+                  }
+                }
+                """;
+
+        var metadata = invokeParse(body, 1091500);
+
+        assertTrue(metadata.isPresent());
+        org.junit.jupiter.api.Assertions.assertFalse(metadata.get().adultContent());
+    }
+
+    @Test
+    void parseMetadataExtractsSteamCategoryIds() throws Exception {
+        String body = """
+                {
+                  "1245620": {
+                    "success": true,
+                    "data": {
+                      "release_date": {
+                        "coming_soon": false,
+                        "date": "25 Feb, 2022"
+                      },
+                      "categories": [
+                        {"id": 2, "description": "Single-player"},
+                        {"id": 22, "description": "Steam Achievements"}
+                      ],
+                      "genres": [{"description": "Action"}]
+                    }
+                  }
+                }
+                """;
+
+        var metadata = invokeParse(body, 1245620);
+
+        assertTrue(metadata.isPresent());
+        assertEquals(java.util.List.of(2, 22), metadata.get().categoryIds());
+    }
+
+    @Test
+    void parseMetadataDoesNotFlagMainstreamMatureGamesWithIncidentalSexualThemes() throws Exception {
+        String body = """
+                {
+                  "271590": {
+                    "success": true,
+                    "data": {
+                      "required_age": "17",
+                      "release_date": {
+                        "coming_soon": false,
+                        "date": "14 Apr, 2015"
+                      },
+                      "content_descriptors": {
+                        "ids": [5],
+                        "notes": null
+                      },
+                      "genres": [{"description": "Action"}]
+                    }
+                  }
+                }
+                """;
+
+        var metadata = invokeParse(body, 271590);
+
+        assertTrue(metadata.isPresent());
+        org.junit.jupiter.api.Assertions.assertFalse(metadata.get().adultContent());
+    }
+
+    @Test
+    void parseMetadataDoesNotFlagGamesWithSomeNudityDescriptor() throws Exception {
+        String body = """
+                {
+                  "1091500": {
+                    "success": true,
+                    "data": {
+                      "required_age": "17",
+                      "release_date": {
+                        "coming_soon": false,
+                        "date": "9 Dec, 2020"
+                      },
+                      "content_descriptors": {
+                        "ids": [1, 2, 5],
+                        "notes": "Contains nudity and sexual material."
+                      },
+                      "genres": [{"description": "RPG"}]
+                    }
+                  }
+                }
+                """;
+
+        var metadata = invokeParse(body, 1091500);
+
+        assertTrue(metadata.isPresent());
+        org.junit.jupiter.api.Assertions.assertFalse(metadata.get().adultContent());
+    }
+
+    @Test
+    void parseMetadataDetectsFrequentSexualContentDescriptor() throws Exception {
+        String body = """
+                {
+                  "1202690": {
+                    "success": true,
+                    "data": {
+                      "release_date": {
+                        "coming_soon": false,
+                        "date": "1 Jan, 2024"
+                      },
+                      "content_descriptors": {
+                        "ids": [1, 2, 3, 4, 5],
+                        "notes": "Nudity and sex scenes."
+                      },
+                      "genres": [{"description": "Simulation"}]
+                    }
+                  }
+                }
+                """;
+
+        var metadata = invokeParse(body, 1202690);
 
         assertTrue(metadata.isPresent());
         assertTrue(metadata.get().adultContent());

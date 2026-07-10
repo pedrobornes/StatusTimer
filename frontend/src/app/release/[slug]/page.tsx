@@ -21,7 +21,7 @@ import { redirectLaunchedReleaseToStatus } from "@/lib/releaseRoutes";
 import { resolveCanonicalGameSlug } from "@/lib/gameSlugs";
 import { toSlug } from "@/lib/slug";
 import { getGamingNews } from "@/services/newsService";
-import { getUpcomingReleases } from "@/services/releasesService";
+import { getUpcomingReleaseBySlug, getUpcomingReleases } from "@/services/releasesService";
 import {
   getGameStatusDetail,
   getGameTelemetryBySlug,
@@ -113,7 +113,9 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
       getGameStatusDetail(canonicalSlug).catch(() => null),
     ]);
 
-    const release = findReleaseBySlug(releases, canonicalSlug);
+    const release =
+      findReleaseBySlug(releases, canonicalSlug) ??
+      (await getUpcomingReleaseBySlug(canonicalSlug).catch(() => null));
 
     if (!release) {
       redirectLaunchedReleaseToStatus(canonicalSlug);

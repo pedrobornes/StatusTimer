@@ -8,8 +8,11 @@ import requests
 
 from config.settings import settings
 from models.feed_events import ScrapedFeedEvent
+from scrapers.blizzard_news import fetch_blizzard_news_events
+from scrapers.epic_news import fetch_epic_news_events
 from scrapers.epic_status import fetch_epic_incident_events
 from scrapers.http_client import build_http_session
+from scrapers.riot_news import fetch_riot_news_events
 from scrapers.riot_status import fetch_riot_incident_events
 from scrapers.reddit_news import fetch_reddit_news_events
 from scrapers.steam_news import fetch_steam_news_events
@@ -26,6 +29,9 @@ def fetch_all_platform_feed_events(
 
     fetchers = [
         fetch_steam_news_events,
+        fetch_riot_news_events,
+        fetch_blizzard_news_events,
+        fetch_epic_news_events,
         fetch_riot_incident_events,
         fetch_epic_incident_events,
     ]

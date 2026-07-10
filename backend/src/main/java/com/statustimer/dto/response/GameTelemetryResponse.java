@@ -2,6 +2,7 @@ package com.statustimer.dto.response;
 
 import com.statustimer.entity.Game;
 import com.statustimer.entity.GameTelemetry;
+import com.statustimer.entity.GameType;
 import com.statustimer.entity.TelemetryStatus;
 import com.statustimer.service.GameCatalogService;
 import java.time.LocalDate;
@@ -35,7 +36,9 @@ public record GameTelemetryResponse(
         String genreName,
         List<String> genreNames,
         List<String> screenshotUrls,
-        List<String> trailerVideoIds
+        List<String> trailerVideoIds,
+        String type,
+        Boolean playersTrackable
 ) {
 
     public static GameTelemetryResponse fromEntity(
@@ -97,6 +100,8 @@ public record GameTelemetryResponse(
                 .map(Game::getTrailerVideoIds)
                 .filter(ids -> ids != null && !ids.isEmpty())
                 .orElse(List.of());
+        GameType gameType = catalogService.resolveGameType(slug);
+        boolean playersTrackable = catalogService.canTrackSteamPlayers(slug);
 
         return new GameTelemetryResponse(
                 entity.getGame().getId(),
@@ -124,7 +129,9 @@ public record GameTelemetryResponse(
                 genreName,
                 genreNames,
                 screenshotUrls,
-                trailerVideoIds
+                trailerVideoIds,
+                gameType.toApiValue(),
+                playersTrackable
         );
     }
 
@@ -143,6 +150,8 @@ public record GameTelemetryResponse(
         List<String> trailerVideoIds = game.getTrailerVideoIds() != null && !game.getTrailerVideoIds().isEmpty()
                 ? game.getTrailerVideoIds()
                 : List.of();
+        GameType gameType = game.getGameType() != null ? game.getGameType() : GameType.MULTIPLAYER;
+        boolean playersTrackable = game.getSteamAppId() != null && game.getSteamAppId() > 0;
 
         return new GameTelemetryResponse(
                 game.getId(),
@@ -174,7 +183,9 @@ public record GameTelemetryResponse(
                                 ? List.of(game.getGenreName())
                                 : List.of()),
                 screenshotUrls,
-                trailerVideoIds
+                trailerVideoIds,
+                gameType.toApiValue(),
+                playersTrackable
         );
     }
 

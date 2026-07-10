@@ -7,13 +7,16 @@ import com.statustimer.config.CacheConfig;
 import com.statustimer.config.GameSlugMapper;
 import com.statustimer.config.KnownSteamAppRegistry;
 import com.statustimer.config.PinnedGamePolicy;
+import com.statustimer.config.SteamAppIdPolicy;
 import com.statustimer.config.TrackedGameCatalog;
 import com.statustimer.dto.request.GameCatalogEntryPayload;
 import com.statustimer.dto.request.SyncGameCatalogRequest;
 import com.statustimer.dto.response.GameCatalogSearchResponse;
 import com.statustimer.dto.response.GameIndexableSlugResponse;
 import com.statustimer.dto.response.SyncGameCatalogResponse;
+import com.statustimer.config.GameTypeResolver;
 import com.statustimer.entity.Game;
+import com.statustimer.entity.GameType;
 import com.statustimer.entity.LifecycleState;
 import com.statustimer.integration.IgdbSearchClient;
 import com.statustimer.integration.IgdbSearchClient.IgdbGameMatch;
@@ -23,6 +26,7 @@ import com.statustimer.dto.response.SteamStoreListingResponse;
 import com.statustimer.repository.GameRepository;
 import com.statustimer.util.IgdbMetadataSupport;
 import com.statustimer.util.SlugUtils;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -190,12 +194,27 @@ public class GameCatalogService {
         }
         if (metadata.adultContent()) {
             game.setSteamAdultContent(true);
+        } else {
+            game.setSteamAdultContent(false);
+        }
+
+        GameType resolvedType = GameTypeResolver.resolveFromSteamCategoryIds(metadata.categoryIds());
+        if (resolvedType != null) {
+            game.setGameType(resolvedType);
         }
 
         CatalogMatureContentPolicy.applyQuarantineIfMature(game);
+        SteamAppIdPolicy.sanitize(game);
     }
 
-    private void refreshSteamAdultContentFlag(Game game) {
+    private void applyPinnedGameType(Game game) {
+        GameType pinnedType = GameTypeResolver.resolvePinnedSlug(game.getSlug());
+        if (pinnedType != null) {
+            game.setGameType(pinnedType);
+        }
+    }
+
+    private void refreshSteamStoreMetadata(Game game) {
         Integer appId = game.getSteamAppId();
         if (appId == null || appId <= 0) {
             CatalogMatureContentPolicy.applyQuarantineIfMature(game);
@@ -270,8 +289,27 @@ public class GameCatalogService {
     @Transactional(readOnly = true)
     public Long resolveLivePlayers(String slug) {
         return findBySlug(slug)
+                .filter(game -> game.getSteamAppId() != null && game.getSteamAppId() > 0)
                 .map(Game::getLivePlayers)
                 .orElse(null);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean canTrackSteamPlayers(String slug) {
+        if (SteamAppIdPolicy.suppressesSteamPlayerTracking(slug)) {
+            return false;
+        }
+
+        return findBySlug(slug)
+                .map(game -> game.getSteamAppId() != null && game.getSteamAppId() > 0)
+                .orElse(false);
+    }
+
+    @Transactional(readOnly = true)
+    public GameType resolveGameType(String slug) {
+        return findBySlug(slug)
+                .map(Game::getGameType)
+                .orElse(GameType.MULTIPLAYER);
     }
 
     @Transactional(readOnly = true)
@@ -380,6 +418,8 @@ public class GameCatalogService {
     ) {
         for (Game game : gameRepository
                 .findByGameNameContainingIgnoreCaseOrSlugContainingIgnoreCase(query, query)) {
+            CatalogMatureContentPolicy.applyQuarantineIfMature(game);
+            gameRepository.save(game);
             if (CatalogNoisePolicy.shouldSkipCatalogSurfacing(game)) {
                 continue;
             }
@@ -520,7 +560,8 @@ public class GameCatalogService {
             game.setLogoUrl(GameAssetPolicy.LOGO_NONE);
         }
 
-        refreshSteamAdultContentFlag(game);
+        refreshSteamStoreMetadata(game);
+        applyPinnedGameType(game);
         CatalogMatureContentPolicy.applyQuarantineIfMature(game);
 
         Game saved = gameRepository.save(game);
@@ -547,9 +588,23 @@ public class GameCatalogService {
                 game.getUserRating(),
                 game.getCriticRating(),
                 game.getGenreName(),
+                resolveGenreNames(game),
                 game.getLivePlayers(),
-                game.getTwitchViewers()
+                game.getTwitchViewers(),
+                game.isUpcomingRelease(LocalDate.now())
         );
+    }
+
+    private List<String> resolveGenreNames(Game game) {
+        if (game.getGenreNames() != null && !game.getGenreNames().isEmpty()) {
+            return List.copyOf(game.getGenreNames());
+        }
+
+        if (game.getGenreName() != null && !game.getGenreName().isBlank()) {
+            return List.of(game.getGenreName().trim());
+        }
+
+        return List.of();
     }
 
     @Transactional
@@ -616,6 +671,8 @@ public class GameCatalogService {
                 applySteamStoreFields(game, payload);
             }
 
+            applyPinnedGameType(game);
+
             if (payload.featured() != null) {
                 game.setFeatured(payload.featured());
             }
@@ -659,7 +716,7 @@ public class GameCatalogService {
 
             if (!Boolean.TRUE.equals(game.getManualLock())) {
                 resolveAllSteamAppIds(game);
-                refreshSteamAdultContentFlag(game);
+                refreshSteamStoreMetadata(game);
             }
 
             if (CatalogMatureContentPolicy.applyQuarantineIfMature(game)) {
@@ -738,6 +795,10 @@ public class GameCatalogService {
                 return;
             }
 
+            if (game.getSteamAppId() == null) {
+                resolveAllSteamAppIds(game);
+            }
+
             boolean needsEnrichment = game.getSteamAppId() == null
                     || game.getIgdbGameId() == null
                     || GameAssetPolicy.needsIgdbAssets(game)
@@ -768,12 +829,8 @@ public class GameCatalogService {
             return;
         }
 
-        if (slug != null && !slug.isBlank()) {
-            Optional<IgdbGameMatch> bySlug = igdbSearchClient.lookupBySlug(slug);
-            if (bySlug.isPresent() && matchesIgdbGame(slug, bySlug.get())) {
-                applyIgdbMatch(game, bySlug.get());
-                return;
-            }
+        if (tryApplyIgdbMatch(game, resolveIgdbMatch(game))) {
+            return;
         }
 
         String gameName = game.getGameName();
@@ -781,14 +838,55 @@ public class GameCatalogService {
             return;
         }
 
-        for (IgdbGameMatch match : igdbSearchClient.search(gameName, 8)) {
-            if (!matchesIgdbGame(slug, match)) {
+        for (IgdbGameMatch match : igdbSearchClient.search(gameName, 24)) {
+            if (!matchesIgdbGame(slug, match, game)) {
                 continue;
             }
 
             applyIgdbMatch(game, match);
             return;
         }
+    }
+
+    private Optional<IgdbGameMatch> resolveIgdbMatch(Game game) {
+        Long igdbGameId = game.getIgdbGameId();
+        if (igdbGameId != null && igdbGameId > 0) {
+            Optional<IgdbGameMatch> byId = igdbSearchClient.lookupById(igdbGameId);
+            if (byId.isPresent()) {
+                return byId;
+            }
+        }
+
+        Integer steamAppId = game.getSteamAppId();
+        if (steamAppId != null && steamAppId > 0) {
+            Optional<IgdbGameMatch> bySteamAppId = igdbSearchClient.lookupBySteamAppId(steamAppId);
+            if (bySteamAppId.isPresent()) {
+                return bySteamAppId;
+            }
+        }
+
+        String slug = game.getSlug();
+        if (slug == null || slug.isBlank()) {
+            return Optional.empty();
+        }
+
+        Optional<IgdbGameMatch> bySlug = igdbSearchClient.lookupBySlug(slug);
+        if (bySlug.isPresent() && matchesIgdbGame(slug, bySlug.get(), game)) {
+            return bySlug;
+        }
+
+        return SlugUtils.toIgdbPossessiveSlugVariant(slug)
+                .flatMap(igdbSearchClient::lookupBySlug)
+                .filter(match -> matchesIgdbGame(slug, match, game));
+    }
+
+    private boolean tryApplyIgdbMatch(Game game, Optional<IgdbGameMatch> match) {
+        if (match.isEmpty()) {
+            return false;
+        }
+
+        applyIgdbMatch(game, match.get());
+        return true;
     }
 
     private void applyIgdbMatch(Game game, IgdbGameMatch match) {
@@ -818,12 +916,14 @@ public class GameCatalogService {
         }
 
         if (game.getSteamAppId() == null && match.steamAppId() != null
-                && !PinnedGamePolicy.isBlockedSteamAppId(game.getSlug(), match.steamAppId())) {
+                && SteamAppIdPolicy.mayAssignSteamAppId(game.getSlug(), match.steamAppId())) {
             game.setSteamAppId(match.steamAppId());
         }
 
         PinnedGamePolicy.findBySlug(game.getSlug())
                 .ifPresent(pin -> game.setSteamAppId(pin.steamAppId()));
+
+        SteamAppIdPolicy.sanitize(game);
     }
 
     private boolean enforcePinnedGameAssets(Game game) {
@@ -879,6 +979,78 @@ public class GameCatalogService {
         }
     }
 
+    @Transactional
+    public int reconcileSteamAdultContentFlags() {
+        int cleared = 0;
+
+        for (Game game : gameRepository.findBySteamAdultContentTrueAndSteamAppIdIsNotNull()) {
+            boolean wasAdult = Boolean.TRUE.equals(game.getSteamAdultContent());
+            refreshSteamStoreMetadata(game);
+            if (wasAdult && !Boolean.TRUE.equals(game.getSteamAdultContent())) {
+                cleared++;
+            }
+            gameRepository.save(game);
+        }
+
+        if (cleared > 0) {
+            log.info("Cleared steamAdultContent for {} games after relaxed Steam policy", cleared);
+        }
+
+        return cleared;
+    }
+
+    @Transactional
+    public int reconcileSteamAppIds() {
+        int cleared = 0;
+
+        for (Game game : gameRepository.findAll()) {
+            Integer before = game.getSteamAppId();
+            Long playersBefore = game.getLivePlayers();
+            SteamAppIdPolicy.sanitize(game);
+            if (!java.util.Objects.equals(before, game.getSteamAppId())
+                    || !java.util.Objects.equals(playersBefore, game.getLivePlayers())) {
+                cleared++;
+                gameRepository.save(game);
+            }
+        }
+
+        if (cleared > 0) {
+            log.info("Cleared invalid Steam app ids for {} games", cleared);
+        }
+
+        return cleared;
+    }
+
+    @Transactional
+    public int reconcileGameTypes() {
+        int updated = 0;
+
+        for (Game game : gameRepository.findBySteamAppIdIsNotNull()) {
+            GameType before = game.getGameType();
+            refreshSteamStoreMetadata(game);
+            applyPinnedGameType(game);
+            if (before != game.getGameType()) {
+                updated++;
+            }
+            gameRepository.save(game);
+        }
+
+        for (Game game : gameRepository.findBySteamAppIdIsNull()) {
+            GameType before = game.getGameType();
+            applyPinnedGameType(game);
+            if (before != game.getGameType()) {
+                updated++;
+                gameRepository.save(game);
+            }
+        }
+
+        if (updated > 0) {
+            log.info("Reconciled game type for {} games", updated);
+        }
+
+        return updated;
+    }
+
     private void consolidateLegacySlugCollisions() {
         gameRepository.findBySlug("counter-strike").ifPresent(legacy -> {
             if (gameRepository.findBySlug("counter-strike-2").isPresent()) {
@@ -888,8 +1060,27 @@ public class GameCatalogService {
     }
 
     private boolean matchesIgdbGame(String slug, IgdbGameMatch match) {
+        return matchesIgdbGame(slug, match, null);
+    }
+
+    private boolean matchesIgdbGame(String slug, IgdbGameMatch match, Game game) {
         if (PinnedGamePolicy.isPinned(slug)) {
             return PinnedGamePolicy.matchesIgdbGame(slug, match);
+        }
+
+        if (game != null) {
+            Long igdbGameId = game.getIgdbGameId();
+            if (igdbGameId != null && igdbGameId > 0 && igdbGameId == match.igdbId()) {
+                return true;
+            }
+
+            Integer steamAppId = game.getSteamAppId();
+            if (steamAppId != null
+                    && steamAppId > 0
+                    && match.steamAppId() != null
+                    && steamAppId.equals(match.steamAppId())) {
+                return true;
+            }
         }
 
         String candidateSlug = SlugUtils.toSlug(match.name());
@@ -899,7 +1090,13 @@ public class GameCatalogService {
 
         String igdbSlug = match.igdbSlug();
         if (igdbSlug != null && !igdbSlug.isBlank()) {
-            return slug.equals(igdbSlug.trim());
+            if (slug.equals(igdbSlug.trim())) {
+                return true;
+            }
+
+            return SlugUtils.toIgdbPossessiveSlugVariant(slug)
+                    .map(variant -> variant.equals(igdbSlug.trim()))
+                    .orElse(false);
         }
 
         return false;
@@ -925,19 +1122,21 @@ public class GameCatalogService {
             return;
         }
 
-        for (IgdbGameMatch match : igdbSearchClient.search(game.getGameName(), 3)) {
-            if (matchesIgdbGame(slug, match)) {
-                if (match.steamAppId() != null) {
+        for (IgdbGameMatch match : igdbSearchClient.search(game.getGameName(), 8)) {
+            if (matchesIgdbGame(slug, match, game)) {
+                if (SteamAppIdPolicy.mayAssignSteamAppId(slug, match.steamAppId())) {
                     game.setSteamAppId(match.steamAppId());
                 }
                 return;
             }
         }
+
+        SteamAppIdPolicy.sanitize(game);
     }
 
     private void resolveSteamAppIdForSync(Game game, GameCatalogEntryPayload payload) {
         if (payload.steamAppId() != null) {
-            if (!PinnedGamePolicy.isBlockedSteamAppId(game.getSlug(), payload.steamAppId())) {
+            if (SteamAppIdPolicy.mayAssignSteamAppId(game.getSlug(), payload.steamAppId())) {
                 game.setSteamAppId(payload.steamAppId());
             }
             PinnedGamePolicy.findBySlug(game.getSlug())
@@ -955,6 +1154,7 @@ public class GameCatalogService {
         }
 
         resolveSteamAppIdFromLinkedSlug(game);
+        SteamAppIdPolicy.sanitize(game);
     }
 
     private void resolveSteamAppIdFromLinkedSlug(Game game) {
@@ -1028,7 +1228,7 @@ public class GameCatalogService {
     private boolean applyLiveMetricsFields(Game game, GameCatalogEntryPayload payload) {
         boolean changed = false;
 
-        if (payload.livePlayers() != null) {
+        if (payload.livePlayers() != null && !SteamAppIdPolicy.suppressesSteamPlayerTracking(game.getSlug())) {
             game.setLivePlayers(payload.livePlayers());
             changed = true;
         }

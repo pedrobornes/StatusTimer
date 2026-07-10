@@ -11,7 +11,7 @@ import requests
 from config.settings import settings
 from scrapers.igdb_media import (
     IGDB_GAME_FIELDS,
-    MAIN_GAME_TYPE,
+    CATALOG_GAME_TYPE_FILTER,
     IgdbGameMetadata,
     is_main_game,
     parse_igdb_game_metadata,
@@ -50,7 +50,7 @@ class IgdbClient:
 
         query = (
             f"fields {IGDB_GAME_FIELDS}; "
-            f"where game_type = {MAIN_GAME_TYPE} & hypes >= {resolved_min_hype} "
+            f"where game_type = {CATALOG_GAME_TYPE_FILTER} & hypes >= {resolved_min_hype} "
             f"& (first_release_date > {now_unix} | first_release_date = null); "
             "sort hypes desc; "
             f"limit {resolved_limit};"
@@ -74,7 +74,7 @@ class IgdbClient:
             page_limit = min(IGDB_MAX_PAGE_SIZE, limit - len(collected))
             query = (
                 f"fields {IGDB_GAME_FIELDS}; "
-                f"where game_type = {MAIN_GAME_TYPE} "
+                f"where game_type = {CATALOG_GAME_TYPE_FILTER} "
                 f"& first_release_date != null "
                 f"& first_release_date <= {now_unix}; "
                 "sort total_rating_count desc; "
@@ -164,7 +164,7 @@ class IgdbClient:
         escaped_name = game_name.replace('"', '\\"')
         query = (
             f"fields {IGDB_GAME_FIELDS}; "
-            f"where game_type = {MAIN_GAME_TYPE}; "
+            f"where game_type = {CATALOG_GAME_TYPE_FILTER}; "
             f'search "{escaped_name}"; '
             "limit 8;"
         )

@@ -50,8 +50,10 @@ export interface GameCatalogSearchResult {
   userRating?: number | null;
   criticRating?: number | null;
   genreName?: string | null;
+  genreNames?: string[];
   livePlayers?: number | null;
   twitchViewers?: number | null;
+  upcomingRelease?: boolean;
 }
 
 export interface GameIndexableSlug {
