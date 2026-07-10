@@ -6,6 +6,8 @@ from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from config.mysql_url import normalize_mysql_sqlalchemy_url
+
 _SCRIPTS_DIR = Path(__file__).resolve().parent.parent
 _ENV_FILE = _SCRIPTS_DIR / ".env"
 
@@ -100,12 +102,11 @@ class Settings(BaseSettings):
     @cached_property
     def sqlalchemy_database_url(self) -> str:
         if self.database_url:
-            return self.database_url
+            return normalize_mysql_sqlalchemy_url(self.database_url)
 
-        return (
+        return normalize_mysql_sqlalchemy_url(
             f"mysql+pymysql://{self.mysql_user}:{self.mysql_password}"
             f"@{self.mysql_host}:{self.mysql_port}/{self.mysql_database}"
-            "?charset=utf8mb4"
         )
 
 
