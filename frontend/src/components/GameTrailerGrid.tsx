@@ -1,19 +1,24 @@
 interface GameTrailerGridProps {
   videoIds: string[];
   gameName: string;
+  maxVisible?: number;
 }
 
 export default function GameTrailerGrid({
   videoIds,
   gameName,
+  maxVisible,
 }: GameTrailerGridProps) {
   if (videoIds.length === 0) {
     return null;
   }
 
+  const visibleVideoIds =
+    maxVisible === undefined ? videoIds : videoIds.slice(0, maxVisible);
+
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      {videoIds.map((videoId, index) => (
+      {visibleVideoIds.map((videoId, index) => (
         <div
           key={`${videoId}-${index}`}
           className="overflow-hidden rounded-2xl border border-white/10 bg-black/40"

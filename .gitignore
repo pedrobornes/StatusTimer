@@ -75,9 +75,8 @@ pnpm-debug.log*
 .cache/
 
 # CUSTOM PRIVACY SAFEGUARDS 
-# Ocultar carpetas de planes, metodologías y prompts de agentes
+# Ocultar carpetas de planes y metodologías
 plans/
-agents/
 GUIA-USO.md
 *.md
 !README.md

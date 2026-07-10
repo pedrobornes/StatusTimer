@@ -195,7 +195,11 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
               newsIndexHref={APP_ROUTES.releaseNews(canonicalSlug)}
             />
 
-            <ReleaseMediaPanel gameName={release.gameName} media={gameMedia} />
+            <ReleaseMediaPanel
+              gameName={release.gameName}
+              media={gameMedia}
+              gameSlug={canonicalSlug}
+            />
           </div>
 
           <aside className="space-y-6 xl:sticky xl:top-24 xl:self-start">

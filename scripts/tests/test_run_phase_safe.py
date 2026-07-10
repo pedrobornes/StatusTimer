@@ -40,7 +40,7 @@ class RunPhaseSafeResilienceTests(unittest.TestCase):
         with patch("pipeline.cycle_resilience.settings") as mock_settings:
             mock_settings.phase_circuit_failure_threshold = 1
             mock_settings.phase_circuit_open_seconds = 60
-            breaker.record_failure("platform_intel_pipeline")
+            breaker.record_failure("platform_feeds_pipeline")
 
             called = False
 
@@ -50,7 +50,7 @@ class RunPhaseSafeResilienceTests(unittest.TestCase):
                 return "ok"
 
             result = run_phase_safe(
-                "platform_intel_pipeline",
+                "platform_feeds_pipeline",
                 _should_not_run,
                 "skipped",
                 cycle_id="cycle-test",
@@ -60,7 +60,7 @@ class RunPhaseSafeResilienceTests(unittest.TestCase):
 
         self.assertEqual(result, "skipped")
         self.assertFalse(called)
-        self.assertEqual(tracker.skipped_phases, ["platform_intel_pipeline"])
+        self.assertEqual(tracker.skipped_phases, ["platform_feeds_pipeline"])
 
 
 if __name__ == "__main__":

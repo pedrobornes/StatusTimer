@@ -185,7 +185,11 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
                 gameName={gameName}
                 gameSlug={slug}
               />
-              <ReleaseMediaPanel gameName={gameName} media={gameMedia} />
+              <ReleaseMediaPanel
+                gameName={gameName}
+                media={gameMedia}
+                gameSlug={canonicalSlug}
+              />
             </div>
 
             <aside className="space-y-6 xl:sticky xl:top-24 xl:self-start">
@@ -269,7 +273,11 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
                 gameName={gameName}
                 gameSlug={slug}
               />
-              <ReleaseMediaPanel gameName={gameName} media={gameMedia} />
+              <ReleaseMediaPanel
+                gameName={gameName}
+                media={gameMedia}
+                gameSlug={canonicalSlug}
+              />
             </div>
 
             <aside className="space-y-6 xl:sticky xl:top-24 xl:self-start">
@@ -391,7 +399,11 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
                 gameSlug={slug}
               />
 
-              <ReleaseMediaPanel gameName={gameName} media={gameMedia} />
+              <ReleaseMediaPanel
+                gameName={gameName}
+                media={gameMedia}
+                gameSlug={canonicalSlug}
+              />
 
               <div className="mt-8">
                 <AdSlot format="leaderboard" slotId={`status-${slug}-leaderboard`} />

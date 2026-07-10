@@ -74,8 +74,7 @@ class HarvestCycleReport:
     telemetry_sync: PushResult
     platform_events_scraped: int
     platform_events_pushed: int
-    context_chunks_indexed: int
-    platform_intel_sync: PushResult
+    platform_feeds_sync: PushResult
     backend_reachable: bool
     runtime_metrics: "CycleRuntimeMetrics | None" = None
     cycle_id: str = ""
@@ -540,12 +539,16 @@ def run_status_sync(
     )
 
 
-def run_platform_intel_pipeline(client: BackendClient) -> tuple[int, int, int, PushResult]:
+def run_platform_feeds_pipeline(client: BackendClient) -> tuple[int, int, PushResult]:
     scraped_events = fetch_with_retry(
         "Platform feed events fetch",
         fetch_all_platform_feed_events,
     )
-    return _sync_prefetched_platform_intel(client, scraped_events)
+    return _sync_prefetched_platform_feeds(
+        client,
+        scraped_events,
+        preload_catalog_snapshot(),
+    )
 
 
 def _fetch_igdb_popular_catalog_safe() -> list:
@@ -723,10 +726,10 @@ def run_harvest_cycle(client: BackendClient) -> HarvestCycleReport:
     )
     telemetry_prepared = scheduled_items
     telemetry_sync = scheduled_sync
-    platform_events_scraped, platform_events_pushed, context_chunks_indexed, platform_intel_sync = run_phase_safe(
-        "platform_intel_pipeline",
-        lambda: _sync_prefetched_platform_intel(client, prefetched_platform_events, catalog_preload),
-        (0, 0, 0, PushResult(success=False, error_message="phase failed")),
+    platform_events_scraped, platform_events_pushed, platform_feeds_sync = run_phase_safe(
+        "platform_feeds_pipeline",
+        lambda: _sync_prefetched_platform_feeds(client, prefetched_platform_events, catalog_preload),
+        (0, 0, PushResult(success=False, error_message="phase failed")),
         **resilience,
     )
     sync_duration_ms = _now_ms() - sync_started_ms
@@ -754,8 +757,7 @@ def run_harvest_cycle(client: BackendClient) -> HarvestCycleReport:
         telemetry_sync=telemetry_sync,
         platform_events_scraped=platform_events_scraped,
         platform_events_pushed=platform_events_pushed,
-        context_chunks_indexed=context_chunks_indexed,
-        platform_intel_sync=platform_intel_sync,
+        platform_feeds_sync=platform_feeds_sync,
         backend_reachable=health.success,
         runtime_metrics=runtime_metrics,
         cycle_id=cycle_id,
@@ -925,18 +927,18 @@ def _sync_prefetched_social(
     return len(entries), aggregate_result
 
 
-def _sync_prefetched_platform_intel(
+def _sync_prefetched_platform_feeds(
     client: BackendClient,
     scraped_events: list,
     catalog_preload: CatalogPreload,
-) -> tuple[int, int, int, PushResult]:
+) -> tuple[int, int, PushResult]:
     recent_events = filter_recent_events(scraped_events)
     dedup_store = DedupStore.from_settings()
     new_events = filter_new_events(recent_events, dedup_store)
     dedup_store.persist()
 
     logger.info(
-        "Platform intel scraped=%s recent=%s new=%s",
+        "Platform feeds scraped=%s recent=%s new=%s",
         len(scraped_events),
         len(recent_events),
         len(new_events),
@@ -995,7 +997,7 @@ def _sync_prefetched_platform_intel(
         attempts=last_result.attempts,
         error_message=last_result.error_message,
     )
-    return len(scraped_events), pushed_count, 0, aggregate_result
+    return len(scraped_events), pushed_count, aggregate_result
 
 
 def _resolve_prefetched_result(

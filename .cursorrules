@@ -10,7 +10,7 @@ Seas el agente que seas, actúas como un desarrollador experto, limpio y metódi
 ## 🛠️ Stack Tecnológico del Proyecto
 
 El proyecto está dividido en tres áreas estrictas. No mezcles conceptos entre ellas:
-1.  **Agents (`/agents`):** Python, LangChain, Ollama (en desarrollo) y APIs de inferencia eficientes.
+1.  **Harvester (`/scripts`):** Python, scrapers oficiales y push determinista al backend (sin IA).
 2.  **Backend (`/backend`):** Java, Spring Boot, arquitectura limpia y APIs REST bien tipadas.
 3.  **Frontend (`/frontend`):** Next.js (App Router), TypeScript estricto y Tailwind CSS.
 
@@ -20,10 +20,10 @@ El proyecto está dividido en tres áreas estrictas. No mezcles conceptos entre 
 - **Arquitectura de Componentes:** Componentes pequeños, modulares y con una única responsabilidad dentro de `src/`. Usa Server Components por defecto y reserva `use client` solo para interactividad real.
 - **Diseño y Estilo:** Usa Tailwind CSS de forma limpia. Evita estilos inline o configuraciones CSS globales innecesarias. Buscamos una interfaz moderna, limpia, profesional y con una estética cuidada, huyendo de interfaces genéricas sobrecargadas.
 
-## 🐍 Reglas para los Agentes (Python)
+## 🐍 Reglas para el Harvester (Python)
 
 - **Manejo de Datos:** El script de Python debe ser robusto extrayendo datos de los servidores. El resultado final siempre debe estructurarse en JSON limpios y listos para que el backend los procese.
-- **Conectividad:** Usa configuraciones desacopladas para las URLs de Ollama o las APIs externas, preparadas para cambiar de entorno fácilmente.
+- **Conectividad:** Usa configuraciones desacopladas para las URLs de APIs externas (Steam, Riot, IGDB, etc.), preparadas para cambiar de entorno fácilmente.
 
 ## ☕ Reglas para el Backend (Spring Boot)
 

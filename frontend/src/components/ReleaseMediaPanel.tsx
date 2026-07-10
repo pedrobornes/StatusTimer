@@ -1,17 +1,25 @@
 import { Clapperboard, ExternalLink } from "lucide-react";
 import GameScreenshotGallery from "@/components/GameScreenshotGallery";
 import GameTrailerGrid from "@/components/GameTrailerGrid";
+import MediaViewMoreLink from "@/components/MediaViewMoreLink";
 import type { GameMediaContent } from "@/components/GameMediaSidebar";
-import { hasGameMedia } from "@/lib/gameMedia";
+import {
+  MEDIA_PREVIEW_MAX_SCREENSHOTS,
+  MEDIA_PREVIEW_MAX_VIDEOS,
+  buildGameMediaSectionHref,
+  hasGameMedia,
+} from "@/lib/gameMedia";
 
 interface ReleaseMediaPanelProps {
   gameName: string;
   media: GameMediaContent;
+  gameSlug?: string;
 }
 
 export default function ReleaseMediaPanel({
   gameName,
   media,
+  gameSlug,
 }: ReleaseMediaPanelProps) {
   if (!hasGameMedia(media)) {
     return null;
@@ -20,6 +28,12 @@ export default function ReleaseMediaPanel({
   const trailers = media.trailerVideoIds ?? [];
   const screenshots = media.screenshotUrls ?? [];
   const youtubeChannelUrl = media.youtubeChannelUrl?.trim() || null;
+  const showMediaLinks = Boolean(gameSlug?.trim());
+  const hiddenVideoCount = Math.max(0, trailers.length - MEDIA_PREVIEW_MAX_VIDEOS);
+  const hiddenScreenshotCount = Math.max(
+    0,
+    screenshots.length - MEDIA_PREVIEW_MAX_SCREENSHOTS,
+  );
 
   return (
     <section className="glass-panel rounded-3xl p-6 md:p-8">
@@ -58,7 +72,17 @@ export default function ReleaseMediaPanel({
             <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">
               {trailers.length === 1 ? "Trailer" : `${trailers.length} Trailers`}
             </p>
-            <GameTrailerGrid videoIds={trailers} gameName={gameName} />
+            <GameTrailerGrid
+              videoIds={trailers}
+              gameName={gameName}
+              maxVisible={MEDIA_PREVIEW_MAX_VIDEOS}
+            />
+            {showMediaLinks && hiddenVideoCount > 0 ? (
+              <MediaViewMoreLink
+                href={buildGameMediaSectionHref(gameSlug!, "videos")}
+                label={`View all ${trailers.length} videos`}
+              />
+            ) : null}
           </div>
         ) : null}
 
@@ -72,8 +96,14 @@ export default function ReleaseMediaPanel({
             <GameScreenshotGallery
               screenshots={screenshots}
               gameName={gameName}
-              maxVisible={screenshots.length}
+              maxVisible={MEDIA_PREVIEW_MAX_SCREENSHOTS}
             />
+            {showMediaLinks && hiddenScreenshotCount > 0 ? (
+              <MediaViewMoreLink
+                href={buildGameMediaSectionHref(gameSlug!, "screenshots")}
+                label={`View all ${screenshots.length} screenshots`}
+              />
+            ) : null}
           </div>
         ) : null}
       </div>

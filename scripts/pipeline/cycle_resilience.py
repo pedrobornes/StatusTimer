@@ -26,7 +26,7 @@ PHASE_CRITICALITY: dict[str, PhaseCriticality] = {
     "catalog_sync": PhaseCriticality.STANDARD,
     "twitch_catalog_sync": PhaseCriticality.STANDARD,
     "social_status_sync": PhaseCriticality.STANDARD,
-    "platform_intel_pipeline": PhaseCriticality.ENRICHMENT,
+    "platform_feeds_pipeline": PhaseCriticality.ENRICHMENT,
     "fetch_releases": PhaseCriticality.STANDARD,
     "fetch_catalog": PhaseCriticality.STANDARD,
     "fetch_dynamic_catalog": PhaseCriticality.STANDARD,
