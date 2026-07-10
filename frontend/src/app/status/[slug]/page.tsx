@@ -14,6 +14,7 @@ import GameStatusFaq from "@/components/seo/GameStatusFaq";
 import JsonLdScript from "@/components/seo/JsonLdScript";
 import GameAssetImage from "@/components/ui/GameAssetImage";
 import { APP_ROUTES, TRACKED_GAME_SLUGS } from "@/config/routes";
+import { getSiteUrl } from "@/config/site";
 import {
   resolveGameDisplayName,
   resolveGameBoxArtUrl,
@@ -55,7 +56,7 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
     redirect(APP_ROUTES.status(canonicalSlug));
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const siteUrl = getSiteUrl();
   const pageUrl = `${siteUrl}${APP_ROUTES.status(slug)}`;
 
   try {

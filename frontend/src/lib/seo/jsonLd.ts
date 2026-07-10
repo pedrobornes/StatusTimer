@@ -3,6 +3,7 @@ import {
   buildGameStatusDescription,
   buildGameStatusTitle,
 } from "@/config/routes";
+import { getSiteUrl } from "@/config/site";
 import { formatSlugLabel } from "@/lib/telemetry";
 import type { GameFaqItem } from "@/lib/seo/gameFaq";
 import type { TelemetryStatus } from "@/types/telemetry";
@@ -324,7 +325,7 @@ export function buildServiceStatusJsonLd(
 ): Record<string, unknown> {
   return buildStatusPageJsonLd({
     ...input,
-    siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+    siteUrl: getSiteUrl(),
     incidentCount: input.incidentCount ?? 0,
   });
 }

@@ -41,6 +41,10 @@ public interface GameRepository extends JpaRepository<Game, Long> {
 
     List<Game> findByIsIndexableTrueOrderBySlugAsc();
 
+    List<Game> findByLifecycleState(LifecycleState lifecycleState);
+
+    long countByLifecycleStateIn(Collection<LifecycleState> lifecycleStates);
+
     List<Game> findByLifecycleStateInAndNextTelemetryAtLessThanEqualOrderByScrapeTierAsc(
             Collection<LifecycleState> lifecycleStates,
             LocalDateTime cutoff,

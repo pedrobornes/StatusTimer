@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import GameNewsArticleView from "@/components/GameNewsArticleView";
 import JsonLdScript from "@/components/seo/JsonLdScript";
 import { APP_ROUTES } from "@/config/routes";
+import { getSiteUrl } from "@/config/site";
 import { resolveCanonicalGameSlug } from "@/lib/gameSlugs";
 import {
   buildNewsExcerpt,
@@ -39,7 +40,7 @@ export async function generateMetadata({
 
 export default async function NewsArticlePage({ params }: NewsArticlePageProps) {
   const { slug: newsSlug } = await params;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const siteUrl = getSiteUrl();
 
   try {
     const article = await getGamingNewsBySlug(newsSlug);

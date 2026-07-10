@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { APP_ROUTES } from "@/config/routes";
+import { getSiteUrl } from "@/config/site";
 import {
   getLastSuccessfulSitemapSlugs,
   rememberSitemapSlugs,
@@ -13,8 +14,7 @@ import {
   fetchReleaseSitemapEntries,
 } from "@/lib/seo/sitemapBuilders";
 
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+const siteUrl = getSiteUrl();
 
 export const revalidate = 3600;
 

@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { APP_ROUTES } from "@/config/routes";
 import { buildRobotsDirective } from "@/lib/seo/indexability";
 import type { UpcomingRelease } from "@/types/api";
+import { getSiteUrl } from "@/config/site";
 
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+const siteUrl = getSiteUrl();
 
 function formatReleaseDateLabel(releaseDate: string | null): string | null {
   if (!releaseDate) {

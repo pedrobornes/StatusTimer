@@ -66,6 +66,10 @@ public class HarvestScheduleService {
             }
 
             gameRepository.findBySlug(result.slug()).ifPresent(game -> {
+                if (!isActiveMonitoring(game)) {
+                    return;
+                }
+
                 applyWorkResult(game, result.workType(), result.success(), now);
                 gameRepository.save(game);
             });
@@ -74,27 +78,52 @@ public class HarvestScheduleService {
 
     @Transactional
     public void ensureScheduleInitialized(Game game) {
+        if (!isActiveMonitoring(game)) {
+            return;
+        }
+
+        initializeActiveMonitoringSchedule(game);
+    }
+
+    @Transactional
+    public void initializeActiveMonitoringSchedule(Game game) {
+        if (!isActiveMonitoring(game)) {
+            return;
+        }
+
         LocalDateTime now = LocalDateTime.now();
         boolean changed = false;
 
-        if (isActiveMonitoring(game)) {
-            if (game.getNextTelemetryAt() == null) {
-                game.setNextTelemetryAt(now);
-                changed = true;
-            }
-            if (game.getNextMetricsAt() == null) {
-                game.setNextMetricsAt(now);
-                changed = true;
-            }
-            if (game.getNextNewsAt() == null) {
-                game.setNextNewsAt(now.plusHours(1));
-                changed = true;
-            }
+        if (game.getNextTelemetryAt() == null) {
+            game.setNextTelemetryAt(now);
+            changed = true;
+        }
+        if (game.getNextMetricsAt() == null) {
+            game.setNextMetricsAt(now);
+            changed = true;
+        }
+        if (game.getNextNewsAt() == null) {
+            game.setNextNewsAt(now.plusHours(1));
+            changed = true;
         }
 
         if (changed) {
             gameRepository.save(game);
         }
+    }
+
+    @Transactional
+    public void bumpScheduleAfterUserInterest(String slug) {
+        gameRepository.findBySlug(slug).ifPresent(game -> {
+            if (!isActiveMonitoring(game)) {
+                return;
+            }
+
+            LocalDateTime now = LocalDateTime.now();
+            game.setNextTelemetryAt(now);
+            game.setNextMetricsAt(now);
+            gameRepository.save(game);
+        });
     }
 
     private List<HarvestWorkTargetResponse> findTelemetryDue(LocalDateTime now) {

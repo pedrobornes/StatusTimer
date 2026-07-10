@@ -6,6 +6,7 @@ import {
   SITE_DEFAULT_DESCRIPTION,
   SITE_DEFAULT_KEYWORDS,
 } from "@/config/seo";
+import { getSiteUrl } from "@/config/site";
 import "./globals.css";
 
 const inter = Inter({
@@ -13,8 +14,7 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+const siteUrl = getSiteUrl();
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

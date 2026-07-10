@@ -11,7 +11,7 @@ if (isProduction) {
 
   if (isLocalhost) {
     throw new Error(
-      "NEXT_PUBLIC_SITE_URL must be set to the production domain (e.g. https://status-timer.com) when NODE_ENV=production.",
+      "NEXT_PUBLIC_SITE_URL must be set to the production domain (e.g. https://www.status-timer.com) when NODE_ENV=production.",
     );
   }
 }

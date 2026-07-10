@@ -7,7 +7,6 @@ import com.statustimer.dto.response.GameActivationResponse;
 import com.statustimer.entity.Game;
 import com.statustimer.entity.LifecycleState;
 import com.statustimer.repository.GameRepository;
-import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,11 +39,8 @@ public class CatalogActivationService {
         game = gameRepository.findBySlug(canonicalSlug).orElse(game);
 
         boolean catalogOnly = CatalogMonitoringPolicy.isCatalogOnlyProfile(game);
-        boolean promoted = promoteToMonitoredIfNeeded(game, catalogOnly);
+        boolean alreadyMonitored = isActiveMonitoring(game);
 
-        // Only enqueue an on-demand scrape job for games that have never produced
-        // telemetry yet. Already-monitored games are refreshed by the scheduled
-        // harvester, so visiting their page must not requeue a job every time.
         boolean needsInitialTelemetry = !Boolean.TRUE.equals(game.getInitialTelemetryReady());
         boolean jobQueued = !catalogOnly
                 && needsInitialTelemetry
@@ -57,11 +53,14 @@ public class CatalogActivationService {
         }
 
         gameRepository.save(game);
-        harvestScheduleService.ensureScheduleInitialized(game);
+
+        if (alreadyMonitored) {
+            harvestScheduleService.bumpScheduleAfterUserInterest(canonicalSlug);
+        }
 
         return new GameActivationResponse(
                 canonicalSlug,
-                promoted,
+                false,
                 Boolean.TRUE.equals(game.getInitialTelemetryReady()),
                 jobQueued,
                 catalogOnly
@@ -84,38 +83,9 @@ public class CatalogActivationService {
         });
     }
 
-    private boolean promoteToMonitoredIfNeeded(Game game, boolean catalogOnly) {
-        if (catalogOnly) {
-            scheduleDueChecks(game);
-            return false;
-        }
-
-        if (game.getLifecycleState() != LifecycleState.CATALOG) {
-            scheduleDueChecks(game);
-            return false;
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-        game.setLifecycleState(LifecycleState.MONITORED);
-        game.setInitialTelemetryReady(false);
-        game.setIsIndexable(false);
-
-        if (game.getFirstMonitoredAt() == null) {
-            game.setFirstMonitoredAt(now);
-        }
-
-        scheduleDueChecks(game);
-        return true;
-    }
-
-    private void scheduleDueChecks(Game game) {
-        LocalDateTime now = LocalDateTime.now();
-        game.setNextTelemetryAt(now);
-        game.setNextMetricsAt(now);
-
-        if (game.getNextNewsAt() == null) {
-            game.setNextNewsAt(now.plusHours(1));
-        }
+    private boolean isActiveMonitoring(Game game) {
+        return game.getLifecycleState() == LifecycleState.MONITORED
+                || game.getLifecycleState() == LifecycleState.INDEXABLE;
     }
 
     private Game createPersistedGameIfKnown() {

@@ -60,11 +60,6 @@ public class CatalogLifecycleMigrationRunner implements CommandLineRunner {
             changed = true;
         }
 
-        if (telemetry.isPresent() && game.getLifecycleState() == LifecycleState.CATALOG) {
-            game.setLifecycleState(LifecycleState.MONITORED);
-            changed = true;
-        }
-
         if (telemetry.isPresent() && game.getLastTelemetryAt() == null) {
             game.setLastTelemetryAt(telemetry.get().getLastChecked());
             changed = true;

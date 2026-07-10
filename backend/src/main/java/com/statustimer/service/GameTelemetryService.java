@@ -442,10 +442,6 @@ public class GameTelemetryService {
                 game.setFirstMonitoredAt(checkedAt);
             }
 
-            if (game.getLifecycleState() == LifecycleState.CATALOG) {
-                game.setLifecycleState(LifecycleState.MONITORED);
-            }
-
             gameRepository.save(game);
             catalogActivationService.markTelemetryReady(gameSlug);
             scrapeJobService.completeRunningJobsForSlug(gameSlug, ScrapeJobStatus.DONE);

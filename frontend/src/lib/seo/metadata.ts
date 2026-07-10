@@ -9,9 +9,9 @@ import { buildRobotsDirective, isIndexableTelemetry } from "@/lib/seo/indexabili
 import { formatSlugLabel } from "@/lib/telemetry";
 import { getGameStatusDetail } from "@/services/telemetryService";
 import type { GameStatusDetail, TelemetryStatus } from "@/types/telemetry";
+import { getSiteUrl } from "@/config/site";
 
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+const siteUrl = getSiteUrl();
 
 function buildStatusAwareDescription(
   gameName: string,

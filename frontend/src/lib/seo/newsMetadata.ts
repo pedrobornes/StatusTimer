@@ -10,9 +10,9 @@ import {
 } from "@/lib/seo/indexability";
 import { isIndexableNewsContent } from "@/lib/seo/newsIndexability";
 import type { GamingNews } from "@/types/api";
+import { getSiteUrl } from "@/config/site";
 
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+const siteUrl = getSiteUrl();
 
 export function buildNewsArticleMetadata(article: GamingNews): Metadata {
   const gameName = resolveNewsGameName(article);

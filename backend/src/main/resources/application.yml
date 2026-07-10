@@ -51,6 +51,12 @@ indexability:
   guardian-interval-ms: 900000
   api-outage-grace-hours: 1
 
+lifecycle:
+  monitor:
+    max-monitored-games: 500
+    demote-inactivity-days: 30
+    promote-max-per-cycle: 25
+
 igdb:
   client-id: ${IGDB_CLIENT_ID:}
   client-secret: ${IGDB_CLIENT_SECRET:}

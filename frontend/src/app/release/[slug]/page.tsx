@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
 import { APP_ROUTES } from "@/config/routes";
+import { getSiteUrl } from "@/config/site";
 import GameExternalLinks from "@/components/GameExternalLinks";
 import GameAssetImage from "@/components/ui/GameAssetImage";
 import GenreBadge from "@/components/ui/GenreBadge";
@@ -34,8 +35,7 @@ import type { GamingNews, UpcomingRelease } from "@/types/api";
 
 export const revalidate = 60;
 
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+const siteUrl = getSiteUrl();
 
 interface ReleasePageProps {
   params: Promise<{ slug: string }>;
