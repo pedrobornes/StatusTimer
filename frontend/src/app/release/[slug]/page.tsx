@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowLeft, Newspaper } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { APP_ROUTES } from "@/config/routes";
 import GameExternalLinks from "@/components/GameExternalLinks";
 import GameAssetImage from "@/components/ui/GameAssetImage";
@@ -9,13 +9,14 @@ import HypeCounterButton from "@/components/HypeCounterButton";
 import ReleaseCountdownPanel from "@/components/ReleaseCountdownPanel";
 import ReleaseMediaPanel from "@/components/ReleaseMediaPanel";
 import ReleaseNewsPanel from "@/components/ReleaseNewsPanel";
+import GameStatusSubNav from "@/components/GameStatusSubNav";
 import SteamStoreWidget from "@/components/dashboard/SteamStoreWidget";
 import PageShell from "@/components/PageShell";
 import DashboardError from "@/components/dashboard/DashboardError";
 import JsonLdScript from "@/components/seo/JsonLdScript";
 import { formatIgdbRating, resolveGameDisplayName } from "@/lib/gameAssets";
 import { resolveReleaseGenres } from "@/lib/genres";
-import { resolveGameMedia } from "@/lib/gameMedia";
+import { resolveGameMedia, hasGameMedia } from "@/lib/gameMedia";
 import { resolveReleaseBoxArtUrl, resolveReleaseHeroUrl } from "@/lib/releases";
 import { redirectLaunchedReleaseToStatus } from "@/lib/releaseRoutes";
 import { resolveCanonicalGameSlug } from "@/lib/gameSlugs";
@@ -142,6 +143,8 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
       | GameExternalLinksMap
       | undefined;
     const genreBadges = resolveReleaseGenres(release);
+    const hasNews = gameNews.length > 0;
+    const hasMedia = hasGameMedia(gameMedia);
     const pageUrl = `${siteUrl}${APP_ROUTES.release(canonicalSlug)}`;
     const releaseJsonLd = buildReleasePageJsonLd({
       gameName: release.gameName,
@@ -203,6 +206,14 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
           </div>
 
           <aside className="space-y-6 xl:sticky xl:top-24 xl:self-start">
+            <GameStatusSubNav
+              slug={canonicalSlug}
+              variant="release"
+              layout="sidebar"
+              hasNews={hasNews}
+              hasMedia={hasMedia}
+            />
+
             <ReleaseCountdownPanel
               platforms={release.platforms}
               fallbackReleaseDate={release.releaseDate}
@@ -236,15 +247,6 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
             <ArrowLeft className="h-4 w-4" aria-hidden />
             Return to monitor
           </Link>
-          {gameNews.length > 0 ? (
-            <Link
-              href={APP_ROUTES.releaseNews(canonicalSlug)}
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-slate-300 transition hover:border-fuchsia-400/30 hover:bg-fuchsia-500/10 hover:text-fuchsia-100"
-            >
-              <Newspaper className="h-4 w-4" aria-hidden />
-              View all {release.gameName} news &amp; patches
-            </Link>
-          ) : null}
         </nav>
       </PageShell>
       </>

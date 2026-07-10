@@ -3,14 +3,17 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import GameNewsIndexList from "@/components/GameNewsIndexList";
+import GameStatusSubNav from "@/components/GameStatusSubNav";
 import PageShell from "@/components/PageShell";
 import { APP_ROUTES } from "@/config/routes";
 import { resolveGameDisplayName } from "@/lib/gameAssets";
+import { hasGameMedia, resolveGameMedia } from "@/lib/gameMedia";
 import { resolveCanonicalGameSlug } from "@/lib/gameSlugs";
 import { resolveNewsGameName } from "@/lib/intelFeed";
 import { buildNewsIndexMetadata } from "@/lib/seo/newsMetadata";
 import { getGamingNewsByGame } from "@/services/newsService";
 import { getUpcomingReleases } from "@/services/releasesService";
+import { getGameStatusDetail } from "@/services/telemetryService";
 
 export const revalidate = 60;
 
@@ -45,9 +48,10 @@ export default async function ReleaseNewsIndexPage({
     redirect(APP_ROUTES.releaseNews(canonicalSlug));
   }
 
-  const [news, releases] = await Promise.all([
+  const [news, releases, statusDetail] = await Promise.all([
     getGamingNewsByGame(canonicalSlug, 100).catch(() => null),
     getUpcomingReleases().catch(() => []),
+    getGameStatusDetail(canonicalSlug).catch(() => null),
   ]);
 
   const release = releases.find((entry) => entry.slug === canonicalSlug);
@@ -60,6 +64,19 @@ export default async function ReleaseNewsIndexPage({
   }
 
   const gameName = resolveNewsGameName(news[0]);
+  const hasMedia = hasGameMedia(
+    resolveGameMedia(
+      release,
+      statusDetail?.telemetry ?? null,
+      statusDetail
+        ? {
+            screenshotUrls: statusDetail.screenshotUrls,
+            trailerVideoIds: statusDetail.trailerVideoIds,
+            youtubeChannelUrl: statusDetail.youtubeChannelUrl,
+          }
+        : null,
+    ),
+  );
   const currentPage = Math.max(1, Number.parseInt(pageParam ?? "1", 10) || 1);
 
   return (
@@ -68,6 +85,12 @@ export default async function ReleaseNewsIndexPage({
       title={`${gameName} News`}
       subtitle={`Patch notes, updates, and developer announcements for ${gameName}.`}
     >
+      <GameStatusSubNav
+        slug={canonicalSlug}
+        variant="release"
+        hasNews
+        hasMedia={hasMedia}
+      />
       <GameNewsIndexList news={news} currentPage={currentPage} />
 
       <nav className="mt-10 flex justify-center border-t border-white/8 pt-6">

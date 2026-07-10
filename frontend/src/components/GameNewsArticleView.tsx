@@ -55,13 +55,20 @@ export default function GameNewsArticleView({
       coverUrl={heroUrl}
       coverAlt={gameName}
     >
-      {!context.isReleaseOnly ? (
+      {context.isReleaseOnly ? (
+        <GameStatusSubNav
+          slug={context.gameSlug}
+          variant="release"
+          hasNews
+          hasMedia={hasMedia}
+        />
+      ) : (
         <GameStatusSubNav
           slug={context.gameSlug}
           hasNews
           hasMedia={hasMedia}
         />
-      ) : null}
+      )}
 
       <section className="glass-panel mb-6 rounded-3xl border border-white/16 bg-[#211b3a]/90 p-6 shadow-[0_18px_50px_rgba(5,3,12,0.34)] md:p-8">
         <div className="mb-6 flex items-start gap-4 border-b border-white/10 pb-5 md:gap-5">

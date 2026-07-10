@@ -152,11 +152,6 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
           coverUrl={coverUrl}
           coverAlt={gameName}
         >
-          <GameStatusSubNav
-            slug={slug}
-            hasNews={hasNews}
-            hasMedia={hasMedia}
-          />
           <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="space-y-8">
               <section aria-labelledby="server-status-heading">
@@ -193,6 +188,12 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
             </div>
 
             <aside className="space-y-6 xl:sticky xl:top-24 xl:self-start">
+              <GameStatusSubNav
+                slug={slug}
+                layout="sidebar"
+                hasNews={hasNews}
+                hasMedia={hasMedia}
+              />
               {steamAppId ? (
                 <SteamStoreWidget steamAppId={steamAppId} gameName={gameName} />
               ) : null}
@@ -240,11 +241,6 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
           coverUrl={coverUrl}
           coverAlt={gameName}
         >
-          <GameStatusSubNav
-            slug={slug}
-            hasNews={hasNews}
-            hasMedia={hasMedia}
-          />
           <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="space-y-8">
               <section aria-labelledby="server-status-heading">
@@ -281,6 +277,12 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
             </div>
 
             <aside className="space-y-6 xl:sticky xl:top-24 xl:self-start">
+              <GameStatusSubNav
+                slug={slug}
+                layout="sidebar"
+                hasNews={hasNews}
+                hasMedia={hasMedia}
+              />
               {steamAppId ? (
                 <SteamStoreWidget steamAppId={steamAppId} gameName={gameName} />
               ) : null}
@@ -374,11 +376,6 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
           coverUrl={coverUrl}
           coverAlt={gameName}
         >
-          <GameStatusSubNav
-            slug={slug}
-            hasNews={hasNews}
-            hasMedia={hasMedia}
-          />
           <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="space-y-8">
               {!isCatalogProfile && !isSinglePlayerProfile && showIndexableContent ? (
@@ -411,6 +408,12 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
             </div>
 
             <aside className="space-y-6 xl:sticky xl:top-24 xl:self-start">
+              <GameStatusSubNav
+                slug={slug}
+                layout="sidebar"
+                hasNews={hasNews}
+                hasMedia={hasMedia}
+              />
               <section aria-labelledby="server-status-heading" className="glass-panel rounded-3xl p-6">
                 {showReportIntro ? (
                   <>

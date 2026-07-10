@@ -93,7 +93,12 @@ export default async function GameMediaPage({ params }: GameMediaPageProps) {
       title={`${gameName} Media`}
       subtitle={`Trailers, gameplay videos, and screenshots for ${gameName}.`}
     >
-      <GameStatusSubNav slug={canonicalSlug} hasNews={hasNews} hasMedia />
+      <GameStatusSubNav
+        slug={canonicalSlug}
+        variant={linkToRelease ? "release" : "status"}
+        hasNews={hasNews}
+        hasMedia
+      />
       <div className="space-y-10">
         {youtubeChannelUrl ? (
           <section className="rounded-2xl border border-white/8 bg-white/[0.04] p-5">
