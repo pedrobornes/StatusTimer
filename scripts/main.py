@@ -4,6 +4,7 @@ import argparse
 import json
 import logging
 import signal
+import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -52,6 +53,7 @@ from sqlalchemy.exc import SQLAlchemyError
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    stream=sys.stdout,
 )
 logger = logging.getLogger("statustimer-harvester")
 
