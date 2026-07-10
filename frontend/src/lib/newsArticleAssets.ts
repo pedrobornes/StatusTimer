@@ -35,7 +35,7 @@ export function resolveNewsArticleAssets(
   const boxFromRelease = release
     ? resolveReleaseBoxArtUrl(gameSlug, release)
     : null;
-  const boxFromStatus = resolveGameBoxArtUrl(gameSlug, telemetry);
+  const boxFromStatus = resolveGameBoxArtUrl(gameSlug, telemetry ?? undefined);
   const boxArtUrl =
     boxFromRelease ??
     boxFromStatus ??
