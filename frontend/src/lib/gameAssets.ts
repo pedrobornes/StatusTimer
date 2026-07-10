@@ -152,6 +152,30 @@ const TRACKED_GAME_ASSETS: Record<string, GameAssetCatalogEntry> = {
 
   },
 
+  "teamfight-tactics": {
+
+    gameName: "Teamfight Tactics",
+
+  },
+
+  hearthstone: {
+
+    gameName: "Hearthstone",
+
+  },
+
+  "world-of-warcraft": {
+
+    gameName: "World of Warcraft",
+
+  },
+
+  "diablo-4": {
+
+    gameName: "Diablo IV",
+
+  },
+
   minecraft: {
 
     gameName: "Minecraft",

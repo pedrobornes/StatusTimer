@@ -73,5 +73,10 @@ export function buildGameStatusFaq(input: {
     });
   }
 
+  items.push({
+    question: `Where can I read ${input.gameName} patch notes and updates?`,
+    answer: `Official patch notes and game updates for ${input.gameName} are listed on this status page and in our news section when publishers release them.`,
+  });
+
   return items;
 }

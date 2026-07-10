@@ -22,7 +22,7 @@ export function buildNewsArticleMetadata(article: GamingNews): Metadata {
   const indexable = isIndexableNewsContent(article.content);
   const description =
     buildNewsExcerpt(article.content, 160) ||
-    `${gameName} patch notes and developer updates on StatusTimer.`;
+    `${gameName} patch notes, game updates, and official developer news on StatusTimer.`;
 
   return {
     title: `${displayTitle} | ${gameName} News`,

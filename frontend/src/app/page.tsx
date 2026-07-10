@@ -20,7 +20,7 @@ import type { GamingNews } from "@/types/api";
 import type { GameTelemetry, TelemetryHistorySnapshot } from "@/types/telemetry";
 
 export const metadata: Metadata = {
-  title: "StatusTimer | Live Gaming Server Status Monitor",
+  title: "StatusTimer | Live Game Server Status & Patch Notes",
   description: HOME_PAGE_DESCRIPTION,
   alternates: {
     canonical: "/",

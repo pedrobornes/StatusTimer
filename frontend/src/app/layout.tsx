@@ -19,7 +19,7 @@ const siteUrl =
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "StatusTimer | Live Gaming Server Status Monitor",
+    default: "StatusTimer | Live Game Server Status & Patch Notes",
     template: "%s | StatusTimer",
   },
   description: SITE_DEFAULT_DESCRIPTION,

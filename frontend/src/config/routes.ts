@@ -11,6 +11,10 @@ export const TRACKED_GAME_SLUGS = [
   "pubg",
   "fortnite",
   "league-of-legends",
+  "teamfight-tactics",
+  "hearthstone",
+  "world-of-warcraft",
+  "diablo-4",
   "minecraft",
   "roblox",
   "apex-legends",
@@ -66,18 +70,24 @@ export function buildGameStatusTitle(gameName: string): string {
 
 export function buildGameStatusDescription(gameName: string): string {
   const safeName = gameName?.trim() || "this game";
-  return `Check if ${safeName} servers are down or having problems. Live status, recent outages, and real-time updates.`;
+  return `Check if ${safeName} servers are down or having problems. Live status, official patch notes, game updates, and recent outages.`;
 }
 
 export function buildGameStatusKeywords(gameName: string, gameSlug: string): string[] {
   const safeName = gameName?.trim() || gameSlug;
+  const lowerName = safeName.toLowerCase();
   return [
     `${safeName} server status`,
-    `is ${safeName.toLowerCase()} down`,
+    `is ${lowerName} down`,
     `${safeName} outage`,
     `${safeName} servers down`,
+    `${safeName} patch notes`,
+    `${safeName} update`,
+    `${safeName} game update`,
     `${gameSlug} status`,
+    `${gameSlug} patch notes`,
     "live server status",
+    "game patch notes",
     "multiplayer outage tracker",
   ];
 }

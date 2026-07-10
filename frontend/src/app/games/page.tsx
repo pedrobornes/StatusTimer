@@ -10,9 +10,9 @@ import { getServerStatuses } from "@/services/statusService";
 import { getTelemetryIncidents } from "@/services/telemetryService";
 
 export const metadata: Metadata = {
-  title: "Game Server Live Status",
+  title: "Game Server Live Status & Patch Notes",
   description:
-    "Browse live game server status — online, down, or maintenance — with player counts and recent outages for every tracked title.",
+    "Browse live game server status — online, down, or maintenance — with patch notes, game updates, player counts, and recent outages for every tracked title.",
 };
 
 export const revalidate = 120;

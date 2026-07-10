@@ -8,7 +8,7 @@ import { MONITORED_SOCIAL_PLATFORMS_TEXT } from "@/config/seo";
 export const metadata: Metadata = {
   title: "How StatusTimer Works",
   description:
-    "Learn how StatusTimer monitors game servers and social platforms, aggregates public data, and presents per-game status and news.",
+    "Learn how StatusTimer monitors game servers and social platforms, aggregates public data, and presents per-game status, patch notes, and updates.",
 };
 
 const STEPS = [
@@ -16,19 +16,19 @@ const STEPS = [
     icon: Database,
     title: "Public data sources",
     body:
-      "We combine publicly available signals: Steam player counts and news, network probes for supported titles, Twitch viewership, IGDB metadata, and official community feeds when linked to a game.",
+      "We combine publicly available information: official publisher status pages, player and audience figures where available, game metadata, and official news from supported titles.",
   },
   {
     icon: Activity,
     title: "Scheduled monitoring",
     body:
-      `Games in our catalog are checked on a recurring schedule and labeled online, down, or maintenance. We also probe connectivity for ${MONITORED_SOCIAL_PLATFORMS_TEXT}. Each page shows when data was last refreshed.`,
+      `Games in our catalog are checked on a recurring schedule and labeled online, down, or maintenance. We also check connectivity for ${MONITORED_SOCIAL_PLATFORMS_TEXT}. Each page shows when data was last refreshed.`,
   },
   {
     icon: Newspaper,
     title: "Per-game news",
     body:
-      "News is scoped to individual games — patch notes, updates, and community announcements appear on that game's status hub, not in a mixed global feed.",
+      "Patch notes and updates from official publisher channels appear on that game's status page — not pulled from forums or social media, and not mixed into a single global feed.",
   },
   {
     icon: Shield,
@@ -43,7 +43,7 @@ export default function HowItWorksPage() {
     <PageShell
       badge="Guide"
       title="How StatusTimer works"
-      subtitle="A transparent overview of what we track, how often we update, and what our status labels mean."
+      subtitle="A clear overview of what we track, how often we update, and what our status labels mean."
     >
       <div className="grid gap-5 md:grid-cols-2">
         {STEPS.map(({ icon: Icon, title, body }) => (

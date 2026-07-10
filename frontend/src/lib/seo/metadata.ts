@@ -108,11 +108,11 @@ export function buildSiteWideMetadata(): Metadata {
   return {
     metadataBase: new URL(siteUrl),
     title: {
-      default: "StatusTimer | Live Gaming Server Status & Game News",
+      default: "StatusTimer | Live Game Server Status & Patch Notes",
       template: "%s | StatusTimer",
     },
     description:
-      "Check live gaming server status, outages, and game news for your favorite multiplayer titles.",
+      "Check live gaming server status, outages, official patch notes, and game updates for your favorite multiplayer titles.",
     robots: {
       index: true,
       follow: true,

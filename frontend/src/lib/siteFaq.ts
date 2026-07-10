@@ -10,7 +10,7 @@ export const SITE_FAQ_ITEMS: SiteFaqItem[] = [
   {
     question: "What is StatusTimer?",
     answer:
-      `StatusTimer is an independent platform that tracks multiplayer game server status (online, down, or maintenance), social platform connectivity for ${MONITORED_SOCIAL_PLATFORMS_TEXT}, release dates, and game-specific news. We aggregate publicly available signals to help players understand whether a game or platform may be experiencing issues.`,
+      `StatusTimer is an independent platform that tracks multiplayer game server status (online, down, or maintenance), social platform connectivity for ${MONITORED_SOCIAL_PLATFORMS_TEXT}, release dates, and official patch notes per game. We aggregate publicly available signals to help players understand whether a game or platform may be experiencing issues.`,
   },
   {
     question: "Is StatusTimer affiliated with any game publisher?",
@@ -30,7 +30,7 @@ export const SITE_FAQ_ITEMS: SiteFaqItem[] = [
   {
     question: "What do ONLINE and DOWN mean for social platforms?",
     answer:
-      "These reflect whether we can reach each platform's public endpoints from our monitoring probes. A DOWN label does not always mean the app is globally offline — regional issues, your ISP, or local network problems can differ from what we see. Use the last-checked time for context.",
+      "These reflect whether we can reach each platform from our monitoring checks. A DOWN label does not always mean the app is globally offline — regional issues, your ISP, or local network problems can differ from what we see. Use the last-checked time for context.",
   },
   {
     question: "How often is status updated?",
@@ -40,7 +40,7 @@ export const SITE_FAQ_ITEMS: SiteFaqItem[] = [
   {
     question: "Why does StatusTimer say a game is DOWN when I can still play?",
     answer:
-      "Status reflects the signals we monitor (network probes, official status pages, or Steam API data). Local network issues, regional outages, or partial service degradation may differ from your experience. Use the incident log, uptime timeline, and timestamps for context.",
+      "Status reflects the signals we monitor — official status pages and our own connectivity checks. Local network issues, regional outages, or partial service degradation may differ from your experience. Use the incident log, uptime timeline, and timestamps for context.",
   },
   {
     question: "Why do some games show player counts but no live server status?",
@@ -60,7 +60,7 @@ export const SITE_FAQ_ITEMS: SiteFaqItem[] = [
   {
     question: "Where do news articles come from?",
     answer:
-      "Game news is scoped per title and sourced from official channels when available, such as Steam news feeds and official subreddits linked from IGDB. We filter low-signal or off-topic posts. Full articles live at /news/[slug]; game news hubs list everything for that title.",
+      "From official publisher channels — developer blogs, store news, and similar first-party sources for each game. Articles are grouped on that game's status page, and we skip low-quality or off-topic items. Full posts are also available at /news/[slug].",
   },
   {
     question: "Is StatusTimer free to use?",
