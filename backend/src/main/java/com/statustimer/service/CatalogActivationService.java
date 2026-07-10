@@ -7,6 +7,7 @@ import com.statustimer.dto.response.GameActivationResponse;
 import com.statustimer.entity.Game;
 import com.statustimer.entity.LifecycleState;
 import com.statustimer.repository.GameRepository;
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class CatalogActivationService {
+
+    private static final int STALE_TELEMETRY_REFRESH_HOURS = 24;
 
     private final GameRepository gameRepository;
     private final GameSlugMapper gameSlugMapper;
@@ -42,13 +45,16 @@ public class CatalogActivationService {
         boolean alreadyMonitored = isActiveMonitoring(game);
 
         boolean needsInitialTelemetry = !Boolean.TRUE.equals(game.getInitialTelemetryReady());
-        boolean jobQueued = !catalogOnly
-                && needsInitialTelemetry
-                && scrapeJobService.enqueueFullJob(canonicalSlug);
+        boolean needsStaleRefresh = shouldRefreshStaleCatalogTelemetry(game, catalogOnly, alreadyMonitored);
+        boolean jobQueued = false;
+
+        if (!catalogOnly && (needsInitialTelemetry || needsStaleRefresh)) {
+            jobQueued = scrapeJobService.enqueueFullJob(canonicalSlug);
+        }
 
         if (catalogOnly) {
             game.setInitialTelemetryReady(true);
-        } else if (jobQueued) {
+        } else if (jobQueued && needsInitialTelemetry) {
             game.setInitialTelemetryReady(false);
         }
 
@@ -86,6 +92,33 @@ public class CatalogActivationService {
     private boolean isActiveMonitoring(Game game) {
         return game.getLifecycleState() == LifecycleState.MONITORED
                 || game.getLifecycleState() == LifecycleState.INDEXABLE;
+    }
+
+    private boolean shouldRefreshStaleCatalogTelemetry(
+            Game game,
+            boolean catalogOnly,
+            boolean alreadyMonitored
+    ) {
+        if (catalogOnly || alreadyMonitored) {
+            return false;
+        }
+
+        if (game.getLifecycleState() != LifecycleState.CATALOG) {
+            return false;
+        }
+
+        if (!Boolean.TRUE.equals(game.getInitialTelemetryReady())) {
+            return false;
+        }
+
+        LocalDateTime lastTelemetryAt = game.getLastTelemetryAt();
+        if (lastTelemetryAt == null) {
+            return false;
+        }
+
+        return lastTelemetryAt.isBefore(
+                LocalDateTime.now().minusHours(STALE_TELEMETRY_REFRESH_HOURS)
+        );
     }
 
     private Game createPersistedGameIfKnown() {

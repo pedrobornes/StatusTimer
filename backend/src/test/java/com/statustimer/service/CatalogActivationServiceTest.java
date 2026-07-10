@@ -11,6 +11,7 @@ import com.statustimer.config.GameSlugMapper;
 import com.statustimer.entity.Game;
 import com.statustimer.entity.LifecycleState;
 import com.statustimer.repository.GameRepository;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -81,5 +82,29 @@ class CatalogActivationServiceTest {
         assertThat(response.jobQueued()).isFalse();
         assertThat(game.getLifecycleState()).isEqualTo(LifecycleState.MONITORED);
         verify(harvestScheduleService).bumpScheduleAfterUserInterest(eq("apex-legends"));
+    }
+
+    @Test
+    void activationRequeuesJobWhenCatalogTelemetryIsStale() {
+        Game game = Game.builder()
+                .slug("stale-steam-game")
+                .gameName("Stale Steam Game")
+                .lifecycleState(LifecycleState.CATALOG)
+                .steamAppId(999_002)
+                .initialTelemetryReady(true)
+                .lastTelemetryAt(LocalDateTime.now().minusHours(30))
+                .build();
+
+        when(gameSlugMapper.resolveCanonicalSlug("stale-steam-game")).thenReturn("stale-steam-game");
+        when(gameRepository.findBySlug("stale-steam-game")).thenReturn(Optional.of(game));
+        when(scrapeJobService.enqueueFullJob("stale-steam-game")).thenReturn(true);
+
+        var response = catalogActivationService.activateOnDemand("stale-steam-game");
+
+        assertThat(response.promoted()).isFalse();
+        assertThat(response.jobQueued()).isTrue();
+        assertThat(response.telemetryReady()).isTrue();
+        assertThat(game.getLifecycleState()).isEqualTo(LifecycleState.CATALOG);
+        verify(harvestScheduleService, never()).bumpScheduleAfterUserInterest(any());
     }
 }

@@ -128,6 +128,24 @@ class LifecycleMonitorServiceTest {
         assertThat(saved.getValue().getSlug()).isEqualTo("overflow-game");
     }
 
+    @Test
+    void getStatsReturnsLifecycleCounts() {
+        when(gameRepository.countByLifecycleStateIn(List.of(LifecycleState.CATALOG))).thenReturn(1200L);
+        when(gameRepository.countByLifecycleStateIn(List.of(LifecycleState.MONITORED))).thenReturn(180L);
+        when(gameRepository.countByLifecycleStateIn(List.of(LifecycleState.INDEXABLE))).thenReturn(42L);
+        when(gameRepository.countByLifecycleStateIn(
+                List.of(LifecycleState.MONITORED, LifecycleState.INDEXABLE)
+        )).thenReturn(222L);
+
+        var stats = lifecycleMonitorService.getStats();
+
+        assertThat(stats.catalog()).isEqualTo(1200L);
+        assertThat(stats.monitored()).isEqualTo(180L);
+        assertThat(stats.indexable()).isEqualTo(42L);
+        assertThat(stats.activeMonitored()).isEqualTo(222L);
+        assertThat(stats.maxMonitoredGames()).isEqualTo(500);
+    }
+
     private Game catalogGame(String slug, int tier, Integer twitchRank) {
         return Game.builder()
                 .slug(slug)

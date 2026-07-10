@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# StatusTimer — Frontend
 
-## Getting Started
+Next.js 16 (App Router) + TypeScript + Tailwind CSS 4.
 
-First, run the development server:
+## Desarrollo local
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abre [http://localhost:3000](http://localhost:3000). El backend debe estar en `http://localhost:8080` (ver `backend/run-local.ps1` y `docker-compose.yml` para MySQL).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Variables opcionales en desarrollo (defaults en código):
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable | Default local |
+|----------|----------------|
+| `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` |
+| `API_BASE_URL` | `http://localhost:8080` |
+| `NEXT_PUBLIC_API_BASE_URL` | `http://localhost:8080` |
 
-## Learn More
+## Scripts
 
-To learn more about Next.js, take a look at the following resources:
+| Comando | Descripción |
+|---------|-------------|
+| `npm run dev` | Servidor de desarrollo |
+| `npm run build` | Build de producción |
+| `npm start` | Servir build |
+| `npm run lint` | ESLint (Next.js) |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Producción (Vercel)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Root directory:** `frontend`
+- **Dominio canónico:** `https://www.status-timer.com`
+- Redirects apex → `www` en `vercel.json`
 
-## Deploy on Vercel
+Variables en Vercel (Production):
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+NEXT_PUBLIC_SITE_URL=https://www.status-timer.com
+API_BASE_URL=https://<backend-railway>
+NEXT_PUBLIC_API_BASE_URL=https://<backend-railway>
+NEXT_PUBLIC_CONTACT_EMAIL=info@status-timer.com
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Runbook completo: [docs/DEPLOY.md](../docs/DEPLOY.md)
+
+## Estructura relevante
+
+```
+src/app/          # Rutas App Router (status, release, games, news…)
+src/components/   # UI modular
+src/lib/seo/      # Metadata, JSON-LD, indexabilidad
+src/services/     # Cliente HTTP hacia Spring Boot
+src/config/       # Rutas, SEO, site URL canónico (getSiteUrl)
+```
+
+## SEO
+
+- `getSiteUrl()` en `src/config/site.ts` normaliza apex → `www` en sitemap, robots y metadata.
+- Páginas legales/hubs: `noindex`. Status indexables, releases y news cualificadas: indexables según backend.

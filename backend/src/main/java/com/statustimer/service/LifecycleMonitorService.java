@@ -4,6 +4,7 @@ import com.statustimer.config.CatalogMonitoringPolicy;
 import com.statustimer.config.LifecycleMonitorProperties;
 import com.statustimer.config.PinnedGamePolicy;
 import com.statustimer.config.TrackedGameCatalog;
+import com.statustimer.dto.response.LifecycleStatsResponse;
 import com.statustimer.entity.Game;
 import com.statustimer.entity.LifecycleState;
 import com.statustimer.repository.GameRepository;
@@ -49,6 +50,24 @@ public class LifecycleMonitorService {
         }
 
         return new LifecycleMonitorReport(promoted, demoted, capDemoted, active);
+    }
+
+    @Transactional(readOnly = true)
+    public LifecycleStatsResponse getStats() {
+        long catalog = gameRepository.countByLifecycleStateIn(List.of(LifecycleState.CATALOG));
+        long monitored = gameRepository.countByLifecycleStateIn(List.of(LifecycleState.MONITORED));
+        long indexable = gameRepository.countByLifecycleStateIn(List.of(LifecycleState.INDEXABLE));
+        long active = gameRepository.countByLifecycleStateIn(ACTIVE_MONITORING);
+
+        return new LifecycleStatsResponse(
+                catalog,
+                monitored,
+                indexable,
+                active,
+                lifecycleMonitorProperties.maxMonitoredGames(),
+                lifecycleMonitorProperties.demoteInactivityDays(),
+                lifecycleMonitorProperties.promoteMaxPerCycle()
+        );
     }
 
     public boolean isProtectedFromDemotion(Game game) {
