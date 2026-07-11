@@ -40,7 +40,7 @@ export function collectReleaseGenres(releases: UpcomingRelease[]): string[] {
   return [...genres].sort((left, right) => left.localeCompare(right));
 }
 
-export const RELEASE_SORT_MODES = ["date", "hype", "rating"] as const;
+export const RELEASE_SORT_MODES = ["date", "hype"] as const;
 
 export type ReleaseSortMode = (typeof RELEASE_SORT_MODES)[number];
 
@@ -89,26 +89,12 @@ export function sortReleasesByHype(
   return [...releases].sort((left, right) => right.hypeCount - left.hypeCount);
 }
 
-export function sortReleasesByRating(
-  releases: UpcomingRelease[],
-): UpcomingRelease[] {
-  return [...releases].sort((left, right) => {
-    const leftScore = Math.max(left.criticRating ?? 0, left.userRating ?? 0);
-    const rightScore = Math.max(right.criticRating ?? 0, right.userRating ?? 0);
-    return rightScore - leftScore;
-  });
-}
-
 export function sortReleases(
   releases: UpcomingRelease[],
   mode: ReleaseSortMode,
 ): UpcomingRelease[] {
   if (mode === "hype") {
     return sortReleasesByHype(releases);
-  }
-
-  if (mode === "rating") {
-    return sortReleasesByRating(releases);
   }
 
   return sortReleasesByDate(releases);
@@ -147,20 +133,6 @@ export function filterReleasesByGenre(
   return releases.filter((release) =>
     resolveReleaseGenres(release).includes(genre),
   );
-}
-
-export function filterReleasesByMinRating(
-  releases: UpcomingRelease[],
-  minRating: number | null,
-): UpcomingRelease[] {
-  if (minRating == null || minRating <= 0) {
-    return releases;
-  }
-
-  return releases.filter((release) => {
-    const best = Math.max(release.criticRating ?? 0, release.userRating ?? 0);
-    return best >= minRating;
-  });
 }
 
 export function buildPlatformsBySlug(

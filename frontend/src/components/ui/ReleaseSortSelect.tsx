@@ -12,7 +12,6 @@ interface ReleaseSortSelectProps {
 const SORT_OPTIONS: { value: ReleaseSortMode; label: string }[] = [
   { value: "hype", label: "Most hyped" },
   { value: "date", label: "Release date" },
-  { value: "rating", label: "Top rated" },
 ];
 
 const selectClassName =
