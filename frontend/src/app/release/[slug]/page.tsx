@@ -34,7 +34,7 @@ import { buildReleasePageJsonLd } from "@/lib/seo/jsonLd";
 import type { GameExternalLinks as GameExternalLinksMap } from "@/lib/gamePlatformLinks";
 import type { GamingNews, UpcomingRelease } from "@/types/api";
 
-export const revalidate = 60;
+export const revalidate = 86400;
 
 const siteUrl = getSiteUrl();
 
