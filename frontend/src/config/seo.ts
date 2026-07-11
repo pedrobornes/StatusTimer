@@ -36,6 +36,10 @@ export const GAMING_SECTION_SUBTITLE =
 export const GAMES_PAGE_SUBTITLE =
   "Game server status, patch notes, player activity, and recent outages for every tracked title.";
 
+/** Shown near catalog browse / global search — IGDB-backed lookup for titles not on the first page. */
+export const CATALOG_SEARCH_HINT =
+  "Can't find your game in the list? Search by name to look up any title in our catalog.";
+
 export const SITE_DEFAULT_KEYWORDS = [
   "gaming server status",
   "is game down",

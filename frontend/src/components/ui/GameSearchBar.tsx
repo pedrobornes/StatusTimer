@@ -6,6 +6,7 @@ import { Search } from "lucide-react";
 import GameLiveMetricsRow from "@/components/dashboard/GameLiveMetricsRow";
 import GameAssetImage from "@/components/ui/GameAssetImage";
 import { APP_ROUTES } from "@/config/routes";
+import { CATALOG_SEARCH_HINT } from "@/config/seo";
 import { resolveCatalogImageUrl } from "@/lib/gameAssets";
 import { resolveGenres } from "@/lib/genres";
 import { canTrackSteamPlayers } from "@/lib/gameType";
@@ -229,6 +230,10 @@ export default function GameSearchBar() {
           Press <span className="text-violet-200">/</span> to search
         </kbd>
       </div>
+
+      {!showDropdown && !normalizedQuery ? (
+        <p className="mt-2 text-xs text-slate-500">{CATALOG_SEARCH_HINT}</p>
+      ) : null}
 
       {showDropdown ? (
         <div

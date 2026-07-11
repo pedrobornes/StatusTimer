@@ -5,6 +5,7 @@ import { Search } from "lucide-react";
 import GamingStatusSection from "@/components/dashboard/GamingStatusSection";
 import GameTelemetrySortSelect from "@/components/ui/GameTelemetrySortSelect";
 import { TRACKED_GAME_SLUGS } from "@/config/routes";
+import { CATALOG_SEARCH_HINT } from "@/config/seo";
 import { getUserFacingErrorMessage } from "@/services/api";
 import { searchGameTelemetry } from "@/services/telemetryService";
 import {
@@ -113,7 +114,7 @@ function TelemetryGamesPanel({
       ? "Searching games..."
       : searchError
         ? searchError
-        : `No games found matching "${normalizedQuery}".`
+        : `No games found matching "${normalizedQuery}". Try a different spelling or the full game title.`
     : undefined;
 
   return (
@@ -177,9 +178,12 @@ function TelemetryGamesPanel({
         ) : null}
 
         {!normalizedQuery && catalogTotal != null ? (
-          <p className="mt-3 text-xs text-slate-400">
-            Showing {gameTelemetry.length} of {catalogTotal} catalog games
-          </p>
+          <div className="mt-3 space-y-1">
+            <p className="text-xs text-slate-400">
+              Showing {gameTelemetry.length} of {catalogTotal} catalog games
+            </p>
+            <p className="text-xs text-slate-500">{CATALOG_SEARCH_HINT}</p>
+          </div>
         ) : null}
 
         {normalizedQuery ? (
