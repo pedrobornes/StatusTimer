@@ -1,3 +1,4 @@
+import { FETCH_REVALIDATE_NEWS } from "@/config/cache";
 import type { MetadataRoute } from "next";
 import { APP_ROUTES } from "@/config/routes";
 import { isIndexableNewsContent } from "@/lib/seo/newsIndexability";
@@ -47,7 +48,7 @@ export async function fetchNewsSitemapEntries(
   siteUrl: string,
 ): Promise<MetadataRoute.Sitemap> {
   try {
-    const articles = await getGamingNews({ revalidate: 3600 });
+    const articles = await getGamingNews({ revalidate: FETCH_REVALIDATE_NEWS });
     return toNewsSitemapEntries(siteUrl, articles);
   } catch {
     return [];
