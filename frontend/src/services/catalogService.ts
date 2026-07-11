@@ -54,6 +54,7 @@ export interface GameCatalogSearchResult {
   livePlayers?: number | null;
   twitchViewers?: number | null;
   upcomingRelease?: boolean;
+  releaseDate?: string | null;
 }
 
 export interface GameIndexableSlug {

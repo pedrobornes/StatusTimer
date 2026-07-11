@@ -132,6 +132,30 @@ class IgdbSearchClientTest {
     }
 
     @Test
+    void searchReturnsMatchWhenPlatformsFieldIsMissing() throws Exception {
+        String payload = """
+                [
+                  {
+                    "id": 1962700,
+                    "name": "Subnautica 2",
+                    "slug": "subnautica-2",
+                    "category": 0,
+                    "cover": { "image_id": "coabc123" }
+                  }
+                ]
+                """;
+
+        when(apiClient.isConfigured()).thenReturn(true);
+        when(apiClient.postGamesQuery(anyString()))
+                .thenReturn(Optional.of(new ObjectMapper().readTree(payload)));
+
+        List<IgdbSearchClient.IgdbGameMatch> matches = searchClient.search("Subnautica 2", 3);
+
+        assertThat(matches).hasSize(1);
+        assertThat(matches.getFirst().name()).isEqualTo("Subnautica 2");
+    }
+
+    @Test
     void lookupBySteamAppIdQueriesExternalGames() throws Exception {
         String payload = """
                 [

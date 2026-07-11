@@ -40,6 +40,10 @@ export const GAMES_PAGE_SUBTITLE =
 export const CATALOG_SEARCH_HINT =
   "Can't find your game in the list? Search by name to look up any title in our catalog.";
 
+/** Shown on /releases — same IGDB lookup, filtered to upcoming titles. */
+export const RELEASES_SEARCH_HINT =
+  "Search by name to find upcoming releases, including titles not yet in our tracked list.";
+
 export const SITE_DEFAULT_KEYWORDS = [
   "gaming server status",
   "is game down",

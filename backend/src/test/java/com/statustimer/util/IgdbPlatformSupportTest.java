@@ -42,5 +42,18 @@ class IgdbPlatformSupportTest {
         platforms.add(33);
 
         assertFalse(IgdbPlatformSupport.hasSupportedPlatform(platforms));
+        assertFalse(IgdbPlatformSupport.isEligibleForDiscovery(platforms));
+    }
+
+    @Test
+    void acceptsMissingPlatformsForDiscovery() {
+        assertTrue(IgdbPlatformSupport.isEligibleForDiscovery(null));
+        assertTrue(IgdbPlatformSupport.isEligibleForDiscovery(objectMapper.createArrayNode()));
+    }
+
+    @Test
+    void rejectsEmptyPlatformsForStrictCheck() {
+        assertFalse(IgdbPlatformSupport.hasSupportedPlatform(null));
+        assertFalse(IgdbPlatformSupport.hasSupportedPlatform(objectMapper.createArrayNode()));
     }
 }

@@ -383,32 +383,105 @@ public class GameCatalogService {
         int remaining = IGDB_DISCOVERY_LIMIT - results.size();
         if (remaining > 0 && igdbSearchClient.isConfigured()) {
             try {
-                for (IgdbGameMatch match : igdbSearchClient.search(trimmed, remaining)) {
-                    try {
-                        Game discovered = upsertFromIgdbDiscovery(match);
-                        if (discovered == null
-                                || CatalogNoisePolicy.shouldSkipCatalogSurfacing(discovered)) {
-                            continue;
-                        }
-
-                        if (seenSlugs.add(discovered.getSlug())) {
-                            results.add(toSearchResponse(discovered));
-                        }
-                    } catch (RuntimeException exception) {
-                        log.warn(
-                                "Skipping IGDB discovery match '{}' during search for '{}'",
-                                match.name(),
-                                trimmed,
-                                exception
-                        );
-                    }
-                }
+                appendIgdbDiscoveryMatches(trimmed, results, seenSlugs, remaining);
             } catch (RuntimeException exception) {
                 log.warn("IGDB discovery failed during search for '{}'", trimmed, exception);
             }
         }
 
         return results;
+    }
+
+    private void appendIgdbDiscoveryMatches(
+            String query,
+            List<GameCatalogSearchResponse> results,
+            Set<String> seenSlugs,
+            int limit
+    ) {
+        int added = appendUpsertedIgdbMatches(igdbSearchClient.search(query, limit), query, results, seenSlugs);
+        if (added >= limit) {
+            return;
+        }
+
+        appendDirectIgdbLookupMatches(query, results, seenSlugs, limit - added);
+    }
+
+    private void appendDirectIgdbLookupMatches(
+            String query,
+            List<GameCatalogSearchResponse> results,
+            Set<String> seenSlugs,
+            int limit
+    ) {
+        List<IgdbGameMatch> directMatches = new ArrayList<>();
+
+        parseSteamAppIdQuery(query).ifPresent(appId ->
+                igdbSearchClient.lookupBySteamAppId(appId).ifPresent(directMatches::add));
+
+        if (directMatches.size() < limit) {
+            String slugQuery = SlugUtils.toSlug(query);
+            if (!slugQuery.isBlank()) {
+                igdbSearchClient.lookupBySlug(slugQuery).ifPresent(match -> {
+                    if (directMatches.stream().noneMatch(existing -> existing.igdbId() == match.igdbId())) {
+                        directMatches.add(match);
+                    }
+                });
+
+                SlugUtils.toIgdbPossessiveSlugVariant(slugQuery)
+                        .flatMap(igdbSearchClient::lookupBySlug)
+                        .ifPresent(match -> {
+                            if (directMatches.stream().noneMatch(existing -> existing.igdbId() == match.igdbId())) {
+                                directMatches.add(match);
+                            }
+                        });
+            }
+        }
+
+        appendUpsertedIgdbMatches(directMatches.stream().limit(limit).toList(), query, results, seenSlugs);
+    }
+
+    private int appendUpsertedIgdbMatches(
+            List<IgdbGameMatch> matches,
+            String query,
+            List<GameCatalogSearchResponse> results,
+            Set<String> seenSlugs
+    ) {
+        int added = 0;
+        for (IgdbGameMatch match : matches) {
+            try {
+                Game discovered = upsertFromIgdbDiscovery(match);
+                if (discovered == null
+                        || CatalogNoisePolicy.shouldSkipCatalogSurfacing(discovered)) {
+                    continue;
+                }
+
+                if (seenSlugs.add(discovered.getSlug())) {
+                    results.add(toSearchResponse(discovered));
+                    added++;
+                }
+            } catch (RuntimeException exception) {
+                log.warn(
+                        "Skipping IGDB discovery match '{}' during search for '{}'",
+                        match.name(),
+                        query,
+                        exception
+                );
+            }
+        }
+
+        return added;
+    }
+
+    private Optional<Integer> parseSteamAppIdQuery(String query) {
+        if (query == null || !query.matches("\\d{1,10}")) {
+            return Optional.empty();
+        }
+
+        try {
+            int appId = Integer.parseInt(query);
+            return appId > 0 ? Optional.of(appId) : Optional.empty();
+        } catch (NumberFormatException ignored) {
+            return Optional.empty();
+        }
     }
 
     private void appendLocalMatches(
@@ -541,20 +614,7 @@ public class GameCatalogService {
                 .manualLock(false)
                 .build());
 
-        if (match.steamAppId() != null) {
-            game.setSteamAppId(match.steamAppId());
-        }
-
-        GameAssetPolicy.applyIgdbAssets(game, match.logoUrl(), match.coverUrl());
-        IgdbMetadataSupport.applyToGame(
-                game,
-                match.igdbId(),
-                match.userRating(),
-                match.criticRating(),
-                List.of(),
-                List.of()
-        );
-        IgdbMetadataSupport.applyGenreNames(game, match.genreNames());
+        applyIgdbMatch(game, match);
 
         if (!GameAssetPolicy.isRenderableLogo(game.getLogoUrl())) {
             game.setLogoUrl(GameAssetPolicy.LOGO_NONE);
@@ -591,7 +651,10 @@ public class GameCatalogService {
                 resolveGenreNames(game),
                 game.getLivePlayers(),
                 game.getTwitchViewers(),
-                game.isUpcomingRelease(LocalDate.now())
+                game.isUpcomingRelease(LocalDate.now()),
+                game.resolveEarliestKnownReleaseDate()
+                        .map(LocalDate::atStartOfDay)
+                        .orElse(null)
         );
     }
 

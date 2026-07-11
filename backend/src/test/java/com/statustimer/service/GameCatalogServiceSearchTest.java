@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 
 import com.statustimer.dto.response.GameCatalogSearchResponse;
 import com.statustimer.entity.Game;
@@ -12,8 +14,10 @@ import com.statustimer.entity.LifecycleState;
 import com.statustimer.integration.IgdbSearchClient;
 import com.statustimer.integration.IgdbSearchClient.IgdbGameMatch;
 import com.statustimer.repository.GameRepository;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -103,5 +107,64 @@ class GameCatalogServiceSearchTest {
         List<GameCatalogSearchResponse> results = gameCatalogService.search("collector");
 
         assertTrue(results.stream().anyMatch(result -> "gta-vi-collector".equals(result.slug())));
+    }
+
+    @Test
+    void searchFallsBackToSteamAppIdLookupWhenTextSearchIsEmpty() {
+        IgdbGameMatch subnauticaMatch = new IgdbGameMatch(
+                300001L,
+                "Subnautica 2",
+                "subnautica-2",
+                null,
+                null,
+                1962700,
+                88,
+                90,
+                List.of("Adventure"),
+                List.of(),
+                0,
+                LocalDate.of(2026, 5, 14),
+                List.of(),
+                List.of(),
+                null,
+                Map.of()
+        );
+
+        when(igdbSearchClient.search(anyString(), anyInt())).thenReturn(List.of());
+        when(igdbSearchClient.lookupBySteamAppId(1962700)).thenReturn(Optional.of(subnauticaMatch));
+
+        List<GameCatalogSearchResponse> results = gameCatalogService.search("1962700");
+
+        assertTrue(results.stream().anyMatch(result -> "subnautica-2".equals(result.slug())));
+        verify(igdbSearchClient).lookupBySteamAppId(1962700);
+    }
+
+    @Test
+    void searchSkipsDirectLookupWhenTextSearchFindsMatches() {
+        IgdbGameMatch textMatch = new IgdbGameMatch(
+                1001L,
+                "Factorio",
+                "factorio",
+                null,
+                null,
+                427520,
+                90,
+                null,
+                List.of("Strategy"),
+                List.of(),
+                0,
+                null,
+                List.of(),
+                List.of(),
+                null,
+                Map.of()
+        );
+
+        when(igdbSearchClient.search(anyString(), anyInt())).thenReturn(List.of(textMatch));
+
+        List<GameCatalogSearchResponse> results = gameCatalogService.search("factorio");
+
+        assertTrue(results.stream().anyMatch(result -> "factorio".equals(result.slug())));
+        verify(igdbSearchClient, never()).lookupBySteamAppId(anyInt());
     }
 }

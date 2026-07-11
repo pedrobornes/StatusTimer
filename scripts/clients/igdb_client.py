@@ -16,7 +16,7 @@ from scrapers.igdb_media import (
     is_main_game,
     parse_igdb_game_metadata,
 )
-from scrapers.igdb_platforms import has_supported_igdb_platform
+from scrapers.igdb_platforms import is_eligible_for_igdb_discovery
 
 logger = logging.getLogger(__name__)
 
@@ -174,7 +174,7 @@ class IgdbClient:
             if not is_main_game(row):
                 continue
 
-            if not has_supported_igdb_platform(row.get("platforms")):
+            if not is_eligible_for_igdb_discovery(row.get("platforms")):
                 continue
 
             try:

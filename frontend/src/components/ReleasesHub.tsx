@@ -6,15 +6,20 @@ import GenreFilterBar from "@/components/GenreFilterBar";
 import ReleasesGrid from "@/components/ReleasesGrid";
 import Pagination from "@/components/ui/Pagination";
 import ReleaseSortSelect from "@/components/ui/ReleaseSortSelect";
+import { RELEASES_SEARCH_HINT } from "@/config/seo";
 import {
   ALL_GENRES_FILTER,
   collectReleaseGenres,
   filterReleasesByGenre,
   filterUpcomingReleases,
+  mapCatalogSearchToUpcomingRelease,
+  mergeUpcomingReleasesBySlug,
   sortReleases,
   type ReleaseGenreFilter,
   type ReleaseSortMode,
 } from "@/lib/releases";
+import { getUserFacingErrorMessage } from "@/services/api";
+import { searchGames } from "@/services/catalogService";
 import type { UpcomingRelease } from "@/types/api";
 
 interface ReleasesHubProps {
@@ -23,49 +28,98 @@ interface ReleasesHubProps {
 
 const PAGE_SIZE = 24;
 
+function matchesLocalQuery(release: UpcomingRelease, normalizedQuery: string): boolean {
+  return (
+    release.gameName.toLowerCase().includes(normalizedQuery) ||
+    release.slug.toLowerCase().includes(normalizedQuery) ||
+    release.slug.replace(/-/g, " ").toLowerCase().includes(normalizedQuery)
+  );
+}
+
 export default function ReleasesHub({ releases }: ReleasesHubProps) {
   const [currentGenre, setCurrentGenre] =
     useState<ReleaseGenreFilter>(ALL_GENRES_FILTER);
   const [sortMode, setSortMode] = useState<ReleaseSortMode>("hype");
   const [page, setPage] = useState(1);
   const [query, setQuery] = useState("");
+  const [remoteResults, setRemoteResults] = useState<UpcomingRelease[] | null>(
+    null,
+  );
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
   const normalizedQuery = query.trim().toLowerCase();
 
-  // Only surface games that have not launched yet.
   const upcomingReleases = useMemo(
     () => filterUpcomingReleases(releases),
     [releases],
   );
 
+  useEffect(() => {
+    if (!normalizedQuery) {
+      setRemoteResults(null);
+      setSearchError(null);
+      setIsSearching(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timeoutId = window.setTimeout(async () => {
+      setIsSearching(true);
+      setSearchError(null);
+
+      try {
+        const results = await searchGames(normalizedQuery);
+        if (cancelled) {
+          return;
+        }
+
+        const discovered = results
+          .filter((entry) => entry.upcomingRelease === true)
+          .map(mapCatalogSearchToUpcomingRelease);
+
+        const localMatches = upcomingReleases.filter((release) =>
+          matchesLocalQuery(release, normalizedQuery),
+        );
+
+        setRemoteResults(mergeUpcomingReleasesBySlug(discovered, localMatches));
+      } catch (error) {
+        if (!cancelled) {
+          setRemoteResults([]);
+          setSearchError(getUserFacingErrorMessage(error));
+        }
+      } finally {
+        if (!cancelled) {
+          setIsSearching(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [normalizedQuery, upcomingReleases]);
+
+  const searchBase = normalizedQuery
+    ? (remoteResults ?? [])
+    : upcomingReleases;
+
   const availableGenres = useMemo(
-    () => collectReleaseGenres(upcomingReleases),
-    [upcomingReleases],
+    () => collectReleaseGenres(searchBase),
+    [searchBase],
   );
 
-  // Sorting and filtering run over the full dataset before pagination, so the
-  // ordering always reflects every release regardless of the active page.
   const filteredReleases = useMemo(() => {
-    const byQuery = normalizedQuery
-      ? upcomingReleases.filter((release) =>
-          release.gameName.toLowerCase().includes(normalizedQuery) ||
-          release.slug.toLowerCase().includes(normalizedQuery) ||
-          release.slug
-            .replace(/-/g, " ")
-            .toLowerCase()
-            .includes(normalizedQuery),
-        )
-      : upcomingReleases;
-    const byGenre = filterReleasesByGenre(byQuery, currentGenre);
+    const byGenre = filterReleasesByGenre(searchBase, currentGenre);
     return sortReleases(byGenre, sortMode);
-  }, [upcomingReleases, normalizedQuery, currentGenre, sortMode]);
+  }, [searchBase, currentGenre, sortMode]);
 
   const totalPages = Math.max(
     1,
     Math.ceil(filteredReleases.length / PAGE_SIZE),
   );
 
-  // Keep the active page in range when filters shrink the result set.
   useEffect(() => {
     setPage(1);
   }, [currentGenre, sortMode, normalizedQuery]);
@@ -82,12 +136,15 @@ export default function ReleasesHub({ releases }: ReleasesHubProps) {
     topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const emptyMessage =
-    normalizedQuery.length > 0
-      ? `No upcoming releases found matching "${query.trim()}".`
-      : currentGenre === ALL_GENRES_FILTER
-      ? "No upcoming games found right now. Check back soon for new reveals!"
-      : "No releases match the selected filters yet.";
+  const emptyMessage = isSearching
+    ? "Searching upcoming releases..."
+    : searchError
+      ? searchError
+      : normalizedQuery.length > 0
+        ? `No upcoming releases found matching "${query.trim()}". If the game is already out, try the Games or Monitor search instead.`
+        : currentGenre === ALL_GENRES_FILTER
+          ? "No upcoming games found right now. Check back soon for new reveals!"
+          : "No releases match the selected filters yet.";
 
   return (
     <>
@@ -107,6 +164,10 @@ export default function ReleasesHub({ releases }: ReleasesHubProps) {
             className="w-full rounded-2xl border border-violet-400/20 bg-white/[0.04] py-3 pl-11 pr-4 text-sm text-white placeholder:text-slate-500 outline-none transition focus:border-violet-400/45 focus:bg-white/[0.06] focus:ring-2 focus:ring-violet-500/20"
           />
         </div>
+
+        {!normalizedQuery ? (
+          <p className="text-xs text-slate-500">{RELEASES_SEARCH_HINT}</p>
+        ) : null}
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">

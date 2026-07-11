@@ -34,3 +34,12 @@ def has_supported_igdb_platform(raw_platforms: Any) -> bool:
         return False
 
     return any(platform_id in SUPPORTED_IGDB_PLATFORM_IDS for platform_id in platform_ids)
+
+
+def is_eligible_for_igdb_discovery(raw_platforms: Any) -> bool:
+    """Accept missing platforms during IGDB text search (API often omits the field)."""
+    platform_ids = parse_igdb_platform_ids(raw_platforms)
+    if not platform_ids:
+        return True
+
+    return has_supported_igdb_platform(raw_platforms)

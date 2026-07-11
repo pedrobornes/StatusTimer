@@ -1,5 +1,7 @@
 package com.statustimer.dto.response;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public record GameCatalogSearchResponse(
@@ -15,6 +17,7 @@ public record GameCatalogSearchResponse(
         List<String> genreNames,
         Long livePlayers,
         Long twitchViewers,
-        Boolean upcomingRelease
+        Boolean upcomingRelease,
+        LocalDateTime releaseDate
 ) {
 }

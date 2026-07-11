@@ -34,4 +34,17 @@ public final class IgdbPlatformSupport {
 
         return false;
     }
+
+    /**
+     * IGDB text search often omits {@code platforms} even when the field is requested.
+     * Accept unknown platform sets during discovery; reject only when platforms are
+     * present and none are on the supported allowlist.
+     */
+    public static boolean isEligibleForDiscovery(JsonNode platformIds) {
+        if (platformIds == null || !platformIds.isArray() || platformIds.isEmpty()) {
+            return true;
+        }
+
+        return hasSupportedPlatform(platformIds);
+    }
 }

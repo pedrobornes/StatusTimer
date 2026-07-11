@@ -64,7 +64,7 @@ public class IgdbSearchClient {
                 continue;
             }
 
-            if (!IgdbPlatformSupport.hasSupportedPlatform(row.path("platforms"))) {
+            if (!IgdbPlatformSupport.isEligibleForDiscovery(row.path("platforms"))) {
                 continue;
             }
 

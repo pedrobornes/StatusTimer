@@ -1,4 +1,5 @@
 import type { GamePlatform, PlatformDetail, UpcomingRelease } from "@/types/api";
+import type { GameCatalogSearchResult } from "@/services/catalogService";
 import {
   resolveGameBoxArtUrl,
   resolveGameCoverUrl,
@@ -247,4 +248,45 @@ function comparePlatformReleaseGroups(
   return (
     new Date(left.releaseDate).getTime() - new Date(right.releaseDate).getTime()
   );
+}
+
+/** Maps IGDB catalog search hits into release cards (upcoming titles only). */
+export function mapCatalogSearchToUpcomingRelease(
+  entry: GameCatalogSearchResult,
+): UpcomingRelease {
+  return {
+    id: entry.id,
+    gameName: entry.gameName,
+    slug: entry.slug,
+    genre: entry.genreName ?? null,
+    genreNames: entry.genreNames,
+    releaseDate: entry.releaseDate ?? null,
+    hypeCount: 0,
+    imageUrl: entry.coverUrl ?? null,
+    logoUrl: entry.logoUrl ?? null,
+    userRating: entry.userRating ?? null,
+    criticRating: entry.criticRating ?? null,
+    platforms: [],
+    steamAppId: entry.steamAppId ?? null,
+  };
+}
+
+export function mergeUpcomingReleasesBySlug(
+  primary: UpcomingRelease[],
+  secondary: UpcomingRelease[],
+): UpcomingRelease[] {
+  const seen = new Set(primary.map((release) => release.slug.toLowerCase()));
+  const merged = [...primary];
+
+  for (const release of secondary) {
+    const key = release.slug.toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    merged.push(release);
+  }
+
+  return merged;
 }
