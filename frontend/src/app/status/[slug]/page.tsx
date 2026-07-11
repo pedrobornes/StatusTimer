@@ -366,10 +366,6 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
           <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="space-y-8">
               {!isCatalogProfile && !isSinglePlayerProfile && showIndexableContent ? (
-                <GameStatusFaq items={faqItems} />
-              ) : null}
-
-              {!isCatalogProfile && !isSinglePlayerProfile && showIndexableContent ? (
                 <IncidentLog
                   incidents={incidents}
                   sectionTitle="Recent Problems"
@@ -388,6 +384,10 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
                 media={gameMedia}
                 gameSlug={canonicalSlug}
               />
+
+              {!isCatalogProfile && !isSinglePlayerProfile && showIndexableContent ? (
+                <GameStatusFaq items={faqItems} />
+              ) : null}
 
               <div className="mt-8">
                 <AdSlot format="leaderboard" slotId={`status-${slug}-leaderboard`} />
