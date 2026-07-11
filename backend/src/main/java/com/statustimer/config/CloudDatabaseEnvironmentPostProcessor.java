@@ -75,10 +75,32 @@ public class CloudDatabaseEnvironmentPostProcessor implements EnvironmentPostPro
 
         String username = decode(credentialParts[0]);
         String password = credentialParts.length > 1 ? decode(credentialParts[1]) : "";
-        String jdbcUrl = "jdbc:mysql://" + hostAndDatabase
-                + "?useSSL=true&requireSSL=true&serverTimezone=UTC";
+        String jdbcUrl = "jdbc:mysql://" + hostAndDatabase + "?" + jdbcQueryParams(hostAndDatabase);
 
         return new ParsedMysqlUrl(jdbcUrl, username, password);
+    }
+
+    /**
+     * Railway private networking ({@code *.railway.internal}) does not terminate TLS
+     * the same way as the public TCP proxy — requiring SSL causes handshake timeouts.
+     */
+    private String jdbcQueryParams(String hostAndDatabase) {
+        String host = hostAndDatabase;
+        int pathSeparator = hostAndDatabase.indexOf('/');
+        if (pathSeparator >= 0) {
+            host = hostAndDatabase.substring(0, pathSeparator);
+        }
+
+        int portSeparator = host.lastIndexOf(':');
+        if (portSeparator >= 0) {
+            host = host.substring(0, portSeparator);
+        }
+
+        if (host.endsWith(".railway.internal") || host.equals("mysql")) {
+            return "useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+        }
+
+        return "useSSL=true&requireSSL=true&serverTimezone=UTC";
     }
 
     private String decode(String value) {

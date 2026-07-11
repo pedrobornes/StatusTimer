@@ -24,7 +24,7 @@ public class UpcomingReleaseService {
     private final GameRepository gameRepository;
 
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE)
+    @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE, key = "'upcomingReleases'")
     public List<UpcomingReleaseResponse> findAll() {
         LocalDate today = LocalDate.now();
 

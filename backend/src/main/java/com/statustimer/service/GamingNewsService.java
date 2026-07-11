@@ -33,7 +33,7 @@ public class GamingNewsService {
     private final GameCatalogService gameCatalogService;
 
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE)
+    @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE, key = "'gamingNewsLatest'")
     public List<GamingNewsResponse> findLatest() {
         Map<String, Integer> perGameCount = new HashMap<>();
 

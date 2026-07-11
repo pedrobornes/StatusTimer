@@ -23,7 +23,7 @@ class CloudDatabaseEnvironmentPostProcessorTest {
 
         assertThat(environment.getProperty("spring.datasource.url"))
                 .isEqualTo("jdbc:mysql://db.railway.internal:3306/statustimer"
-                        + "?useSSL=true&requireSSL=true&serverTimezone=UTC");
+                        + "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC");
         assertThat(environment.getProperty("spring.datasource.username")).isEqualTo("statustimer");
         assertThat(environment.getProperty("spring.datasource.password")).isEqualTo("secret");
     }
@@ -49,5 +49,20 @@ class CloudDatabaseEnvironmentPostProcessorTest {
         processor.postProcessEnvironment(environment, new SpringApplication());
 
         assertThat(environment.getPropertySources().contains("cloudDatabaseOverrides")).isFalse();
+    }
+    @Test
+    void keepsSslForPublicDatabaseHosts() {
+        MockEnvironment environment = new MockEnvironment()
+                .withProperty("spring.profiles.active", "prod")
+                .withProperty(
+                        "DATABASE_URL",
+                        "mysql://statustimer:secret@tokaido.proxy.rlwy.net:18298/railway"
+                );
+
+        processor.postProcessEnvironment(environment, new SpringApplication());
+
+        assertThat(environment.getProperty("spring.datasource.url"))
+                .isEqualTo("jdbc:mysql://tokaido.proxy.rlwy.net:18298/railway"
+                        + "?useSSL=true&requireSSL=true&serverTimezone=UTC");
     }
 }

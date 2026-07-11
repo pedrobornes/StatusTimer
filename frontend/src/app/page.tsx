@@ -92,7 +92,7 @@ export default async function HomePage() {
     const [gameTelemetry, releases, incidents, statuses, news] =
       await Promise.all([
         loadDashboardTelemetry(DASHBOARD_TELEMETRY_LIMIT),
-        getUpcomingReleases(),
+        getUpcomingReleases().catch(() => []),
         getTelemetryIncidents().catch(() => []),
         getServerStatuses().catch(() => []),
         getGamingNews().catch(() => []),

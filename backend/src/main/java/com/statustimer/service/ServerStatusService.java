@@ -20,7 +20,7 @@ public class ServerStatusService {
     private final ServerStatusRepository serverStatusRepository;
 
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE)
+    @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE, key = "'serverStatuses'")
     public List<ServerStatusResponse> findAll() {
         return serverStatusRepository.findAll().stream()
                 .map(ServerStatusResponse::fromEntity)

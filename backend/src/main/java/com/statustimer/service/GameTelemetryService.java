@@ -69,7 +69,7 @@ public class GameTelemetryService {
     private final HarvestScheduleService harvestScheduleService;
 
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE)
+    @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE, key = "'gameTelemetryAll'")
     public List<GameTelemetryResponse> findAll() {
         return gameTelemetryRepository.findAll().stream()
                 .map(this::toResponse)
@@ -77,7 +77,7 @@ public class GameTelemetryService {
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE)
+    @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE, key = "'gameTelemetryFeatured'")
     public List<GameTelemetryResponse> findAllFeatured() {
         return gameTelemetryRepository.findAll().stream()
                 .filter(entity -> gameCatalogService.isFeatured(entity.getGame().getSlug()))
@@ -143,7 +143,7 @@ public class GameTelemetryService {
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE)
+    @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE, key = "'dashboardTelemetry:' + #limit")
     public List<GameTelemetryResponse> findDashboardTopGames(int limit) {
         int safeLimit = Math.max(1, Math.min(limit, 6));
         List<String> candidateSlugs = new ArrayList<>();
@@ -257,7 +257,7 @@ public class GameTelemetryService {
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_SHORT_CACHE)
+    @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_SHORT_CACHE, key = "'telemetryIncidents'")
     public List<TelemetryIncidentResponse> findRecentIncidents() {
         LocalDate today = LocalDate.now();
 
