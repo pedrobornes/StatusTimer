@@ -4,9 +4,10 @@ import {
   resolveHistoryDateIso,
   TIMELINE_EMPTY_BLOCK_CLASS,
 } from "@/lib/telemetry";
+import { STATUS_TIMELINE_BLOCK_COUNT } from "@/config/telemetryDisplay";
 import type { TelemetryHistorySnapshot } from "@/types/telemetry";
 
-const DEFAULT_BLOCK_COUNT = 12;
+const DEFAULT_BLOCK_COUNT = STATUS_TIMELINE_BLOCK_COUNT;
 
 interface StatusTimelineProps {
   snapshots: TelemetryHistorySnapshot[];

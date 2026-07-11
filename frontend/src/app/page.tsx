@@ -11,6 +11,7 @@ import {
   FETCH_REVALIDATE_DEFAULT,
   PAGE_REVALIDATE_HOME,
 } from "@/config/cache";
+import { DASHBOARD_TELEMETRY_LIMIT } from "@/config/telemetryDisplay";
 import type { ApiRequestOptions } from "@/services/api";
 import { getGamingNews } from "@/services/newsService";
 import { getUpcomingReleases } from "@/services/releasesService";
@@ -40,7 +41,6 @@ export const metadata: Metadata = {
 
 export const revalidate = PAGE_REVALIDATE_HOME;
 
-const DASHBOARD_TELEMETRY_LIMIT = 12;
 const DASHBOARD_NEWS_LIMIT = 4;
 const SERVER_FETCH_OPTIONS: ApiRequestOptions = {
   revalidate: FETCH_REVALIDATE_DEFAULT,

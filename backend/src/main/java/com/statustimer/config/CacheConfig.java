@@ -24,8 +24,8 @@ public class CacheConfig {
         SimpleCacheManager manager = new SimpleCacheManager();
         manager.setCaches(List.of(
                 buildCache(INDEXABLE_SLUGS_CACHE, Duration.ofHours(1), 1),
-                buildCache(PUBLIC_READ_SHORT_CACHE, Duration.ofSeconds(60), 64),
-                buildCache(PUBLIC_READ_MEDIUM_CACHE, Duration.ofSeconds(120), 32)
+                buildCache(PUBLIC_READ_SHORT_CACHE, Duration.ofSeconds(120), 64),
+                buildCache(PUBLIC_READ_MEDIUM_CACHE, Duration.ofSeconds(300), 32)
         ));
         return manager;
     }

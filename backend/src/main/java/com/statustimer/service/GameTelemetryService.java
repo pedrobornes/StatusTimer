@@ -51,6 +51,7 @@ public class GameTelemetryService {
 
     private static final int RECENT_INCIDENT_FETCH_LIMIT = 20;
     private static final int RECENT_INCIDENT_RESPONSE_LIMIT = 5;
+    private static final int PUBLIC_HISTORY_RESPONSE_LIMIT = 6;
     private static final int DASHBOARD_TELEMETRY_CANDIDATE_LIMIT = 50;
     private static final List<TelemetryStatus> INCIDENT_STATUSES = List.of(
             TelemetryStatus.DOWN,
@@ -144,7 +145,7 @@ public class GameTelemetryService {
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE)
     public List<GameTelemetryResponse> findDashboardTopGames(int limit) {
-        int safeLimit = Math.max(1, Math.min(limit, 12));
+        int safeLimit = Math.max(1, Math.min(limit, 6));
         List<String> candidateSlugs = new ArrayList<>();
 
         gameRepository
@@ -232,15 +233,27 @@ public class GameTelemetryService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_SHORT_CACHE)
     public List<TelemetryHistorySnapshotResponse> findHistoryByGameSlug(String gameSlug) {
         validateGameSlug(gameSlug);
         String canonicalSlug = gameSlugMapper.resolveCanonicalSlug(gameSlug);
 
         LocalDateTime since = telemetryHistoryService.historyReadWindowStart();
 
-        return gameTelemetryRepository.findHistoryByGameSlugSince(canonicalSlug, since).stream()
+        List<TelemetryHistorySnapshotResponse> history = gameTelemetryRepository
+                .findHistoryByGameSlugSince(canonicalSlug, since)
+                .stream()
                 .map(TelemetryHistorySnapshotResponse::fromEntity)
                 .toList();
+
+        if (history.size() <= PUBLIC_HISTORY_RESPONSE_LIMIT) {
+            return history;
+        }
+
+        return history.subList(
+                history.size() - PUBLIC_HISTORY_RESPONSE_LIMIT,
+                history.size()
+        );
     }
 
     @Transactional(readOnly = true)

@@ -28,7 +28,7 @@ export async function fetchJson<T>(
   path: string,
   options: ApiRequestOptions = {},
 ): Promise<T> {
-  const { revalidate = 120, cache } = options;
+  const { revalidate = 600, cache } = options;
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     cache,

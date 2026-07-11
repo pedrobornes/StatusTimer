@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     batch_size_catalog_sync: int = 50
     batch_size_dynamic_catalog_sync: int = 50
     batch_size_telemetry_sync: int = 50
-    harvest_interval_seconds: int = 600
+    harvest_interval_seconds: int = 900
     on_demand_poll_interval_seconds: int = 60
     http_rate_limit_per_minute: int = 20
     http_jitter_min_seconds: float = 0.3
