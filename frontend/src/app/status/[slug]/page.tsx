@@ -13,6 +13,7 @@ import PageShell from "@/components/PageShell";
 import GameStatusFaq from "@/components/seo/GameStatusFaq";
 import JsonLdScript from "@/components/seo/JsonLdScript";
 import GameAssetImage from "@/components/ui/GameAssetImage";
+import { PAGE_REVALIDATE_STATUS } from "@/config/cache";
 import { APP_ROUTES, TRACKED_GAME_SLUGS } from "@/config/routes";
 import { getSiteUrl } from "@/config/site";
 import {
@@ -33,7 +34,7 @@ import { getGameStatusDetail } from "@/services/telemetryService";
 import { getUpcomingReleases } from "@/services/releasesService";
 import type { GameTelemetry, TelemetryStatus } from "@/types/telemetry";
 
-export const revalidate = 60;
+export const revalidate = PAGE_REVALIDATE_STATUS;
 
 export function generateStaticParams() {
   return TRACKED_GAME_SLUGS.map((slug) => ({ slug }));
@@ -78,7 +79,7 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
       },
       releases,
     ] = await Promise.all([
-      getGameStatusDetail(slug, { revalidate: 0, cache: "no-store" }),
+      getGameStatusDetail(slug, { revalidate: PAGE_REVALIDATE_STATUS }),
       getUpcomingReleases().catch(() => []),
     ]);
 

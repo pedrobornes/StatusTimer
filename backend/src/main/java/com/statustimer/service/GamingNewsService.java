@@ -1,5 +1,6 @@
 package com.statustimer.service;
 
+import com.statustimer.config.CacheConfig;
 import com.statustimer.dto.request.CreateGamingNewsRequest;
 import com.statustimer.dto.response.GamingNewsResponse;
 import com.statustimer.entity.Game;
@@ -13,6 +14,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -30,6 +33,7 @@ public class GamingNewsService {
     private final GameCatalogService gameCatalogService;
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE)
     public List<GamingNewsResponse> findLatest() {
         Map<String, Integer> perGameCount = new HashMap<>();
 
@@ -72,6 +76,7 @@ public class GamingNewsService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE, allEntries = true)
     public GamingNewsResponse create(CreateGamingNewsRequest request) {
         LocalDateTime ingestedAt = LocalDateTime.now();
         String baseSlug = buildNewsBaseSlug(request.gameTag(), request.title());

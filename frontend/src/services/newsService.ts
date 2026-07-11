@@ -1,17 +1,13 @@
 import type { ApiRequestOptions } from "@/services/api";
+import { FETCH_REVALIDATE_DEFAULT } from "@/config/cache";
 import { fetchJson } from "@/services/api";
 import type { GamingNews } from "@/types/api";
-
-const LIVE_NEWS_FETCH_OPTIONS: ApiRequestOptions = {
-  cache: "no-store",
-  revalidate: 0,
-};
 
 export function getGamingNews(
   options: ApiRequestOptions = {},
 ): Promise<GamingNews[]> {
   return fetchJson<GamingNews[]>("/api/v1/news", {
-    ...LIVE_NEWS_FETCH_OPTIONS,
+    revalidate: FETCH_REVALIDATE_DEFAULT,
     ...options,
   });
 }
@@ -21,7 +17,7 @@ export function getGamingNewsById(
   options: ApiRequestOptions = {},
 ): Promise<GamingNews> {
   return fetchJson<GamingNews>(`/api/v1/news/${id}`, {
-    ...LIVE_NEWS_FETCH_OPTIONS,
+    revalidate: FETCH_REVALIDATE_DEFAULT,
     ...options,
   });
 }
@@ -33,7 +29,7 @@ export function getGamingNewsBySlug(
   return fetchJson<GamingNews>(
     `/api/v1/news/slug/${encodeURIComponent(slug)}`,
     {
-      ...LIVE_NEWS_FETCH_OPTIONS,
+      revalidate: FETCH_REVALIDATE_DEFAULT,
       ...options,
     },
   );
@@ -48,7 +44,7 @@ export function getGamingNewsByGame(
   return fetchJson<GamingNews[]>(
     `/api/v1/news/game/${encodeURIComponent(gameSlug)}?${params.toString()}`,
     {
-      ...LIVE_NEWS_FETCH_OPTIONS,
+      revalidate: FETCH_REVALIDATE_DEFAULT,
       ...options,
     },
   );

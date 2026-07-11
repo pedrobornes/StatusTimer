@@ -7,6 +7,10 @@ import {
   HOME_PAGE_DESCRIPTION,
   HOME_PAGE_OG_TITLE,
 } from "@/config/seo";
+import {
+  FETCH_REVALIDATE_DEFAULT,
+  PAGE_REVALIDATE_HOME,
+} from "@/config/cache";
 import type { ApiRequestOptions } from "@/services/api";
 import { getGamingNews } from "@/services/newsService";
 import { getUpcomingReleases } from "@/services/releasesService";
@@ -34,11 +38,13 @@ export const metadata: Metadata = {
   },
 };
 
-export const revalidate = 60;
+export const revalidate = PAGE_REVALIDATE_HOME;
 
 const DASHBOARD_TELEMETRY_LIMIT = 12;
 const DASHBOARD_NEWS_LIMIT = 4;
-const LIVE_FETCH_OPTIONS: ApiRequestOptions = { revalidate: 0 };
+const SERVER_FETCH_OPTIONS: ApiRequestOptions = {
+  revalidate: FETCH_REVALIDATE_DEFAULT,
+};
 
 const FEATURED_SLUG_SET = new Set<string>(FEATURED_GAME_SLUGS);
 
@@ -52,7 +58,7 @@ async function loadDashboardTelemetry(
   limit: number,
 ): Promise<GameTelemetry[]> {
   try {
-    const twitchRanked = await getDashboardTelemetry(limit, LIVE_FETCH_OPTIONS);
+    const twitchRanked = await getDashboardTelemetry(limit, SERVER_FETCH_OPTIONS);
     if (twitchRanked.length > 0) {
       return twitchRanked;
     }
@@ -63,7 +69,7 @@ async function loadDashboardTelemetry(
   try {
     const featured = await getGameTelemetry({
       featured: true,
-      ...LIVE_FETCH_OPTIONS,
+      ...SERVER_FETCH_OPTIONS,
     });
     return featured.slice(0, limit);
   } catch {

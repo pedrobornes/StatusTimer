@@ -2,6 +2,7 @@ package com.statustimer.service;
 
 import com.statustimer.config.CatalogMatureContentPolicy;
 import com.statustimer.config.CatalogNoisePolicy;
+import com.statustimer.config.CacheConfig;
 import com.statustimer.config.GameSlugMapper;
 import com.statustimer.dto.request.GameTelemetryPayload;
 import com.statustimer.dto.request.SyncTelemetryRequest;
@@ -32,6 +33,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -65,6 +68,7 @@ public class GameTelemetryService {
     private final HarvestScheduleService harvestScheduleService;
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE)
     public List<GameTelemetryResponse> findAll() {
         return gameTelemetryRepository.findAll().stream()
                 .map(this::toResponse)
@@ -72,6 +76,7 @@ public class GameTelemetryService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE)
     public List<GameTelemetryResponse> findAllFeatured() {
         return gameTelemetryRepository.findAll().stream()
                 .filter(entity -> gameCatalogService.isFeatured(entity.getGame().getSlug()))
@@ -137,6 +142,7 @@ public class GameTelemetryService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE)
     public List<GameTelemetryResponse> findDashboardTopGames(int limit) {
         int safeLimit = Math.max(1, Math.min(limit, 12));
         List<String> candidateSlugs = new ArrayList<>();
@@ -238,6 +244,7 @@ public class GameTelemetryService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_SHORT_CACHE)
     public List<TelemetryIncidentResponse> findRecentIncidents() {
         LocalDate today = LocalDate.now();
 
@@ -286,6 +293,13 @@ public class GameTelemetryService {
     }
 
     @Transactional
+    @CacheEvict(
+            cacheNames = {
+                    CacheConfig.PUBLIC_READ_SHORT_CACHE,
+                    CacheConfig.PUBLIC_READ_MEDIUM_CACHE
+            },
+            allEntries = true
+    )
     public SyncTelemetryResponse syncTelemetry(SyncTelemetryRequest request) {
         if (request.entries() == null || request.entries().isEmpty()) {
             throw new ResponseStatusException(

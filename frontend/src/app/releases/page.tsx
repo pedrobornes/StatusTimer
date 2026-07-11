@@ -3,12 +3,13 @@ import PageShell from "@/components/PageShell";
 import ReleasesHub from "@/components/ReleasesHub";
 import DashboardError from "@/components/dashboard/DashboardError";
 import { resolveUserFacingError } from "@/lib/userFacingErrors";
+import { PAGE_REVALIDATE_RELEASES } from "@/config/cache";
 import { buildReleasesHubMetadata } from "@/lib/seo/releaseMetadata";
 import { getUpcomingReleases } from "@/services/releasesService";
 
 export const metadata: Metadata = buildReleasesHubMetadata();
 
-export const revalidate = 60;
+export const revalidate = PAGE_REVALIDATE_RELEASES;
 
 export default async function ReleasesPage() {
   try {

@@ -15,7 +15,14 @@ import { activateGame, searchGames } from "@/services/catalogService";
 import { getUpcomingReleases } from "@/services/releasesService";
 import type { GameCatalogSearchResult } from "@/services/catalogService";
 
-export default function GameSearchBar() {
+interface GameSearchBarProps {
+  /** When provided, skips the client-side /releases fetch on mount. */
+  initialUpcomingSlugs?: readonly string[];
+}
+
+export default function GameSearchBar({
+  initialUpcomingSlugs,
+}: GameSearchBarProps) {
   const router = useRouter();
   const listboxId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -28,7 +35,9 @@ export default function GameSearchBar() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [upcomingSlugs, setUpcomingSlugs] = useState<Set<string>>(new Set());
+  const [upcomingSlugs, setUpcomingSlugs] = useState<Set<string>>(() =>
+    new Set(initialUpcomingSlugs?.map((slug) => slug.toLowerCase()) ?? []),
+  );
 
   const normalizedQuery = query.trim();
 
@@ -62,6 +71,10 @@ export default function GameSearchBar() {
   );
 
   useEffect(() => {
+    if (initialUpcomingSlugs && initialUpcomingSlugs.length > 0) {
+      return undefined;
+    }
+
     let cancelled = false;
 
     void getUpcomingReleases()
@@ -82,7 +95,7 @@ export default function GameSearchBar() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialUpcomingSlugs]);
 
   useEffect(() => {
     setActiveIndex(0);

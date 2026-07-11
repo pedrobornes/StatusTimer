@@ -55,7 +55,7 @@ export default function Dashboard({
           </p>
 
           <div className="mt-6">
-            <GameSearchBar />
+            <GameSearchBar initialUpcomingSlugs={upcomingReleaseSlugs} />
           </div>
         </header>
 

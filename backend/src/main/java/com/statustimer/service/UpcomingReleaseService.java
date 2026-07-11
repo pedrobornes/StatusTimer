@@ -1,5 +1,6 @@
 package com.statustimer.service;
 
+import com.statustimer.config.CacheConfig;
 import com.statustimer.config.CatalogMatureContentPolicy;
 import com.statustimer.dto.response.UpcomingReleaseResponse;
 import com.statustimer.entity.Game;
@@ -9,6 +10,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +24,7 @@ public class UpcomingReleaseService {
     private final GameRepository gameRepository;
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE)
     public List<UpcomingReleaseResponse> findAll() {
         LocalDate today = LocalDate.now();
 
@@ -48,6 +52,7 @@ public class UpcomingReleaseService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE, allEntries = true)
     public UpcomingReleaseResponse incrementHype(Long id) {
         Game game = gameRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
