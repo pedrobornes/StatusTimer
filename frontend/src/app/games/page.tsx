@@ -3,7 +3,6 @@ import PageShell from "@/components/PageShell";
 import TelemetryStatusHub from "@/components/dashboard/TelemetryStatusHub";
 import DashboardError from "@/components/dashboard/DashboardError";
 import { resolveUserFacingError } from "@/lib/userFacingErrors";
-import { PAGE_REVALIDATE_GAMES } from "@/config/cache";
 import { GAMES_PAGE_SUBTITLE } from "@/config/seo";
 import { buildPlatformsBySlug } from "@/lib/releases";
 import { getCatalogGames } from "@/services/catalogService";
@@ -17,7 +16,7 @@ export const metadata: Metadata = {
     "Browse live game server status — online, down, or maintenance — with patch notes, game updates, player counts, and recent outages for every tracked title.",
 };
 
-export const revalidate = PAGE_REVALIDATE_GAMES;
+export const revalidate = 600;
 
 export default async function GamesPage() {
   try {

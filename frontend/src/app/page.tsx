@@ -7,10 +7,7 @@ import {
   HOME_PAGE_DESCRIPTION,
   HOME_PAGE_OG_TITLE,
 } from "@/config/seo";
-import {
-  FETCH_REVALIDATE_DEFAULT,
-  PAGE_REVALIDATE_HOME,
-} from "@/config/cache";
+import { FETCH_REVALIDATE_DEFAULT } from "@/config/cache";
 import { DASHBOARD_TELEMETRY_LIMIT } from "@/config/telemetryDisplay";
 import type { ApiRequestOptions } from "@/services/api";
 import { getGamingNews } from "@/services/newsService";
@@ -39,7 +36,7 @@ export const metadata: Metadata = {
   },
 };
 
-export const revalidate = PAGE_REVALIDATE_HOME;
+export const revalidate = 600;
 
 const DASHBOARD_NEWS_LIMIT = 4;
 const SERVER_FETCH_OPTIONS: ApiRequestOptions = {
