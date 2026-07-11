@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import PageShell from "@/components/PageShell";
 import ReleasesHub from "@/components/ReleasesHub";
 import DashboardError from "@/components/dashboard/DashboardError";
+import { resolveUserFacingError } from "@/lib/userFacingErrors";
 import { buildReleasesHubMetadata } from "@/lib/seo/releaseMetadata";
 import { getUpcomingReleases } from "@/services/releasesService";
 
@@ -25,11 +26,8 @@ export default async function ReleasesPage() {
       </PageShell>
     );
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Unable to load releases from the backend.";
-
-    return <DashboardError message={message} />;
+    return (
+      <DashboardError message={resolveUserFacingError(error, "releases")} />
+    );
   }
 }

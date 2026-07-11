@@ -167,4 +167,19 @@ class GameCatalogServiceSearchTest {
         assertTrue(results.stream().anyMatch(result -> "factorio".equals(result.slug())));
         verify(igdbSearchClient, never()).lookupBySteamAppId(anyInt());
     }
+
+    @Test
+    void searchMatchesLocalGameWhenPunctuationDiffers() {
+        gameRepository.save(Game.builder()
+                .slug("halloween-the-game")
+                .gameName("Halloween: The Game")
+                .lifecycleState(LifecycleState.CATALOG)
+                .build());
+
+        when(igdbSearchClient.search(anyString(), anyInt())).thenReturn(List.of());
+
+        List<GameCatalogSearchResponse> results = gameCatalogService.search("halloween the game");
+
+        assertTrue(results.stream().anyMatch(result -> "halloween-the-game".equals(result.slug())));
+    }
 }

@@ -7,14 +7,17 @@ import com.statustimer.config.IgdbProperties;
 import com.statustimer.util.IgdbExternalLinksSupport;
 import com.statustimer.util.IgdbPlatformSupport;
 import com.statustimer.util.IgdbYoutubeSupport;
+import com.statustimer.util.SearchQuerySupport;
 import com.statustimer.util.IgdbYoutubeSupport.YoutubeWebsiteData;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -44,6 +47,26 @@ public class IgdbSearchClient {
         }
 
         int resolvedLimit = limit > 0 ? limit : properties.getSearchLimit();
+        List<IgdbGameMatch> matches = new ArrayList<>();
+        Set<Long> seenIds = new LinkedHashSet<>();
+
+        for (String variant : SearchQuerySupport.searchVariants(trimmed)) {
+            if (matches.size() >= resolvedLimit) {
+                break;
+            }
+
+            appendSearchResults(
+                    searchOnce(variant, resolvedLimit),
+                    matches,
+                    seenIds,
+                    resolvedLimit
+            );
+        }
+
+        return List.copyOf(matches);
+    }
+
+    private List<IgdbGameMatch> searchOnce(String trimmed, int resolvedLimit) {
         int fetchLimit = Math.max(resolvedLimit * 3, resolvedLimit);
         String escaped = trimmed.replace("\"", "\\\"");
         String body = "fields " + GAME_FIELDS + "; "
@@ -83,6 +106,23 @@ public class IgdbSearchClient {
         }
 
         return matches;
+    }
+
+    private void appendSearchResults(
+            List<IgdbGameMatch> batch,
+            List<IgdbGameMatch> matches,
+            Set<Long> seenIds,
+            int limit
+    ) {
+        for (IgdbGameMatch match : batch) {
+            if (matches.size() >= limit) {
+                return;
+            }
+
+            if (seenIds.add(match.igdbId())) {
+                matches.add(match);
+            }
+        }
     }
 
     public Optional<IgdbGameMatch> lookupBySlug(String slug) {

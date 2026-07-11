@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Dashboard from "@/components/dashboard/Dashboard";
 import DashboardError from "@/components/dashboard/DashboardError";
+import { resolveUserFacingError } from "@/lib/userFacingErrors";
 import { FEATURED_GAME_SLUGS } from "@/config/routes";
 import {
   HOME_PAGE_DESCRIPTION,
@@ -110,11 +111,8 @@ export default async function HomePage() {
       />
     );
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Unable to load dashboard data from the backend.";
-
-    return <DashboardError message={message} />;
+    return (
+      <DashboardError message={resolveUserFacingError(error, "dashboard")} />
+    );
   }
 }

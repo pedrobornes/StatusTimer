@@ -33,6 +33,10 @@ public interface GameRepository extends JpaRepository<Game, Long> {
             String slug
     );
 
+    List<Game> findByGameNameContainingIgnoreCase(String gameName);
+
+    List<Game> findBySlugContainingIgnoreCase(String slug);
+
     List<Game> findBySteamAdultContentTrueAndSteamAppIdIsNotNull();
 
     List<Game> findBySteamAppIdIsNotNull();

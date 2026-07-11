@@ -22,28 +22,7 @@ export class ApiError extends Error {
   }
 }
 
-export function getUserFacingErrorMessage(
-  error: unknown,
-  fallback = "No se pudo completar la búsqueda. Inténtalo de nuevo.",
-): string {
-  if (error instanceof ApiError) {
-    if (error.status === 404) {
-      return "La búsqueda no está disponible. Reinicia el backend con la última versión del código.";
-    }
-
-    if (error.status >= 500) {
-      return "El servidor no responde correctamente. Inténtalo de nuevo en unos segundos.";
-    }
-
-    return fallback;
-  }
-
-  if (error instanceof TypeError) {
-    return "No se pudo conectar con el servidor. Comprueba que el backend esté en marcha.";
-  }
-
-  return fallback;
-}
+export { getUserFacingErrorMessage, resolveUserFacingError } from "@/lib/userFacingErrors";
 
 export async function fetchJson<T>(
   path: string,

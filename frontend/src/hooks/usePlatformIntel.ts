@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { resolveUserFacingError } from "@/lib/userFacingErrors";
 import { getGamingNews } from "@/services/newsService";
 import type { GamingNews } from "@/types/api";
 
@@ -37,11 +38,7 @@ export function usePlatformIntel(
         : newsResult;
       setNews(limit ? filtered.slice(0, limit) : filtered);
     } catch (fetchError) {
-      const message =
-        fetchError instanceof Error
-          ? fetchError.message
-          : "Unable to load latest updates right now.";
-      setError(message);
+      setError(resolveUserFacingError(fetchError, "updates"));
     } finally {
       setLoading(false);
     }

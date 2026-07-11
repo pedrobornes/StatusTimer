@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Flame, LoaderCircle } from "lucide-react";
+import { resolveUserFacingError } from "@/lib/userFacingErrors";
 import { incrementReleaseHype } from "@/services/releasesClientService";
 
 interface HypeCounterButtonProps {
@@ -27,12 +28,7 @@ export default function HypeCounterButton({
         const updatedRelease = await incrementReleaseHype(releaseId);
         setHypeCount(updatedRelease.hypeCount);
       } catch (error) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Unable to register hype right now.";
-
-        setErrorMessage(message);
+        setErrorMessage(resolveUserFacingError(error, "hype"));
       }
     });
   };

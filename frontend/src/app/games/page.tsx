@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import PageShell from "@/components/PageShell";
 import TelemetryStatusHub from "@/components/dashboard/TelemetryStatusHub";
 import DashboardError from "@/components/dashboard/DashboardError";
+import { resolveUserFacingError } from "@/lib/userFacingErrors";
 import { GAMES_PAGE_SUBTITLE } from "@/config/seo";
 import { buildPlatformsBySlug } from "@/lib/releases";
 import { getCatalogGames } from "@/services/catalogService";
@@ -52,11 +53,8 @@ export default async function GamesPage() {
       </PageShell>
     );
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Unable to load game status data from the backend.";
-
-    return <DashboardError message={message} />;
+    return (
+      <DashboardError message={resolveUserFacingError(error, "games")} />
+    );
   }
 }

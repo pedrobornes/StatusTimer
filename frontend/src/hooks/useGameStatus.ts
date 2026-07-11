@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { resolveUserFacingError } from "@/lib/userFacingErrors";
 import {
   getGameTelemetry,
   getGameTelemetryBySlug,
@@ -65,11 +66,7 @@ export function useGameStatus(
         setHistory([]);
       }
     } catch (fetchError) {
-      const message =
-        fetchError instanceof Error
-          ? fetchError.message
-          : "Unable to load game status data.";
-      setError(message);
+      setError(resolveUserFacingError(fetchError, "status"));
     } finally {
       setLoading(false);
     }

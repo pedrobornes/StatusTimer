@@ -14,6 +14,7 @@ import GameStatusSubNav from "@/components/GameStatusSubNav";
 import SteamStoreWidget from "@/components/dashboard/SteamStoreWidget";
 import PageShell from "@/components/PageShell";
 import DashboardError from "@/components/dashboard/DashboardError";
+import { resolveUserFacingError } from "@/lib/userFacingErrors";
 import JsonLdScript from "@/components/seo/JsonLdScript";
 import { formatIgdbRating, resolveGameDisplayName } from "@/lib/gameAssets";
 import { resolveReleaseGenres } from "@/lib/genres";
@@ -252,11 +253,8 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
       </>
     );
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Unable to load release profile from the backend.";
-
-    return <DashboardError message={message} />;
+    return (
+      <DashboardError message={resolveUserFacingError(error, "release")} />
+    );
   }
 }

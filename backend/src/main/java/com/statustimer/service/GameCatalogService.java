@@ -25,6 +25,7 @@ import com.statustimer.integration.SteamStoreAppDetailsClient.SteamAppMetadata;
 import com.statustimer.dto.response.SteamStoreListingResponse;
 import com.statustimer.repository.GameRepository;
 import com.statustimer.util.IgdbMetadataSupport;
+import com.statustimer.util.SearchQuerySupport;
 import com.statustimer.util.SlugUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -489,8 +490,35 @@ public class GameCatalogService {
             List<GameCatalogSearchResponse> results,
             Set<String> seenSlugs
     ) {
-        for (Game game : gameRepository
-                .findByGameNameContainingIgnoreCaseOrSlugContainingIgnoreCase(query, query)) {
+        LinkedHashSet<Long> candidateIds = new LinkedHashSet<>();
+        List<Game> candidates = new ArrayList<>();
+
+        String slugQuery = SlugUtils.toSlug(query);
+        appendUniqueGames(candidates, candidateIds, gameRepository
+                .findByGameNameContainingIgnoreCaseOrSlugContainingIgnoreCase(
+                        query,
+                        slugQuery.isBlank() ? query : slugQuery
+                ));
+
+        for (String variant : SearchQuerySupport.searchVariants(query)) {
+            if (variant.equalsIgnoreCase(query.trim())) {
+                continue;
+            }
+
+            appendUniqueGames(candidates, candidateIds,
+                    gameRepository.findByGameNameContainingIgnoreCase(variant));
+        }
+
+        if (!slugQuery.isBlank()) {
+            appendUniqueGames(candidates, candidateIds,
+                    gameRepository.findBySlugContainingIgnoreCase(slugQuery));
+        }
+
+        for (Game game : candidates) {
+            if (!SearchQuerySupport.matchesCatalogQuery(query, game.getGameName(), game.getSlug())) {
+                continue;
+            }
+
             CatalogMatureContentPolicy.applyQuarantineIfMature(game);
             gameRepository.save(game);
             if (CatalogNoisePolicy.shouldSkipCatalogSurfacing(game)) {
@@ -501,7 +529,23 @@ public class GameCatalogService {
                 results.add(toSearchResponse(game));
             }
         }
+    }
 
+    private void appendUniqueGames(
+            List<Game> candidates,
+            Set<Long> candidateIds,
+            List<Game> batch
+    ) {
+        for (Game game : batch) {
+            if (game.getId() == null) {
+                candidates.add(game);
+                continue;
+            }
+
+            if (candidateIds.add(game.getId())) {
+                candidates.add(game);
+            }
+        }
     }
 
     private void appendTrackedCatalogMatches(
@@ -509,14 +553,11 @@ public class GameCatalogService {
             List<GameCatalogSearchResponse> results,
             Set<String> seenSlugs
     ) {
-        String normalized = query.toLowerCase();
-
         for (var entry : TrackedGameCatalog.allEntries().entrySet()) {
             String slug = entry.getKey();
             TrackedGameCatalog.GameAssetMetadata metadata = entry.getValue();
-            String gameName = metadata.gameName().toLowerCase();
 
-            if (!slug.contains(normalized) && !gameName.contains(normalized)) {
+            if (!SearchQuerySupport.matchesCatalogQuery(query, metadata.gameName(), slug)) {
                 continue;
             }
 

@@ -15,11 +15,11 @@ export default function DashboardError({ message }: DashboardErrorProps) {
 
         <div className="glass-panel rounded-3xl border border-rose-400/20 p-8 text-center">
           <h1 className="heading-display text-2xl uppercase text-white">
-            Dashboard connection failed
+            Something went wrong
           </h1>
           <p className="mt-4 text-sm text-slate-300">{message}</p>
           <p className="mt-2 text-sm text-slate-400">
-            Ensure the backend is running on port 8080.
+            Refresh the page or try again in a few minutes.
           </p>
         </div>
       </div>
