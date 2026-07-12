@@ -64,7 +64,6 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
       {
         gameName: catalogGameName,
         telemetry,
-        history,
         incidents,
         news,
         telemetryReady,
@@ -409,10 +408,8 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
                   telemetry={telemetry}
                   linkToStatusPage={false}
                   linkToProfile={false}
-                  history={isCatalogProfile || isSinglePlayerProfile ? [] : history}
                   platforms={releasePlatforms}
                   catalogOnly={isCatalogProfile}
-                  timelineLegendLayout="stacked"
                   embedded
                 />
               </section>

@@ -9,17 +9,15 @@ import {
   sortTelemetryEntries,
   type TelemetrySortMode,
 } from "@/lib/telemetrySort";
-import type { GameTelemetry, TelemetryHistorySnapshot } from "@/types/telemetry";
+import type { GameTelemetry } from "@/types/telemetry";
 
 interface TelemetryGridProps {
   gameTelemetry: GameTelemetry[];
-  historyBySlug?: Record<string, TelemetryHistorySnapshot[]>;
   headerAction?: ReactNode;
 }
 
 export default function TelemetryGrid({
   gameTelemetry,
-  historyBySlug = {},
   headerAction,
 }: TelemetryGridProps) {
   const [sortMode, setSortMode] = useState<TelemetrySortMode>("trending");
@@ -76,7 +74,6 @@ export default function TelemetryGrid({
             <GameTelemetryCard
               key={telemetry.gameSlug}
               telemetry={telemetry}
-              history={historyBySlug[telemetry.gameSlug] ?? []}
             />
           ))}
         </div>

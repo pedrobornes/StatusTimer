@@ -6,14 +6,12 @@ import TelemetryGamesPanel from "@/components/dashboard/TelemetryGamesPanel";
 import type { PlatformDetail, ServerStatus } from "@/types/api";
 import type {
   GameTelemetry,
-  TelemetryHistorySnapshot,
   TelemetryIncident,
 } from "@/types/telemetry";
 
 interface TelemetryStatusHubProps {
   statuses: ServerStatus[];
   gameTelemetry: GameTelemetry[];
-  telemetryHistoryBySlug: Record<string, TelemetryHistorySnapshot[]>;
   platformsBySlug: Record<string, PlatformDetail[]>;
   incidents: TelemetryIncident[];
   unreleasedSlugs?: string[];
@@ -23,7 +21,6 @@ interface TelemetryStatusHubProps {
 export default function TelemetryStatusHub({
   statuses,
   gameTelemetry,
-  telemetryHistoryBySlug,
   platformsBySlug,
   incidents,
   unreleasedSlugs = [],
@@ -49,7 +46,6 @@ export default function TelemetryStatusHub({
     <div className="space-y-8">
       <TelemetryGamesPanel
         gameTelemetry={gameTelemetry}
-        telemetryHistoryBySlug={telemetryHistoryBySlug}
         platformsBySlug={platformsBySlug}
         catalogTotal={catalogTotal}
       />

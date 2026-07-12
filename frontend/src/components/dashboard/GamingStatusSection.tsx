@@ -3,12 +3,11 @@ import { Gamepad2 } from "lucide-react";
 import GameTelemetryCard from "@/components/dashboard/GameTelemetryCard";
 import PaginationControls from "@/components/ui/PaginationControls";
 import type { PlatformDetail } from "@/types/api";
-import type { GameTelemetry, TelemetryHistorySnapshot } from "@/types/telemetry";
+import type { GameTelemetry } from "@/types/telemetry";
 import { GAMING_SECTION_SUBTITLE } from "@/config/seo";
 
 interface GamingStatusSectionProps {
   games: GameTelemetry[];
-  telemetryHistoryBySlug: Record<string, TelemetryHistorySnapshot[]>;
   platformsBySlug: Record<string, PlatformDetail[]>;
   emptyMessage?: string;
   currentPage: number;
@@ -18,7 +17,6 @@ interface GamingStatusSectionProps {
 
 export default memo(function GamingStatusSection({
   games,
-  telemetryHistoryBySlug,
   platformsBySlug,
   emptyMessage = "All game servers look good right now.",
   currentPage,
@@ -54,7 +52,6 @@ export default memo(function GamingStatusSection({
               <GameTelemetryCard
                 key={entry.gameSlug}
                 telemetry={entry}
-                history={telemetryHistoryBySlug[entry.gameSlug] ?? []}
                 platforms={platformsBySlug[entry.gameSlug] ?? []}
               />
             ))}

@@ -1,3 +1,8 @@
+/**
+ * Status check timeline for telemetry cards.
+ * Disabled on dashboard cards (cost control). Re-enable via
+ * showStatusTimeline on GameTelemetryCard.
+ */
 import {
   formatTimelineCheckTooltip,
   getTimelineBlockClass,

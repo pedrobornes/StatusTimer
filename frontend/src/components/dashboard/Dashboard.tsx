@@ -10,11 +10,10 @@ import StatusTimerSonarLogo from "@/components/ui/StatusTimerSonarLogo";
 import { APP_ROUTES } from "@/config/routes";
 import { HOME_HERO_SUBTITLE } from "@/config/seo";
 import type { GamingNews, ServerStatus, UpcomingRelease } from "@/types/api";
-import type { GameTelemetry, TelemetryHistorySnapshot, TelemetryIncident } from "@/types/telemetry";
+import type { GameTelemetry, TelemetryIncident } from "@/types/telemetry";
 
 interface DashboardProps {
   gameTelemetry: GameTelemetry[];
-  historyBySlug: Record<string, TelemetryHistorySnapshot[]>;
   releases: UpcomingRelease[];
   unreleasedSlugs?: string[];
   incidents: TelemetryIncident[];
@@ -24,7 +23,6 @@ interface DashboardProps {
 
 export default function Dashboard({
   gameTelemetry,
-  historyBySlug,
   releases,
   unreleasedSlugs = [],
   incidents,
@@ -63,7 +61,6 @@ export default function Dashboard({
           <div className="min-w-0 space-y-8">
             <TelemetryGrid
               gameTelemetry={gameTelemetry}
-              historyBySlug={historyBySlug}
               headerAction={
                 <Link
                   href={APP_ROUTES.games}

@@ -35,6 +35,8 @@ interface GameTelemetryCardProps {
   catalogOnly?: boolean;
   /** Applies a unified accent color to playing/watching metrics. */
   unifiedMetricsColors?: boolean;
+  /** Re-enable card timeline (costs extra /telemetry/history calls per game). */
+  showStatusTimeline?: boolean;
   /** Controls the status legend layout under the timeline. */
   timelineLegendLayout?: "inline" | "stacked";
   /** Sidebar/status page: single glass panel without nested card chrome. */
@@ -50,6 +52,7 @@ export default memo(function GameTelemetryCard({
   serverStatusPending = false,
   catalogOnly = false,
   unifiedMetricsColors = false,
+  showStatusTimeline = false,
   timelineLegendLayout = "inline",
   embedded = false,
 }: GameTelemetryCardProps) {
@@ -69,7 +72,8 @@ export default memo(function GameTelemetryCard({
   const isSinglePlayer = isSinglePlayerGame(telemetry);
   const showLivePlayers = canTrackSteamPlayers(telemetry);
   const showServerStatus = !catalogOnly && !isSinglePlayer;
-  const showTimeline = showServerStatus && !serverStatusPending && !upcoming;
+  const showTimeline =
+    showStatusTimeline && showServerStatus && !serverStatusPending && !upcoming;
 
   const headerHref = linkToStatusPage
     ? statusHref

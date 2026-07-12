@@ -44,7 +44,6 @@ export default async function GamesPage() {
         <TelemetryStatusHub
           statuses={statuses}
           gameTelemetry={catalogPage.items}
-          telemetryHistoryBySlug={{}}
           platformsBySlug={platformsBySlug}
           incidents={incidents}
           unreleasedSlugs={releases.map((release) => release.slug)}

@@ -15,7 +15,6 @@ import {
 import type { PlatformDetail } from "@/types/api";
 import type {
   GameTelemetry,
-  TelemetryHistorySnapshot,
 } from "@/types/telemetry";
 import {
   sortTelemetryEntries,
@@ -26,14 +25,12 @@ const GAMES_PER_PAGE = 9;
 
 interface TelemetryGamesPanelProps {
   gameTelemetry: GameTelemetry[];
-  telemetryHistoryBySlug: Record<string, TelemetryHistorySnapshot[]>;
   platformsBySlug: Record<string, PlatformDetail[]>;
   catalogTotal?: number;
 }
 
 function TelemetryGamesPanel({
   gameTelemetry,
-  telemetryHistoryBySlug,
   platformsBySlug,
   catalogTotal,
 }: TelemetryGamesPanelProps) {
@@ -197,7 +194,6 @@ function TelemetryGamesPanel({
 
       <GamingStatusSection
         games={sortedTelemetry}
-        telemetryHistoryBySlug={telemetryHistoryBySlug}
         platformsBySlug={platformsBySlug}
         emptyMessage={gamingEmptyMessage}
         currentPage={currentPage}
