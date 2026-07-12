@@ -1,4 +1,4 @@
-"""Riot platform status API probe for Valorant telemetry."""
+"""Riot platform status API probes for live game telemetry."""
 
 from __future__ import annotations
 
@@ -16,12 +16,31 @@ from scrapers.text_utils import normalize_plain_text, plain_text_from_html
 logger = logging.getLogger(__name__)
 
 RIOT_API_TOKEN_HEADER = "X-Riot-Token"
-VALORANT_STATUS_URL = "https://na.api.riotgames.com/val/status/v1/platform-data"
+
+RIOT_STATUS_URL_BY_SLUG: dict[str, str] = {
+    "valorant": "https://na.api.riotgames.com/val/status/v1/platform-data",
+    "league-of-legends": "https://na1.api.riotgames.com/lol/status/v4/platform-data",
+    "teamfight-tactics": "https://na1.api.riotgames.com/tft/status/v1/platform-data",
+}
 
 
-def probe_valorant_status(
+def probe_riot_game_status(
     session: requests.Session,
     timeout: float,
+    slug: str,
+) -> ProbeOutcome | None:
+    status_url = RIOT_STATUS_URL_BY_SLUG.get(slug)
+    if status_url is None:
+        logger.warning("No Riot status endpoint configured for slug=%s", slug)
+        return None
+
+    return probe_riot_platform_status(session, timeout, status_url)
+
+
+def probe_riot_platform_status(
+    session: requests.Session,
+    timeout: float,
+    status_url: str,
 ) -> ProbeOutcome | None:
     if not settings.riot_api_key:
         logger.info("Riot telemetry probe skipped: RIOT_API_KEY is not configured")
@@ -31,14 +50,14 @@ def probe_valorant_status(
 
     try:
         response = session.get(
-            VALORANT_STATUS_URL,
+            status_url,
             headers={RIOT_API_TOKEN_HEADER: settings.riot_api_key},
             timeout=timeout,
         )
         response.raise_for_status()
         payload = response.json()
     except (requests.RequestException, ValueError) as error:
-        logger.warning("Riot Valorant status request failed: %s", error)
+        logger.warning("Riot status request failed for %s: %s", status_url, error)
         return None
 
     if not isinstance(payload, dict):
@@ -54,6 +73,13 @@ def probe_valorant_status(
         context=context,
         ambiguous=ambiguous,
     )
+
+
+def probe_valorant_status(
+    session: requests.Session,
+    timeout: float,
+) -> ProbeOutcome | None:
+    return probe_riot_game_status(session, timeout, "valorant")
 
 
 def _resolve_platform_status(

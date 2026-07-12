@@ -35,7 +35,7 @@ export const SITE_FAQ_ITEMS: SiteFaqItem[] = [
   {
     question: "How often is status updated?",
     answer:
-      "Update frequency depends on the game or platform and the data source behind it. Monitored titles and social services are checked on a recurring schedule. Every card and status page shows when data was last refreshed so you can judge how current it is.",
+      "Priority titles (our core Tier 1 set) are probed every few minutes on a recurring harvest schedule. The wider catalog is checked less often to keep costs sustainable. Cards and status pages show when data was last checked — older checks may read as “within a few hours” instead of an exact minute count.",
   },
   {
     question: "Why does StatusTimer say a game is DOWN when I can still play?",

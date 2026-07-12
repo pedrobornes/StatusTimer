@@ -15,7 +15,7 @@ class StatusHarvesterTests(unittest.TestCase):
 
     @patch("scrapers.status.probe_tcp_latency", return_value=None)
     @patch("scrapers.status.probe_fortnite_status")
-    @patch("scrapers.status.probe_valorant_status")
+    @patch("scrapers.status.probe_riot_game_status")
     @patch("scrapers.status.probe_steam_game")
     def test_failed_probe_is_omitted_from_payload(
         self,

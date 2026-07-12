@@ -6,7 +6,7 @@ import GameLiveMetricsRow from "@/components/dashboard/GameLiveMetricsRow";
 import GameBoxArtImage from "@/components/ui/GameBoxArtImage";
 import PlatformBadge from "@/components/ui/PlatformBadge";
 import StatusBadge from "@/components/ui/StatusBadge";
-import RelativeTime from "@/components/ui/RelativeTime";
+import StatusCheckTime from "@/components/ui/StatusCheckTime";
 import { APP_ROUTES } from "@/config/routes";
 import {
   formatIgdbRating,
@@ -210,11 +210,7 @@ export default memo(function GameTelemetryCard({
             <Gauge className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />
             <span>{formatProbeSource(telemetry.gameSlug, telemetry.dataSource)}</span>
             <span aria-hidden>•</span>
-            <RelativeTime
-              value={telemetry.lastChecked}
-              prefix="Updated "
-              updateIntervalMs={1_000}
-            />
+            <StatusCheckTime value={telemetry.lastChecked} />
           </footer>
         </>
       ) : null}

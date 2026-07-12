@@ -170,3 +170,44 @@ export function formatRelativeTime(
   const elapsedDays = Math.floor(elapsedHours / 24);
   return elapsedDays === 1 ? "1 day ago" : `${elapsedDays} days ago`;
 }
+
+/** After this many hours, card copy uses a soft label instead of an exact relative time. */
+export const STATUS_CHECK_SOFT_LABEL_HOURS = 5;
+
+export const STATUS_CHECK_SOFT_LABEL = "Checked within a few hours";
+
+export function isStatusCheckStale(
+  input: BackendDateInput,
+  nowMs = Date.now(),
+): boolean {
+  const date = parseBackendDate(input);
+  if (!date) {
+    return false;
+  }
+
+  const elapsedMs = Math.max(0, nowMs - date.getTime());
+  return elapsedMs >= STATUS_CHECK_SOFT_LABEL_HOURS * 60 * 60 * 1000;
+}
+
+export function formatStatusCheckRelativeLabel(
+  input: BackendDateInput,
+  nowMs = Date.now(),
+): string {
+  if (isStatusCheckStale(input, nowMs)) {
+    return STATUS_CHECK_SOFT_LABEL;
+  }
+
+  return formatRelativeTime(input, nowMs);
+}
+
+export function formatStatusCheckFaqTimestamp(
+  input: BackendDateInput,
+  nowMs = Date.now(),
+): string {
+  if (isStatusCheckStale(input, nowMs)) {
+    return "within the last few hours";
+  }
+
+  const date = parseBackendDate(input);
+  return date ? date.toUTCString() : "recently";
+}

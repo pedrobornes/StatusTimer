@@ -1,4 +1,5 @@
 import type { TelemetryStatus } from "@/types/telemetry";
+import { formatStatusCheckFaqTimestamp } from "@/utils/dateFormatter";
 
 export interface GameFaqItem {
   question: string;
@@ -47,7 +48,7 @@ export function buildGameStatusFaq(input: {
   const items: GameFaqItem[] = [
     {
       question: `Is ${input.gameName} down right now?`,
-      answer: `${statusAnswer} Last checked ${new Date(input.lastChecked).toUTCString()}.`,
+      answer: `${statusAnswer} Last checked ${formatStatusCheckFaqTimestamp(input.lastChecked)}.`,
     },
     {
       question: `How does StatusTimer check ${input.gameName} server status?`,
@@ -56,7 +57,7 @@ export function buildGameStatusFaq(input: {
     {
       question: `How often is ${input.gameName} monitored?`,
       answer: monitoringAgeMet
-        ? `${input.gameName} is on an active monitoring schedule with heartbeat history and incident tracking.`
+        ? `${input.gameName} is on an active monitoring schedule. Core priority titles are checked every few minutes; other catalog games follow a slower tier-based schedule. Heartbeat history and incident tracking appear here once monitoring is established.`
         : `${input.gameName} was recently activated on-demand. Full incident history appears after 48 hours of monitoring.`,
     },
   ];

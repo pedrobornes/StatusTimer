@@ -29,6 +29,8 @@ import org.springframework.web.server.ResponseStatusException;
 public class GamingNewsService {
 
     private static final int MAX_ITEMS_PER_GAME_IN_LATEST = 2;
+    /** Safety cap while legacy MySQL columns may still be TEXT (64 KB). */
+    private static final int MAX_CONTENT_CHARS = 60_000;
 
     private final GamingNewsRepository gamingNewsRepository;
     private final GameRepository gameRepository;
@@ -89,9 +91,17 @@ public class GamingNewsService {
         String baseSlug = buildNewsBaseSlug(request.gameTag(), request.title());
         String resolvedSlug = reserveUniqueNewsSlug(baseSlug);
         Game linkedGame = resolveLinkedGame(request.gameTag());
+        CreateGamingNewsRequest normalized = new CreateGamingNewsRequest(
+                request.title(),
+                normalizeContent(request.content()),
+                request.gameTag(),
+                request.publishedAt()
+        );
 
         return GamingNewsResponse.fromEntity(
-                gamingNewsRepository.save(request.toEntity(ingestedAt, resolvedSlug, linkedGame)),
+                gamingNewsRepository.save(
+                        normalized.toEntity(ingestedAt, resolvedSlug, linkedGame)
+                ),
                 gameCatalogService
         );
     }
@@ -205,5 +215,18 @@ public class GamingNewsService {
         }
 
         return tierSlugs.contains(resolveGroupingKey(entity));
+    }
+
+    private String normalizeContent(String content) {
+        if (content == null || content.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "News content is required");
+        }
+
+        String trimmed = content.trim();
+        if (trimmed.length() <= MAX_CONTENT_CHARS) {
+            return trimmed;
+        }
+
+        return trimmed.substring(0, MAX_CONTENT_CHARS).trim();
     }
 }

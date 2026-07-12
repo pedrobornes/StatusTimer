@@ -16,7 +16,7 @@ from models.telemetry import GameTelemetryPayload, TelemetrySource, TelemetrySta
 from scrapers.epic_lightswitch import probe_fortnite_status
 from scrapers.parallel_utils import PARALLEL_HTTP_MAX_WORKERS
 from scrapers.probe_models import ProbeOutcome
-from scrapers.riot_telemetry import probe_valorant_status
+from scrapers.riot_telemetry import probe_riot_game_status
 from scrapers.steam_probe import probe_steam_game
 
 logger = logging.getLogger(__name__)
@@ -34,6 +34,7 @@ ALWAYS_TIER_1: frozenset[str] = frozenset(
         "counter-strike-2",
         "dota-2",
         "valorant",
+        "league-of-legends",
         "apex-legends",
         "rust",
         # GTA V canonical slug (IGDB) for consistent enrichment.
@@ -156,7 +157,7 @@ MONITORED_GAME_TARGETS: tuple[MonitoredGameTarget, ...] = (
         slug="valorant",
         display_name="Valorant",
         strategy=ProbeStrategy.RIOT,
-        fallback_host="104.160.131.3",
+        fallback_host="valorant.com",
         fallback_port=443,
     ),
     _target(
@@ -399,7 +400,7 @@ class StatusHarvester:
             )
 
         if target.strategy == ProbeStrategy.RIOT:
-            return probe_valorant_status(self._session, self._timeout)
+            return probe_riot_game_status(self._session, self._timeout, target.slug)
 
         if target.strategy == ProbeStrategy.EPIC_LIGHTSWITCH:
             return probe_fortnite_status(self._session, self._timeout)

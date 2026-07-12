@@ -25,7 +25,12 @@ from scrapers.status import (
 class TierTrendsTests(unittest.TestCase):
     def test_always_tier_one_overrides_trend_and_db(self) -> None:
         self.assertIn("valorant", ALWAYS_TIER_1)
+        self.assertIn("league-of-legends", ALWAYS_TIER_1)
         self.assertEqual(resolve_effective_scrape_tier("valorant", db_tier=3), TIER_HIGH)
+        self.assertEqual(
+            resolve_effective_scrape_tier("league-of-legends", db_tier=3),
+            TIER_HIGH,
+        )
         self.assertEqual(
             resolve_effective_scrape_tier("minecraft", db_tier=3, current_rank=80),
             TIER_LOW,

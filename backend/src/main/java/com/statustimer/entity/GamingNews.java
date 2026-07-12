@@ -35,7 +35,7 @@ public class GamingNews {
     @Column(name = "news_slug", unique = true, length = 255)
     private String newsSlug;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(nullable = false, columnDefinition = "LONGTEXT")
     private String content;
 
     @ManyToOne(fetch = FetchType.LAZY)
