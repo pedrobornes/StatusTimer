@@ -11,8 +11,10 @@ import com.statustimer.util.SlugUtils;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -33,12 +35,17 @@ public class GamingNewsService {
     private final GameCatalogService gameCatalogService;
 
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE, key = "'gamingNewsLatest'")
-    public List<GamingNewsResponse> findLatest() {
+    @Cacheable(
+            cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE,
+            key = "'gamingNewsLatest:' + (#scrapeTier != null ? #scrapeTier : 'all')"
+    )
+    public List<GamingNewsResponse> findLatest(Integer scrapeTier) {
+        Set<String> tierSlugs = resolveTierSlugs(scrapeTier);
         Map<String, Integer> perGameCount = new HashMap<>();
 
         return gamingNewsRepository.findAllByOrderByCreatedAtDesc().stream()
                 .sorted(Comparator.comparing(this::resolveSortTime).reversed())
+                .filter(entity -> matchesScrapeTier(entity, tierSlugs))
                 .filter(entity -> {
                     String key = resolveGroupingKey(entity);
                     int current = perGameCount.getOrDefault(key, 0);
@@ -182,5 +189,21 @@ public class GamingNewsService {
         }
 
         return "unknown";
+    }
+
+    private Set<String> resolveTierSlugs(Integer scrapeTier) {
+        if (scrapeTier == null) {
+            return null;
+        }
+
+        return new HashSet<>(gameRepository.findSlugsByScrapeTier(scrapeTier));
+    }
+
+    private boolean matchesScrapeTier(GamingNews entity, Set<String> tierSlugs) {
+        if (tierSlugs == null) {
+            return true;
+        }
+
+        return tierSlugs.contains(resolveGroupingKey(entity));
     }
 }

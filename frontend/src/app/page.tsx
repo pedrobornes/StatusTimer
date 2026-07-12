@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Dashboard from "@/components/dashboard/Dashboard";
 import DashboardError from "@/components/dashboard/DashboardError";
 import { resolveUserFacingError } from "@/lib/userFacingErrors";
-import { FEATURED_GAME_SLUGS } from "@/config/routes";
 import {
   HOME_PAGE_DESCRIPTION,
   HOME_PAGE_OG_TITLE,
@@ -42,12 +41,8 @@ const SERVER_FETCH_OPTIONS: ApiRequestOptions = {
   revalidate: FETCH_REVALIDATE_DEFAULT,
 };
 
-const FEATURED_SLUG_SET = new Set<string>(FEATURED_GAME_SLUGS);
-
-function selectFeaturedNews(news: GamingNews[]): GamingNews[] {
-  return news
-    .filter((article) => FEATURED_SLUG_SET.has(article.gameTag))
-    .slice(0, DASHBOARD_NEWS_LIMIT);
+function selectDashboardNews(news: GamingNews[]): GamingNews[] {
+  return news.slice(0, DASHBOARD_NEWS_LIMIT);
 }
 
 async function loadDashboardTelemetry(
@@ -81,7 +76,7 @@ export default async function HomePage() {
         getUpcomingReleases().catch(() => []),
         getTelemetryIncidents().catch(() => []),
         getServerStatuses().catch(() => []),
-        getGamingNews().catch(() => []),
+        getGamingNews({ tier: 1 }).catch(() => []),
       ]);
 
     return (
@@ -91,7 +86,7 @@ export default async function HomePage() {
         unreleasedSlugs={releases.map((release) => release.slug)}
         incidents={incidents}
         statuses={statuses}
-        news={selectFeaturedNews(news)}
+        news={selectDashboardNews(news)}
       />
     );
   } catch (error) {

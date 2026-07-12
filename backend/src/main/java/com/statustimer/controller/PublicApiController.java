@@ -122,8 +122,10 @@ public class PublicApiController {
     }
 
     @GetMapping("/news")
-    public List<GamingNewsResponse> getGamingNews() {
-        return gamingNewsService.findLatest();
+    public List<GamingNewsResponse> getGamingNews(
+            @RequestParam(name = "tier", required = false) Integer tier
+    ) {
+        return gamingNewsService.findLatest(tier);
     }
 
     @GetMapping("/news/game/{gameSlug}")

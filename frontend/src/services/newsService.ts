@@ -3,12 +3,19 @@ import { FETCH_REVALIDATE_NEWS } from "@/config/cache";
 import { fetchJson } from "@/services/api";
 import type { GamingNews } from "@/types/api";
 
+export type GamingNewsQueryOptions = ApiRequestOptions & {
+  tier?: number;
+};
+
 export function getGamingNews(
-  options: ApiRequestOptions = {},
+  options: GamingNewsQueryOptions = {},
 ): Promise<GamingNews[]> {
-  return fetchJson<GamingNews[]>("/api/v1/news", {
+  const { tier, ...fetchOptions } = options;
+  const query = tier != null ? `?tier=${tier}` : "";
+
+  return fetchJson<GamingNews[]>(`/api/v1/news${query}`, {
     revalidate: FETCH_REVALIDATE_NEWS,
-    ...options,
+    ...fetchOptions,
   });
 }
 

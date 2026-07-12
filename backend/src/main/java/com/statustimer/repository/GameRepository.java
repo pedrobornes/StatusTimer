@@ -45,6 +45,9 @@ public interface GameRepository extends JpaRepository<Game, Long> {
 
     List<Game> findByIsIndexableTrueOrderBySlugAsc();
 
+    @Query("SELECT g.slug FROM Game g WHERE g.scrapeTier = :tier")
+    List<String> findSlugsByScrapeTier(@Param("tier") int tier);
+
     List<Game> findByLifecycleState(LifecycleState lifecycleState);
 
     long countByLifecycleStateIn(Collection<LifecycleState> lifecycleStates);
