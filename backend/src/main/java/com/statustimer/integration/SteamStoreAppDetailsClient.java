@@ -27,6 +27,8 @@ public class SteamStoreAppDetailsClient {
 
     private static final String APP_DETAILS_URL =
             "https://store.steampowered.com/api/appdetails";
+    private static final long MIN_REQUEST_INTERVAL_MS = 1_500L;
+    private static final long RATE_LIMIT_COOLDOWN_MS = 120_000L;
     private static final Pattern ISO_DATE = Pattern.compile("(\\d{4})-(\\d{2})-(\\d{2})");
     private static final DateTimeFormatter STEAM_LONG_DATE =
             DateTimeFormatter.ofPattern("d MMM, yyyy", Locale.ENGLISH);
@@ -35,6 +37,8 @@ public class SteamStoreAppDetailsClient {
 
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
+    private long lastRequestAtMs;
+    private long rateLimitedUntilMs;
 
     public SteamStoreAppDetailsClient(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
@@ -43,10 +47,21 @@ public class SteamStoreAppDetailsClient {
                 .build();
     }
 
+    public boolean isRateLimited() {
+        return System.currentTimeMillis() < rateLimitedUntilMs;
+    }
+
     public Optional<SteamAppMetadata> fetchMetadata(int appId) {
         if (appId <= 0) {
             return Optional.empty();
         }
+
+        if (isRateLimited()) {
+            log.debug("Steam appdetails skipped for app {} while rate-limit cooldown is active", appId);
+            return Optional.empty();
+        }
+
+        throttleBeforeRequest();
 
         try {
             URI uri = URI.create(
@@ -65,16 +80,43 @@ public class SteamStoreAppDetailsClient {
                     HttpResponse.BodyHandlers.ofString()
             );
 
+            if (response.statusCode() == 429) {
+                rateLimitedUntilMs = System.currentTimeMillis() + RATE_LIMIT_COOLDOWN_MS;
+                log.warn(
+                        "Steam appdetails rate limited (HTTP 429) for app {}; pausing Steam enrichment for {}s",
+                        appId,
+                        RATE_LIMIT_COOLDOWN_MS / 1000
+                );
+                return Optional.empty();
+            }
+
             if (response.statusCode() != 200) {
                 log.warn("Steam appdetails failed with HTTP {} for app {}", response.statusCode(), appId);
                 return Optional.empty();
             }
 
             return parseMetadata(response.body(), appId);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            log.warn("Steam appdetails interrupted for app {}", appId);
+            return Optional.empty();
         } catch (Exception exception) {
             log.warn("Steam appdetails failed for app {}", appId, exception);
             return Optional.empty();
         }
+    }
+
+    private synchronized void throttleBeforeRequest() {
+        long now = System.currentTimeMillis();
+        long waitMs = MIN_REQUEST_INTERVAL_MS - (now - lastRequestAtMs);
+        if (waitMs > 0) {
+            try {
+                Thread.sleep(waitMs);
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+            }
+        }
+        lastRequestAtMs = System.currentTimeMillis();
     }
 
     private Optional<SteamAppMetadata> parseMetadata(String body, int appId) {

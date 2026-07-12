@@ -66,6 +66,9 @@ class EpicStatusScraper:
             incident.get("created_at") or incident.get("updated_at"),
         )
         game_tag = _resolve_game_tag(name, update_text)
+        if game_tag is None:
+            logger.debug("Skipping Epic incident without a mapped game slug: %s", name)
+            return None
 
         return ScrapedFeedEvent(
             source=FeedSource.EPIC,
@@ -95,7 +98,7 @@ def fetch_epic_incident_events(session: requests.Session | None = None) -> list[
     return EpicStatusScraper(session=session).fetch_all()
 
 
-def _resolve_game_tag(title: str, body: str) -> str:
+def _resolve_game_tag(title: str, body: str) -> str | None:
     haystack = f"{title} {body}".lower()
     if "fortnite" in haystack:
         return "fortnite"
@@ -103,7 +106,7 @@ def _resolve_game_tag(title: str, body: str) -> str:
         return "rocket-league"
     if "fall guys" in haystack:
         return "fall-guys"
-    return "epic-games"
+    return None
 
 
 def _parse_iso_timestamp(raw_value: object) -> datetime:

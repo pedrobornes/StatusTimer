@@ -47,6 +47,9 @@ import org.springframework.web.server.ResponseStatusException;
 @Slf4j
 public class GameCatalogService {
 
+    private static final int STARTUP_STEAM_ENRICH_LIMIT = 10;
+    private static final int STARTUP_IGDB_ENRICH_LIMIT = 6;
+
     private static final Set<String> MANUAL_PROTECTED_SLUGS = Set.of(
             "valorant",
             "fortnite",
@@ -803,6 +806,9 @@ public class GameCatalogService {
     public void enrichMissingLogos() {
         enforceAllPinnedGamePolicies();
 
+        int steamEnrichments = 0;
+        int igdbEnrichments = 0;
+
         for (Game game : gameRepository.findAll()) {
             if (PinnedGamePolicy.isPinned(game.getSlug())) {
                 continue;
@@ -819,8 +825,21 @@ public class GameCatalogService {
             GameAssetPolicy.normalizeStoredAssets(game);
 
             if (!Boolean.TRUE.equals(game.getManualLock())) {
-                resolveAllSteamAppIds(game);
-                refreshSteamStoreMetadata(game);
+                if (game.getSteamAppId() == null
+                        && igdbEnrichments < STARTUP_IGDB_ENRICH_LIMIT
+                        && !igdbSearchClient.isRateLimited()) {
+                    resolveAllSteamAppIds(game);
+                    igdbEnrichments++;
+                } else {
+                    knownSteamAppRegistry.resolveAppId(game.getSlug()).ifPresent(game::setSteamAppId);
+                }
+
+                if (needsSteamStoreRefresh(game)
+                        && steamEnrichments < STARTUP_STEAM_ENRICH_LIMIT
+                        && !steamStoreAppDetailsClient.isRateLimited()) {
+                    refreshSteamStoreMetadata(game);
+                    steamEnrichments++;
+                }
             }
 
             if (CatalogMatureContentPolicy.applyQuarantineIfMature(game)) {
@@ -832,8 +851,11 @@ public class GameCatalogService {
                     && (GameAssetPolicy.needsIgdbAssets(game)
                     || (game.getIgdbFirstReleaseDate() == null && game.getPlatforms().isEmpty()));
 
-            if (needsIgdbEnrichment) {
+            if (needsIgdbEnrichment
+                    && igdbEnrichments < STARTUP_IGDB_ENRICH_LIMIT
+                    && !igdbSearchClient.isRateLimited()) {
                 enrichFromIgdbSearch(game);
+                igdbEnrichments++;
             }
 
             if (!GameAssetPolicy.isRenderableLogo(game.getLogoUrl())) {
@@ -841,7 +863,31 @@ public class GameCatalogService {
             }
 
             gameRepository.save(game);
+
+            if (steamStoreAppDetailsClient.isRateLimited()
+                    && igdbSearchClient.isRateLimited()
+                    && steamEnrichments >= STARTUP_STEAM_ENRICH_LIMIT
+                    && igdbEnrichments >= STARTUP_IGDB_ENRICH_LIMIT) {
+                break;
+            }
         }
+
+        log.info(
+                "Catalog startup enrichment finished (steam_calls={}, igdb_calls={}, steam_rate_limited={}, igdb_rate_limited={})",
+                steamEnrichments,
+                igdbEnrichments,
+                steamStoreAppDetailsClient.isRateLimited(),
+                igdbSearchClient.isRateLimited()
+        );
+    }
+
+    private boolean needsSteamStoreRefresh(Game game) {
+        Integer appId = game.getSteamAppId();
+        if (appId == null || appId <= 0) {
+            return false;
+        }
+
+        return !hasSteamStoreListing(game) || game.getSteamAdultContent() == null;
     }
 
     private boolean applyMissingAssetsFromPayload(

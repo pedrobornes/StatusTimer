@@ -352,10 +352,49 @@ def _apply_scrape_tier_updates(updates: dict[str, int]) -> int:
 
 
 def enforce_always_tier_one_slugs() -> int:
-    updates = {slug: 1 for slug in ALWAYS_TIER_1}
-    applied = _apply_scrape_tier_updates(updates)
+    statement = text(
+        """
+        UPDATE games
+        SET scrape_tier = 1,
+            next_telemetry_at = CASE
+                WHEN scrape_tier IS NULL
+                     OR scrape_tier <> 1
+                     OR next_telemetry_at IS NULL
+                     OR next_telemetry_at > DATE_ADD(UTC_TIMESTAMP(), INTERVAL 15 MINUTE)
+                THEN UTC_TIMESTAMP()
+                ELSE next_telemetry_at
+            END
+        WHERE slug = :slug
+        """
+    )
+    applied = 0
+    missing: list[str] = []
+
+    try:
+        with get_engine().begin() as connection:
+            for slug in ALWAYS_TIER_1:
+                result = connection.execute(statement, {"slug": slug})
+                rowcount = result.rowcount or 0
+                if rowcount == 0:
+                    missing.append(slug)
+                else:
+                    applied += rowcount
+    except SQLAlchemyError:
+        logger.exception("Failed to enforce ALWAYS_TIER_1 scrape tiers.")
+        return 0
+
+    if missing:
+        logger.warning(
+            "ALWAYS_TIER_1 slugs missing from games table (no schedule bump): %s",
+            missing,
+        )
+
     if applied:
-        logger.info("Enforced ALWAYS_TIER_1 on %s game(s).", applied)
+        logger.info(
+            "Enforced ALWAYS_TIER_1 on %s game(s) (tier + telemetry schedule).",
+            applied,
+        )
+
     return applied
 
 

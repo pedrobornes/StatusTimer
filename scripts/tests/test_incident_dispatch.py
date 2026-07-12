@@ -53,6 +53,28 @@ class IncidentDispatchTests(unittest.TestCase):
             "MAINTENANCE",
         )
 
+    def test_epic_games_slug_skips_telemetry_but_keeps_news(self) -> None:
+        client = Mock()
+        client.push_patch_note.return_value = PushResult(success=True, status_code=201)
+
+        event = ScrapedFeedEvent(
+            source=FeedSource.EPIC,
+            kind=FeedEventKind.INCIDENT,
+            external_id="epic-1",
+            game_tag="epic-games",
+            title="Epic Online Services outage",
+            plain_text="Store unavailable.",
+            published_at=datetime(2026, 7, 12, tzinfo=timezone.utc),
+        )
+
+        report = dispatch_incident_event(client, event)
+
+        self.assertFalse(report.skipped)
+        self.assertTrue(report.success)
+        client.sync_game_telemetry.assert_not_called()
+        client.push_patch_note.assert_called_once()
+        self.assertIsNone(report.telemetry_push)
+
 
 if __name__ == "__main__":
     unittest.main()

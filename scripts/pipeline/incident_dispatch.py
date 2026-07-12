@@ -14,6 +14,8 @@ from scrapers.text_utils import clean_news_title
 
 logger = logging.getLogger(__name__)
 
+TELEMETRY_EXCLUDED_GAME_TAGS = frozenset({"epic-games"})
+
 
 @dataclass
 class IncidentDispatchReport:
@@ -41,15 +43,23 @@ def dispatch_incident_event(
     status = _resolve_incident_status(event)
     summary = _build_incident_summary(event)
 
-    telemetry_payload = GameTelemetryPayload(
-        gameSlug=event.game_tag,
-        status=status,
-        latencyMs=0,
-        dataSource=_map_telemetry_source(event.source),
-    )
-    telemetry_push = client.sync_game_telemetry(
-        SyncTelemetryRequest(entries=[telemetry_payload]),
-    )
+    telemetry_push: PushResult | None = None
+    if event.game_tag not in TELEMETRY_EXCLUDED_GAME_TAGS:
+        telemetry_payload = GameTelemetryPayload(
+            gameSlug=event.game_tag,
+            status=status,
+            latencyMs=0,
+            dataSource=_map_telemetry_source(event.source),
+        )
+        telemetry_push = client.sync_game_telemetry(
+            SyncTelemetryRequest(entries=[telemetry_payload]),
+        )
+    else:
+        logger.info(
+            "Skipping incident telemetry for unmapped slug=%s (%s)",
+            event.game_tag,
+            event.title,
+        )
 
     news_payload = PatchNotePayload(
         title=clean_news_title(event.title),

@@ -40,6 +40,10 @@ public class IgdbSearchClient {
         return apiClient.isConfigured();
     }
 
+    public boolean isRateLimited() {
+        return apiClient.isRateLimited();
+    }
+
     public List<IgdbGameMatch> search(String query, int limit) {
         String trimmed = query == null ? "" : query.trim();
         if (trimmed.isEmpty() || !apiClient.isConfigured()) {

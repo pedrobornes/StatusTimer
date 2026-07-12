@@ -22,6 +22,8 @@ public class IgdbApiClient {
 
     private static final String OAUTH_URL = "https://id.twitch.tv/oauth2/token";
     private static final String API_BASE = "https://api.igdb.com/v4";
+    private static final long MIN_REQUEST_INTERVAL_MS = 350L;
+    private static final long RATE_LIMIT_COOLDOWN_MS = 90_000L;
 
     private final IgdbProperties properties;
     private final HttpClient httpClient;
@@ -29,6 +31,8 @@ public class IgdbApiClient {
 
     private String accessToken;
     private Instant tokenExpiresAt = Instant.EPOCH;
+    private long lastRequestAtMs;
+    private long rateLimitedUntilMs;
 
     public IgdbApiClient(IgdbProperties properties, ObjectMapper objectMapper) {
         this.properties = properties;
@@ -52,10 +56,21 @@ public class IgdbApiClient {
         return properties.isConfigured();
     }
 
+    public boolean isRateLimited() {
+        return System.currentTimeMillis() < rateLimitedUntilMs;
+    }
+
     public Optional<JsonNode> postGamesQuery(String body) {
         if (!isConfigured()) {
             return Optional.empty();
         }
+
+        if (isRateLimited()) {
+            log.debug("IGDB games query skipped while rate-limit cooldown is active");
+            return Optional.empty();
+        }
+
+        throttleBeforeRequest();
 
         try {
             String token = ensureAccessToken();
@@ -72,6 +87,15 @@ public class IgdbApiClient {
                     HttpResponse.BodyHandlers.ofString()
             );
 
+            if (response.statusCode() == 429) {
+                rateLimitedUntilMs = System.currentTimeMillis() + RATE_LIMIT_COOLDOWN_MS;
+                log.warn(
+                        "IGDB games query rate limited (HTTP 429); pausing IGDB enrichment for {}s",
+                        RATE_LIMIT_COOLDOWN_MS / 1000
+                );
+                return Optional.empty();
+            }
+
             if (response.statusCode() != 200) {
                 log.warn(
                         "IGDB games query failed with HTTP {}: {}",
@@ -82,10 +106,27 @@ public class IgdbApiClient {
             }
 
             return Optional.of(objectMapper.readTree(response.body()));
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            log.warn("IGDB games query interrupted");
+            return Optional.empty();
         } catch (Exception exception) {
             log.warn("IGDB games query failed", exception);
             return Optional.empty();
         }
+    }
+
+    private synchronized void throttleBeforeRequest() {
+        long now = System.currentTimeMillis();
+        long waitMs = MIN_REQUEST_INTERVAL_MS - (now - lastRequestAtMs);
+        if (waitMs > 0) {
+            try {
+                Thread.sleep(waitMs);
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+            }
+        }
+        lastRequestAtMs = System.currentTimeMillis();
     }
 
     private String ensureAccessToken() throws Exception {
