@@ -37,9 +37,13 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -63,6 +67,7 @@ public class GameCatalogService {
     private final KnownSteamAppRegistry knownSteamAppRegistry;
     private final IndexabilityService indexabilityService;
     private final SteamStoreAppDetailsClient steamStoreAppDetailsClient;
+    private final PlatformTransactionManager transactionManager;
 
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = CacheConfig.INDEXABLE_SLUGS_CACHE)
@@ -450,9 +455,15 @@ public class GameCatalogService {
             Set<String> seenSlugs
     ) {
         int added = 0;
+        Set<Long> seenIgdbIds = new LinkedHashSet<>();
+
         for (IgdbGameMatch match : matches) {
+            if (match.igdbId() > 0 && !seenIgdbIds.add(match.igdbId())) {
+                continue;
+            }
+
             try {
-                Game discovered = upsertFromIgdbDiscovery(match);
+                Game discovered = upsertFromIgdbDiscoveryIsolated(match);
                 if (discovered == null
                         || CatalogNoisePolicy.shouldSkipCatalogSurfacing(discovered)) {
                     continue;
@@ -473,6 +484,21 @@ public class GameCatalogService {
         }
 
         return added;
+    }
+
+    private Game upsertFromIgdbDiscoveryIsolated(IgdbGameMatch match) {
+        TransactionTemplate template = new TransactionTemplate(transactionManager);
+        template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+
+        try {
+            return template.execute(status -> upsertFromIgdbDiscovery(match));
+        } catch (DataIntegrityViolationException exception) {
+            log.debug(
+                    "IGDB discovery slug collision for '{}'; reloading existing catalog row",
+                    match.name()
+            );
+            return resolveExistingGameForIgdbMatch(match).orElse(null);
+        }
     }
 
     private Optional<Integer> parseSteamAppIdQuery(String query) {
@@ -605,18 +631,10 @@ public class GameCatalogService {
     }
 
     private Game upsertFromIgdbDiscovery(IgdbGameMatch match) {
-        if (match.name() == null || match.name().isBlank()) {
-            return null;
-        }
-
-        String slug = SlugUtils.toSlug(match.igdbSlug() != null && !match.igdbSlug().isBlank()
-                ? match.igdbSlug()
-                : match.name());
+        String slug = resolveDiscoverySlug(match);
         if (slug.isBlank()) {
             return null;
         }
-
-        slug = gameSlugMapper.resolveCanonicalSlug(slug);
 
         if (CatalogMatureContentPolicy.isMatureIgdbMatch(match)) {
             return null;
@@ -635,7 +653,7 @@ public class GameCatalogService {
             return gameRepository.findBySlug(slug).orElse(null);
         }
 
-        Optional<Game> existing = gameRepository.findBySlug(slug);
+        Optional<Game> existing = resolveExistingGameForIgdbMatch(match, slug);
         if (existing.isPresent()) {
             Game game = existing.get();
             if (Boolean.TRUE.equals(game.getManualLock())) {
@@ -668,12 +686,55 @@ public class GameCatalogService {
         applyPinnedGameType(game);
         CatalogMatureContentPolicy.applyQuarantineIfMature(game);
 
-        Game saved = gameRepository.save(game);
+        Game saved = gameRepository.saveAndFlush(game);
         if (CatalogNoisePolicy.shouldSkipCatalogSurfacing(saved)) {
             return null;
         }
 
         return saved;
+    }
+
+    private Optional<Game> resolveExistingGameForIgdbMatch(IgdbGameMatch match) {
+        return resolveExistingGameForIgdbMatch(match, resolveDiscoverySlug(match));
+    }
+
+    private Optional<Game> resolveExistingGameForIgdbMatch(IgdbGameMatch match, String slug) {
+        if (match.igdbId() > 0) {
+            Optional<Game> byIgdbId = gameRepository.findByIgdbGameId(match.igdbId());
+            if (byIgdbId.isPresent()) {
+                return byIgdbId;
+            }
+        }
+
+        if (slug == null || slug.isBlank()) {
+            return Optional.empty();
+        }
+
+        Optional<Game> bySlug = gameRepository.findBySlug(slug);
+        if (bySlug.isPresent()) {
+            return bySlug;
+        }
+
+        if (match.steamAppId() != null && match.steamAppId() > 0) {
+            return gameRepository.findBySlug(slug + "-" + match.steamAppId());
+        }
+
+        return Optional.empty();
+    }
+
+    private String resolveDiscoverySlug(IgdbGameMatch match) {
+        if (match.name() == null || match.name().isBlank()) {
+            return "";
+        }
+
+        String slug = SlugUtils.toSlug(match.igdbSlug() != null && !match.igdbSlug().isBlank()
+                ? match.igdbSlug()
+                : match.name());
+        if (slug.isBlank()) {
+            return "";
+        }
+
+        return gameSlugMapper.resolveCanonicalSlug(slug);
     }
 
     private GameCatalogSearchResponse toSearchResponse(Game game) {

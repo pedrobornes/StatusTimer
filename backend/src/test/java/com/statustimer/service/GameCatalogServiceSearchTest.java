@@ -1,5 +1,6 @@
 package com.statustimer.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -24,7 +25,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -36,6 +39,9 @@ class GameCatalogServiceSearchTest {
 
     @Autowired
     private GameRepository gameRepository;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
 
     @MockitoBean
     private IgdbSearchClient igdbSearchClient;
@@ -166,6 +172,80 @@ class GameCatalogServiceSearchTest {
 
         assertTrue(results.stream().anyMatch(result -> "factorio".equals(result.slug())));
         verify(igdbSearchClient, never()).lookupBySteamAppId(anyInt());
+    }
+
+    @Test
+    void searchHandlesDuplicateIgdbMatchesInSameResponse() {
+        IgdbGameMatch duplicateMatch = new IgdbGameMatch(
+                2001L,
+                "Apex Legends Champions Edition",
+                "apex-legends-champions-edition",
+                null,
+                null,
+                null,
+                null,
+                null,
+                List.of("Shooter"),
+                List.of(),
+                0,
+                null,
+                List.of(),
+                List.of(),
+                null,
+                Map.of()
+        );
+
+        when(igdbSearchClient.search(anyString(), anyInt()))
+                .thenReturn(List.of(duplicateMatch, duplicateMatch));
+
+        List<GameCatalogSearchResponse> results = gameCatalogService.search("apex champions");
+
+        assertTrue(results.stream().anyMatch(result ->
+                "apex-legends-champions-edition".equals(result.slug())));
+        assertEquals(
+                1,
+                results.stream()
+                        .filter(result -> "apex-legends-champions-edition".equals(result.slug()))
+                        .count()
+        );
+        assertEquals(1, gameRepository.findBySlug("apex-legends-champions-edition").stream().count());
+    }
+
+    @Test
+    void searchUpdatesExistingCatalogRowInsteadOfInsertingDuplicateSlug() {
+        TransactionTemplate template = new TransactionTemplate(transactionManager);
+        template.executeWithoutResult(status -> gameRepository.save(Game.builder()
+                .slug("apex-legends-champions-edition")
+                .gameName("Apex Legends Champions Edition")
+                .lifecycleState(LifecycleState.CATALOG)
+                .build()));
+
+        IgdbGameMatch match = new IgdbGameMatch(
+                2001L,
+                "Apex Legends Champions Edition",
+                "apex-legends-champions-edition",
+                null,
+                null,
+                null,
+                80,
+                85,
+                List.of("Shooter"),
+                List.of(),
+                0,
+                null,
+                List.of(),
+                List.of(),
+                null,
+                Map.of()
+        );
+
+        when(igdbSearchClient.search(anyString(), anyInt())).thenReturn(List.of(match));
+
+        List<GameCatalogSearchResponse> results = gameCatalogService.search("apex legends champions");
+
+        assertTrue(results.stream().anyMatch(result ->
+                "apex-legends-champions-edition".equals(result.slug())));
+        assertEquals(1, gameRepository.findBySlug("apex-legends-champions-edition").stream().count());
     }
 
     @Test

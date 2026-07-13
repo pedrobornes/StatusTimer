@@ -18,6 +18,8 @@ public interface GameRepository extends JpaRepository<Game, Long> {
     @Query("SELECT g FROM Game g LEFT JOIN FETCH g.platforms WHERE g.slug = :slug")
     Optional<Game> findBySlug(String slug);
 
+    Optional<Game> findByIgdbGameId(Long igdbGameId);
+
     @Override
     @EntityGraph(attributePaths = {"platforms"})
     List<Game> findAll();
