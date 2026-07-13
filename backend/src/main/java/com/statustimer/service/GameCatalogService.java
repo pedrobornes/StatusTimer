@@ -24,6 +24,7 @@ import com.statustimer.integration.SteamStoreAppDetailsClient;
 import com.statustimer.integration.SteamStoreAppDetailsClient.SteamAppMetadata;
 import com.statustimer.dto.response.SteamStoreListingResponse;
 import com.statustimer.repository.GameRepository;
+import com.statustimer.repository.GameTelemetryRepository;
 import com.statustimer.util.IgdbMetadataSupport;
 import com.statustimer.util.SearchQuerySupport;
 import com.statustimer.util.SlugUtils;
@@ -62,6 +63,7 @@ public class GameCatalogService {
     private static final int IGDB_DISCOVERY_LIMIT = 8;
 
     private final GameRepository gameRepository;
+    private final GameTelemetryRepository gameTelemetryRepository;
     private final IgdbSearchClient igdbSearchClient;
     private final GameSlugMapper gameSlugMapper;
     private final KnownSteamAppRegistry knownSteamAppRegistry;
@@ -73,6 +75,7 @@ public class GameCatalogService {
     @Cacheable(cacheNames = CacheConfig.INDEXABLE_SLUGS_CACHE)
     public List<GameIndexableSlugResponse> findIndexableSlugs() {
         return gameRepository.findByIsIndexableTrueOrderBySlugAsc().stream()
+                .filter(game -> gameSlugMapper.isCanonicalCatalogSlug(game.getSlug()))
                 .map(game -> new GameIndexableSlugResponse(
                         game.getSlug(),
                         game.getLastTelemetryAt() != null
@@ -734,7 +737,97 @@ public class GameCatalogService {
             return "";
         }
 
-        return gameSlugMapper.resolveCanonicalSlug(slug);
+        return gameSlugMapper.getSteamSlug(slug);
+    }
+
+    @Transactional
+    public int reconcileDuplicateCatalogSlugs() {
+        int reconciled = 0;
+
+        for (Game game : List.copyOf(gameRepository.findAll())) {
+            String slug = game.getSlug();
+            String canonicalSlug = gameSlugMapper.getSteamSlug(slug);
+            if (slug.equals(canonicalSlug)) {
+                continue;
+            }
+
+            Optional<Game> canonicalGame = gameRepository.findBySlug(canonicalSlug);
+            if (canonicalGame.isPresent()) {
+                mergeDuplicateIntoCanonical(canonicalGame.get(), game);
+                deleteDuplicateCatalogGame(game);
+                reconciled++;
+                continue;
+            }
+
+            game.setSlug(canonicalSlug);
+            try {
+                gameRepository.saveAndFlush(game);
+                indexabilityService.recalculateForSlug(canonicalSlug);
+                reconciled++;
+            } catch (DataIntegrityViolationException exception) {
+                log.warn(
+                        "Failed to rename duplicate catalog slug '{}' to '{}'; removing duplicate row",
+                        slug,
+                        canonicalSlug,
+                        exception
+                );
+                gameRepository.findBySlug(canonicalSlug).ifPresent(canonical -> {
+                    mergeDuplicateIntoCanonical(canonical, game);
+                    deleteDuplicateCatalogGame(game);
+                });
+            }
+        }
+
+        if (reconciled > 0) {
+            log.info("Reconciled {} duplicate catalog slug(s)", reconciled);
+        }
+
+        return reconciled;
+    }
+
+    private void mergeDuplicateIntoCanonical(Game canonical, Game duplicate) {
+        boolean changed = false;
+
+        if ((canonical.getTwitchGameId() == null || canonical.getTwitchGameId().isBlank())
+                && duplicate.getTwitchGameId() != null
+                && !duplicate.getTwitchGameId().isBlank()) {
+            canonical.setTwitchGameId(duplicate.getTwitchGameId());
+            changed = true;
+        }
+
+        if (canonical.getTwitchViewers() == null && duplicate.getTwitchViewers() != null) {
+            canonical.setTwitchViewers(duplicate.getTwitchViewers());
+            changed = true;
+        }
+
+        if (canonical.getTwitchRank() == null && duplicate.getTwitchRank() != null) {
+            canonical.setTwitchRank(duplicate.getTwitchRank());
+            changed = true;
+        }
+
+        if (canonical.getLivePlayers() == null && duplicate.getLivePlayers() != null) {
+            canonical.setLivePlayers(duplicate.getLivePlayers());
+            changed = true;
+        }
+
+        if ((canonical.getSteamAppId() == null || canonical.getSteamAppId() <= 0)
+                && duplicate.getSteamAppId() != null
+                && duplicate.getSteamAppId() > 0
+                && SteamAppIdPolicy.mayAssignSteamAppId(canonical.getSlug(), duplicate.getSteamAppId())) {
+            canonical.setSteamAppId(duplicate.getSteamAppId());
+            changed = true;
+        }
+
+        if (changed) {
+            gameRepository.save(canonical);
+            indexabilityService.recalculateForSlug(canonical.getSlug());
+        }
+    }
+
+    private void deleteDuplicateCatalogGame(Game duplicate) {
+        gameTelemetryRepository.findByGame_Slug(duplicate.getSlug())
+                .ifPresent(gameTelemetryRepository::delete);
+        gameRepository.delete(duplicate);
     }
 
     private GameCatalogSearchResponse toSearchResponse(Game game) {

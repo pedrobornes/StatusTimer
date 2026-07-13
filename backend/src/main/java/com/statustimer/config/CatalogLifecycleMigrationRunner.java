@@ -39,6 +39,7 @@ public class CatalogLifecycleMigrationRunner implements CommandLineRunner {
             harvestScheduleService.ensureScheduleInitialized(game);
         }
 
+        gameCatalogService.reconcileDuplicateCatalogSlugs();
         indexabilityService.recalculateAll();
         gameCatalogService.enforceAllPinnedGamePolicies();
         gameCatalogService.reconcileSteamAdultContentFlags();

@@ -1,5 +1,6 @@
 package com.statustimer.config;
 
+import com.statustimer.util.SlugUtils;
 import java.util.Map;
 import org.springframework.stereotype.Component;
 
@@ -28,7 +29,16 @@ public class GameSlugMapper {
             return slug;
         }
 
-        return SLUG_ALIASES.getOrDefault(slug, slug);
+        String normalized = SlugUtils.normalizeCatalogSlug(slug);
+        return SLUG_ALIASES.getOrDefault(normalized, normalized);
+    }
+
+    public boolean isCanonicalCatalogSlug(String slug) {
+        if (slug == null || slug.isBlank()) {
+            return false;
+        }
+
+        return slug.equals(getSteamSlug(slug));
     }
 
     public Map<String, String> slugAliases() {

@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from datetime import date
 
+from config.game_slug_registry import normalize_catalog_slug
 from models.normalization import normalize_platform, to_slug
 from models.schemas import GameReleasePayload, PlatformRelease
 from scrapers.igdb_releases import fetch_igdb_upcoming_releases
@@ -44,7 +45,7 @@ def build_release_payload(
 
     return GameReleasePayload(
         gameName=game_name,
-        slug=to_slug(game_name),
+        slug=normalize_catalog_slug(to_slug(game_name)),
         genreNames=_clean_genre_names(raw_genre_tags),
         platforms=platforms,
         hypeCount=hype_count,

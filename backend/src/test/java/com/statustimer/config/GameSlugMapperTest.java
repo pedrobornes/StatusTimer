@@ -16,6 +16,21 @@ class GameSlugMapperTest {
     }
 
     @Test
+    void normalizesTrademarkAndRomanNumeralSlugVariants() {
+        assertEquals("apex-legends", mapper.resolveCanonicalSlug("apex-legends-tm"));
+        assertEquals("slay-the-spire-2", mapper.resolveCanonicalSlug("slay-the-spire-ii"));
+        assertEquals("diablo-4", mapper.resolveCanonicalSlug("diablo-iv"));
+    }
+
+    @Test
+    void identifiesCanonicalCatalogSlugs() {
+        assertEquals(true, mapper.isCanonicalCatalogSlug("apex-legends"));
+        assertEquals(false, mapper.isCanonicalCatalogSlug("apex-legends-tm"));
+        assertEquals(false, mapper.isCanonicalCatalogSlug("counter-strike"));
+        assertEquals(true, mapper.isCanonicalCatalogSlug("counter-strike-2"));
+    }
+
+    @Test
     void returnsMappedSteamSlugForKnownTwitchSlug() {
         assertEquals("pubg", mapper.getSteamSlug("pubg-battlegrounds"));
         assertEquals("apex-legends", mapper.getSteamSlug("apex-legends-1"));

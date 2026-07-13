@@ -32,6 +32,7 @@ public class TrackedGameCatalogSeeder implements CommandLineRunner {
             gameRepository.save(game);
         }
 
+        gameCatalogService.reconcileDuplicateCatalogSlugs();
         gameTelemetryService.consolidateSlugAliases();
         gameCatalogService.enrichMissingLogos();
     }

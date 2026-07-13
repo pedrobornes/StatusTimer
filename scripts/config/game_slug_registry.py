@@ -5,6 +5,21 @@ from __future__ import annotations
 from typing import TypedDict
 
 # Twitch / legacy slugs that must map to a single monitored title.
+_ROMAN_SUFFIXES: dict[str, str] = {
+    "i": "1",
+    "ii": "2",
+    "iii": "3",
+    "iv": "4",
+    "v": "5",
+    "vi": "6",
+    "vii": "7",
+    "viii": "8",
+    "ix": "9",
+    "x": "10",
+}
+
+_NOISE_SUFFIXES = ("tm", "r")
+
 CANONICAL_CATALOG_SLUGS: dict[str, str] = {
     "counter-strike": "counter-strike-2",
     # Canonicalize GTA V variants into the IGDB slug.
@@ -99,8 +114,31 @@ PINNED_GAMES: dict[str, PinnedGame] = {
 }
 
 
+def normalize_catalog_slug(slug: str) -> str:
+    """Collapse trademark noise and roman-numeral slug variants into one catalog slug."""
+    if not slug:
+        return slug
+
+    normalized = slug.strip().lower()
+
+    changed = True
+    while changed:
+        changed = False
+        for suffix in _NOISE_SUFFIXES:
+            marker = f"-{suffix}"
+            if normalized.endswith(marker):
+                normalized = normalized[: -len(marker)]
+                changed = True
+
+    parts = normalized.rsplit("-", 1)
+    if len(parts) == 2 and len(parts[1]) >= 2 and parts[1] in _ROMAN_SUFFIXES:
+        normalized = f"{parts[0]}-{_ROMAN_SUFFIXES[parts[1]]}"
+
+    return CANONICAL_CATALOG_SLUGS.get(normalized, normalized)
+
+
 def canonical_catalog_slug(slug: str) -> str:
-    return CANONICAL_CATALOG_SLUGS.get(slug, slug)
+    return normalize_catalog_slug(slug)
 
 
 def get_pinned_game(slug: str) -> PinnedGame | None:

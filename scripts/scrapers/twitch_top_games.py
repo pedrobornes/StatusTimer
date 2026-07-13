@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import requests
 
 from config.settings import settings
-from config.game_slug_registry import canonical_catalog_slug
+from config.game_slug_registry import normalize_catalog_slug
 from models.catalog_schemas import GameCatalogEntryPayload
 from scrapers.igdb_catalog_enrichment import enrich_catalog_entries_with_igdb
 from models.normalization import to_slug
@@ -72,7 +72,7 @@ def parse_twitch_top_game(game: dict, rank: int) -> TwitchTopGameEntry | None:
     if is_non_game_category(normalized_name):
         return None
 
-    slug = to_slug(normalized_name)
+    slug = normalize_catalog_slug(to_slug(normalized_name))
     if not slug:
         return None
 
@@ -90,7 +90,7 @@ def build_catalog_entry(
     *,
     featured: bool = False,
 ) -> GameCatalogEntryPayload:
-    canonical_slug = canonical_catalog_slug(entry.slug)
+    canonical_slug = normalize_catalog_slug(entry.slug)
     return GameCatalogEntryPayload(
         slug=canonical_slug,
         game_name=entry.game_name,

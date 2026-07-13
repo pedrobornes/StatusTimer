@@ -10,6 +10,21 @@ public final class SlugUtils {
     private static final Pattern POSSESSIVE_SLUG_PATTERN =
             Pattern.compile("^([a-z0-9]+)-s-(.+)$");
 
+    private static final java.util.Map<String, String> ROMAN_SUFFIXES = java.util.Map.ofEntries(
+            java.util.Map.entry("i", "1"),
+            java.util.Map.entry("ii", "2"),
+            java.util.Map.entry("iii", "3"),
+            java.util.Map.entry("iv", "4"),
+            java.util.Map.entry("v", "5"),
+            java.util.Map.entry("vi", "6"),
+            java.util.Map.entry("vii", "7"),
+            java.util.Map.entry("viii", "8"),
+            java.util.Map.entry("ix", "9"),
+            java.util.Map.entry("x", "10")
+    );
+
+    private static final String[] NOISE_SUFFIXES = {"tm", "r"};
+
     private SlugUtils() {
     }
 
@@ -23,6 +38,42 @@ public final class SlugUtils {
                 .toLowerCase()
                 .replaceAll("[^a-z0-9]+", "-")
                 .replaceAll("(^-|-$)", "");
+
+        return normalized;
+    }
+
+    /**
+     * Collapse trademark noise and roman-numeral slug variants into one catalog slug.
+     */
+    public static String normalizeCatalogSlug(String slug) {
+        if (slug == null || slug.isBlank()) {
+            return slug;
+        }
+
+        String normalized = slug.trim().toLowerCase();
+
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            for (String suffix : NOISE_SUFFIXES) {
+                String marker = "-" + suffix;
+                if (normalized.endsWith(marker)) {
+                    normalized = normalized.substring(0, normalized.length() - marker.length());
+                    changed = true;
+                }
+            }
+        }
+
+        int separator = normalized.lastIndexOf('-');
+        if (separator > 0) {
+            String romanSuffix = normalized.substring(separator + 1);
+            if (romanSuffix.length() >= 2) {
+                String arabicSuffix = ROMAN_SUFFIXES.get(romanSuffix);
+                if (arabicSuffix != null) {
+                    normalized = normalized.substring(0, separator + 1) + arabicSuffix;
+                }
+            }
+        }
 
         return normalized;
     }

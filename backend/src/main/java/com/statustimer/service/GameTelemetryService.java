@@ -217,18 +217,28 @@ public class GameTelemetryService {
 
     @Transactional
     public void consolidateSlugAliases() {
-        gameSlugMapper.slugAliases().forEach((aliasSlug, canonicalSlug) -> {
-            gameTelemetryRepository.findByGame_Slug(aliasSlug).ifPresent(aliasTelemetry -> {
-                if (gameTelemetryRepository.findByGame_Slug(canonicalSlug).isPresent()) {
-                    gameTelemetryRepository.delete(aliasTelemetry);
-                }
-            });
+        gameSlugMapper.slugAliases().forEach(this::consolidateAliasPair);
 
-            gameRepository.findBySlug(aliasSlug).ifPresent(aliasGame -> {
-                if (gameRepository.findBySlug(canonicalSlug).isPresent()) {
-                    gameRepository.delete(aliasGame);
-                }
-            });
+        for (Game game : List.copyOf(gameRepository.findAll())) {
+            String slug = game.getSlug();
+            String canonicalSlug = gameSlugMapper.getSteamSlug(slug);
+            if (!slug.equals(canonicalSlug)) {
+                consolidateAliasPair(slug, canonicalSlug);
+            }
+        }
+    }
+
+    private void consolidateAliasPair(String aliasSlug, String canonicalSlug) {
+        gameTelemetryRepository.findByGame_Slug(aliasSlug).ifPresent(aliasTelemetry -> {
+            if (gameTelemetryRepository.findByGame_Slug(canonicalSlug).isPresent()) {
+                gameTelemetryRepository.delete(aliasTelemetry);
+            }
+        });
+
+        gameRepository.findBySlug(aliasSlug).ifPresent(aliasGame -> {
+            if (gameRepository.findBySlug(canonicalSlug).isPresent()) {
+                gameRepository.delete(aliasGame);
+            }
         });
     }
 

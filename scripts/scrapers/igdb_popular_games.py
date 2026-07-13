@@ -7,6 +7,7 @@ import logging
 from clients.igdb_client import IgdbClient, is_igdb_configured
 from config.settings import settings
 from models.catalog_schemas import GameCatalogEntryPayload
+from config.game_slug_registry import normalize_catalog_slug
 from models.normalization import to_slug
 from scrapers.igdb_media import (
     parse_igdb_game_metadata,
@@ -42,7 +43,7 @@ def fetch_igdb_popular_catalog(limit: int | None = None) -> list[GameCatalogEntr
         except ValueError:
             continue
 
-        slug = to_slug(metadata.slug or metadata.name)
+        slug = normalize_catalog_slug(to_slug(metadata.slug or metadata.name))
         if not slug or slug in seen_slugs:
             continue
 

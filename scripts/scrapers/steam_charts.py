@@ -9,6 +9,7 @@ import requests
 
 from config.settings import settings
 from models.catalog_schemas import GameCatalogEntryPayload
+from config.game_slug_registry import normalize_catalog_slug
 from models.normalization import to_slug
 from scrapers.igdb_catalog_enrichment import enrich_catalog_entries_with_igdb
 from scrapers.live_metrics import fetch_steam_live_players
@@ -96,7 +97,7 @@ def build_catalog_entry(
     game_name: str,
     featured: bool = False,
 ) -> GameCatalogEntryPayload:
-    slug = to_slug(game_name)
+    slug = normalize_catalog_slug(to_slug(game_name))
     return GameCatalogEntryPayload(
         slug=slug,
         game_name=game_name,
@@ -141,7 +142,7 @@ def _fetch_ranked_catalog_entry(
             logger.warning("Steam appdetails returned no name for app_id=%s", rank.app_id)
             return None
 
-        slug = to_slug(game_name)
+        slug = normalize_catalog_slug(to_slug(game_name))
         if slug in MANUAL_PROTECTED_SLUGS:
             logger.info("Skipping manual protected slug from Steam charts: %s", slug)
             return None

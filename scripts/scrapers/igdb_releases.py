@@ -7,6 +7,7 @@ from typing import Any
 
 from clients.igdb_client import IgdbClient, is_igdb_configured
 from models.enums import Platform
+from config.game_slug_registry import normalize_catalog_slug
 from models.normalization import to_slug
 from models.schemas import GameReleasePayload, PlatformRelease
 from scrapers.igdb_media import (
@@ -86,7 +87,7 @@ def map_igdb_metadata_to_release(
 
     return GameReleasePayload(
         gameName=resolve_display_name(metadata),
-        slug=to_slug(metadata.slug or metadata.name),
+        slug=normalize_catalog_slug(to_slug(metadata.slug or metadata.name)),
         genreNames=_clean_genre_names(metadata.genre_names),
         platforms=platform_entries,
         hypeCount=metadata.hype_count,
