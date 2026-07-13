@@ -151,8 +151,8 @@ export default memo(function GameTelemetryCard({
     <article
       className={
         embedded
-          ? "glass-panel flex flex-col rounded-3xl p-6"
-          : "flex flex-col rounded-2xl border border-white/8 bg-white/[0.04] p-6 transition hover:border-violet-400/25 hover:bg-white/[0.06]"
+          ? "glass-panel flex h-full flex-col rounded-3xl p-6"
+          : "flex h-full flex-col rounded-2xl border border-white/8 bg-white/[0.04] p-6 transition hover:border-violet-400/25 hover:bg-white/[0.06]"
       }
     >
       <header className="mb-4">
@@ -203,7 +203,7 @@ export default memo(function GameTelemetryCard({
       ) : null}
 
       {!serverStatusPending && showServerStatus ? (
-        <>
+        <div className="mt-auto">
           <hr className="mt-4 border-white/5" />
 
           <footer className="mt-3 flex items-center gap-1.5 text-xs text-zinc-400">
@@ -212,7 +212,7 @@ export default memo(function GameTelemetryCard({
             <span aria-hidden>•</span>
             <StatusCheckTime value={telemetry.lastChecked} />
           </footer>
-        </>
+        </div>
       ) : null}
     </article>
   );
