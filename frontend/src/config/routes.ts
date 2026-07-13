@@ -3,6 +3,7 @@
  */
 
 import { getFeaturedGameSlugs } from "@/lib/gameAssets";
+import type { TelemetryStatus } from "@/types/telemetry";
 
 export const TRACKED_GAME_SLUGS = [
   "counter-strike-2",
@@ -63,14 +64,31 @@ export function isTrackedGameSlug(slug: string): slug is TrackedGameSlug {
   return (TRACKED_GAME_SLUGS as readonly string[]).includes(slug);
 }
 
-export function buildGameStatusTitle(gameName: string): string {
+export function buildGameStatusTitle(
+  gameName: string,
+  status: TelemetryStatus | null = null,
+): string {
   const safeName = gameName?.trim() || "this game";
-  return `Is ${safeName} Down Right Now? Live Server Status & Outages`;
+
+  if (status === "DOWN") {
+    return `${safeName} Servers Down? Live Outage & Server Status`;
+  }
+
+  if (status === "MAINTENANCE") {
+    return `${safeName} Server Maintenance — Live Status Update`;
+  }
+
+  return `Is ${safeName} Down Right Now? Live Server Status`;
 }
 
-export function buildGameStatusDescription(gameName: string): string {
+export function buildGameStatusDescriptionTail(gameName: string): string {
   const safeName = gameName?.trim() || "this game";
-  return `Check if ${safeName} servers are down or having problems. Live status, official patch notes, game updates, and recent outages.`;
+  return `Check if ${safeName} servers are down or in maintenance. Patch notes and official game updates on this page.`;
+}
+
+/** @deprecated Use buildGameStatusDescriptionTail or buildGameStatusMetaDescription. */
+export function buildGameStatusDescription(gameName: string): string {
+  return buildGameStatusDescriptionTail(gameName);
 }
 
 export function buildGameStatusKeywords(gameName: string, gameSlug: string): string[] {

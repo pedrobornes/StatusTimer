@@ -1,38 +1,17 @@
 import type { Metadata } from "next";
-import {
-  buildGameStatusDescription,
-  buildGameStatusKeywords,
-  buildGameStatusTitle,
-} from "@/config/routes";
+import { buildGameStatusKeywords } from "@/config/routes";
 import { resolveGameDisplayName } from "@/lib/gameAssets";
 import { buildRobotsDirective, isIndexableTelemetry } from "@/lib/seo/indexability";
+import {
+  buildGameStatusMetaDescription,
+  buildGameStatusTitle,
+} from "@/lib/seo/statusMetadata";
 import { formatSlugLabel } from "@/lib/telemetry";
 import { getGameStatusDetail } from "@/services/telemetryService";
 import type { GameStatusDetail, TelemetryStatus } from "@/types/telemetry";
 import { getSiteUrl } from "@/config/site";
 
 const siteUrl = getSiteUrl();
-
-function buildStatusAwareDescription(
-  gameName: string,
-  status: TelemetryStatus | null,
-): string {
-  const base = buildGameStatusDescription(gameName);
-
-  if (status === "DOWN") {
-    return `${base} Right now, ${gameName} looks down.`;
-  }
-
-  if (status === "MAINTENANCE") {
-    return `${base} Right now, ${gameName} is in maintenance.`;
-  }
-
-  if (status === "ONLINE") {
-    return `${base} Right now, ${gameName} servers look online.`;
-  }
-
-  return base;
-}
 
 function resolveStatusPageGameName(
   gameSlug: string,
@@ -61,6 +40,7 @@ export async function buildStatusPageMetadata(gameSlug: string): Promise<Metadat
   const canonicalUrl = `${siteUrl}${canonicalPath}`;
 
   let liveStatus: TelemetryStatus | null = null;
+  let lastChecked: string | null = null;
   let indexable = false;
 
   try {
@@ -68,15 +48,21 @@ export async function buildStatusPageMetadata(gameSlug: string): Promise<Metadat
     gameName = resolveStatusPageGameName(gameSlug, detail);
     if (detail.telemetry) {
       liveStatus = detail.telemetry.status;
+      lastChecked = detail.telemetry.lastChecked ?? null;
       indexable = isIndexableTelemetry(detail.telemetry);
     }
   } catch {
     liveStatus = null;
+    lastChecked = null;
     indexable = false;
   }
 
-  const title = buildGameStatusTitle(gameName);
-  const description = buildStatusAwareDescription(gameName, liveStatus);
+  const title = buildGameStatusTitle(gameName, liveStatus);
+  const description = buildGameStatusMetaDescription(
+    gameName,
+    liveStatus,
+    lastChecked,
+  );
 
   return {
     title: {

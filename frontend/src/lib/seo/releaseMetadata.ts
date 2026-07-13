@@ -76,9 +76,11 @@ export function buildReleasePageMetadata(release: UpcomingRelease): Metadata {
   const canonicalPath = APP_ROUTES.release(release.slug);
   const canonicalUrl = `${siteUrl}${canonicalPath}`;
   const formattedDate = formatReleaseDateLabel(release.releaseDate);
-  const title = `${release.gameName} Release Date & Countdown`;
+  const title = formattedDate
+    ? `${release.gameName} Release Date — ${formattedDate}`
+    : `${release.gameName} Release Date & Countdown`;
   const description = formattedDate
-    ? `When does ${release.gameName} release? Launching ${formattedDate}. Live countdown, platforms, hype tracker, and news for ${release.gameName}.`
+    ? `${release.gameName} releases on ${formattedDate}. Live countdown, confirmed platforms, hype tracker, trailers, and patch notes.`
     : `When does ${release.gameName} release? Track the launch window, platforms, hype, and news for ${release.gameName}.`;
 
   return {

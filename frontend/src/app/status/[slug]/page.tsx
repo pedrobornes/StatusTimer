@@ -301,6 +301,7 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
 
     const jsonLd = buildStatusPageJsonLd({
       gameSlug: slug,
+      gameName,
       status: telemetry.status,
       lastChecked: telemetry.lastChecked,
       pageUrl,

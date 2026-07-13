@@ -1,15 +1,13 @@
-import {
-  APP_ROUTES,
-  buildGameStatusDescription,
-  buildGameStatusTitle,
-} from "@/config/routes";
+import { APP_ROUTES, buildGameStatusTitle } from "@/config/routes";
 import { getSiteUrl } from "@/config/site";
 import { formatSlugLabel } from "@/lib/telemetry";
 import type { GameFaqItem } from "@/lib/seo/gameFaq";
+import { buildGameStatusMetaDescription } from "@/lib/seo/statusMetadata";
 import type { TelemetryStatus } from "@/types/telemetry";
 
 interface StatusPageJsonLdInput {
   gameSlug: string;
+  gameName?: string;
   status: TelemetryStatus;
   lastChecked: string;
   pageUrl: string;
@@ -39,9 +37,13 @@ function mapWatchActionStatus(status: TelemetryStatus): string {
 }
 
 export function buildStatusPageJsonLd(input: StatusPageJsonLdInput): Record<string, unknown> {
-  const gameName = formatSlugLabel(input.gameSlug);
-  const pageName = buildGameStatusTitle(gameName);
-  const pageDescription = buildGameStatusDescription(gameName);
+  const gameName = input.gameName?.trim() || formatSlugLabel(input.gameSlug);
+  const pageName = buildGameStatusTitle(gameName, input.status);
+  const pageDescription = buildGameStatusMetaDescription(
+    gameName,
+    input.status,
+    input.lastChecked,
+  );
   const organizationId = `${input.siteUrl}/#organization`;
   const websiteId = `${input.siteUrl}/#website`;
   const pageId = `${input.pageUrl}#webpage`;

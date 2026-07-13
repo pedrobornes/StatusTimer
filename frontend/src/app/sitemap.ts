@@ -25,19 +25,19 @@ function buildStaticSitemapEntries(): MetadataRoute.Sitemap {
     {
       url: siteUrl,
       lastModified: now,
-      changeFrequency: "hourly",
+      changeFrequency: "daily",
       priority: 1,
     },
     {
       url: `${siteUrl}/status`,
       lastModified: now,
-      changeFrequency: "hourly",
+      changeFrequency: "daily",
       priority: 0.9,
     },
     {
       url: `${siteUrl}${APP_ROUTES.games}`,
       lastModified: now,
-      changeFrequency: "hourly",
+      changeFrequency: "daily",
       priority: 0.8,
     },
     {
@@ -73,7 +73,7 @@ function toGameSitemapEntries(slugs: GameIndexableSlug[]): MetadataRoute.Sitemap
     .map((entry) => ({
       url: `${siteUrl}${APP_ROUTES.status(entry.slug)}`,
       lastModified: new Date(entry.lastModified),
-      changeFrequency: "hourly" as const,
+      changeFrequency: "daily" as const,
       priority: 0.8,
     }));
 }
