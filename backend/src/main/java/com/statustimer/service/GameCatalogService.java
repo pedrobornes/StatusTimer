@@ -478,8 +478,7 @@ public class GameCatalogService {
                     continue;
                 }
 
-                if (seenSlugs.add(discovered.getSlug())) {
-                    results.add(toSearchResponse(discovered));
+                if (addSearchResult(discovered, results, seenSlugs)) {
                     added++;
                 }
             } catch (RuntimeException exception) {
@@ -563,9 +562,7 @@ public class GameCatalogService {
                 continue;
             }
 
-            if (seenSlugs.add(game.getSlug())) {
-                results.add(toSearchResponse(game));
-            }
+            addSearchResult(game, results, seenSlugs);
         }
     }
 
@@ -599,7 +596,7 @@ public class GameCatalogService {
                 continue;
             }
 
-            if (!seenSlugs.add(slug)) {
+            if (!seenSlugs.add(canonicalSearchSlug(slug))) {
                 continue;
             }
 
@@ -912,7 +909,33 @@ public class GameCatalogService {
         gameRepository.flush();
     }
 
+    private String canonicalSearchSlug(String slug) {
+        return gameSlugMapper.getSteamSlug(slug);
+    }
+
+    private boolean addSearchResult(
+            Game game,
+            List<GameCatalogSearchResponse> results,
+            Set<String> seenCanonicalSlugs
+    ) {
+        if (CatalogNoisePolicy.shouldSkipCatalogSurfacing(game)) {
+            return false;
+        }
+
+        String canonicalSlug = canonicalSearchSlug(game.getSlug());
+        if (!seenCanonicalSlugs.add(canonicalSlug)) {
+            return false;
+        }
+
+        results.add(toSearchResponse(game, canonicalSlug));
+        return true;
+    }
+
     private GameCatalogSearchResponse toSearchResponse(Game game) {
+        return toSearchResponse(game, canonicalSearchSlug(game.getSlug()));
+    }
+
+    private GameCatalogSearchResponse toSearchResponse(Game game, String responseSlug) {
         String logoUrl = game.getLogoUrl();
         if (logoUrl == null || logoUrl.isBlank()) {
             logoUrl = GameAssetPolicy.LOGO_NONE;
@@ -920,7 +943,7 @@ public class GameCatalogService {
 
         return new GameCatalogSearchResponse(
                 game.getId(),
-                game.getSlug(),
+                responseSlug,
                 game.getGameName(),
                 logoUrl.trim(),
                 game.getCoverUrl(),

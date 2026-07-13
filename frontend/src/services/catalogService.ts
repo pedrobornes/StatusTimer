@@ -1,5 +1,6 @@
 import type { ApiRequestOptions } from "@/services/api";
 import { fetchJson, postJson } from "@/services/api";
+import { dedupeCatalogSearchResults } from "@/lib/gameSlugs";
 import type { GameTelemetry } from "@/types/telemetry";
 
 export interface GameCatalogPage {
@@ -70,12 +71,16 @@ export interface GameActivationResult {
   jobQueued: boolean;
 }
 
-export function searchGames(query: string): Promise<GameCatalogSearchResult[]> {
+export async function searchGames(
+  query: string,
+): Promise<GameCatalogSearchResult[]> {
   const params = new URLSearchParams({ q: query });
-  return fetchJson<GameCatalogSearchResult[]>(
+  const results = await fetchJson<GameCatalogSearchResult[]>(
     `/api/v1/games/search?${params.toString()}`,
     { cache: "no-store", revalidate: 0 },
   );
+
+  return dedupeCatalogSearchResults(results);
 }
 
 export function fetchIndexableSlugs(): Promise<GameIndexableSlug[]> {

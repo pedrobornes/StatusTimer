@@ -262,4 +262,29 @@ class GameCatalogServiceSearchTest {
 
         assertTrue(results.stream().anyMatch(result -> "halloween-the-game".equals(result.slug())));
     }
+
+    @Test
+    void searchDeduplicatesTrademarkAliasSlug() {
+        gameRepository.save(Game.builder()
+                .slug("sluggy-adventure")
+                .gameName("Sluggy Adventure")
+                .lifecycleState(LifecycleState.CATALOG)
+                .build());
+        gameRepository.save(Game.builder()
+                .slug("sluggy-adventure-tm")
+                .gameName("Sluggy Adventure TM")
+                .lifecycleState(LifecycleState.CATALOG)
+                .build());
+
+        when(igdbSearchClient.search(anyString(), anyInt())).thenReturn(List.of());
+
+        List<GameCatalogSearchResponse> results = gameCatalogService.search("sluggy adventure");
+
+        long canonicalMatches = results.stream()
+                .filter(result -> "sluggy-adventure".equals(result.slug()))
+                .count();
+
+        assertEquals(1, canonicalMatches);
+        assertFalse(results.stream().anyMatch(result -> "sluggy-adventure-tm".equals(result.slug())));
+    }
 }

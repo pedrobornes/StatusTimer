@@ -57,3 +57,23 @@ function normalizeCatalogSlug(slug: string): string {
 export function resolveCanonicalGameSlug(slug: string): string {
   return normalizeCatalogSlug(slug);
 }
+
+export function dedupeCatalogSearchResults<T extends { slug: string }>(
+  results: T[],
+): T[] {
+  const byCanonical = new Map<string, T>();
+
+  for (const result of results) {
+    const canonicalSlug = resolveCanonicalGameSlug(result.slug);
+    const normalized =
+      canonicalSlug === result.slug
+        ? result
+        : ({ ...result, slug: canonicalSlug } as T);
+
+    if (!byCanonical.has(canonicalSlug)) {
+      byCanonical.set(canonicalSlug, normalized);
+    }
+  }
+
+  return [...byCanonical.values()];
+}

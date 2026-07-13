@@ -10,6 +10,7 @@ import { CATALOG_SEARCH_HINT } from "@/config/seo";
 import { resolveCatalogImageUrl } from "@/lib/gameAssets";
 import { resolveGenres } from "@/lib/genres";
 import { canTrackSteamPlayers } from "@/lib/gameType";
+import { resolveCanonicalGameSlug } from "@/lib/gameSlugs";
 import { getUserFacingErrorMessage } from "@/services/api";
 import { activateGame, searchGames } from "@/services/catalogService";
 import { getUpcomingReleases } from "@/services/releasesService";
@@ -50,22 +51,23 @@ export default function GameSearchBar({
       setActiveIndex(0);
       inputRef.current?.blur();
 
-      const normalizedSlug = game.slug.toLowerCase();
+      const canonicalSlug = resolveCanonicalGameSlug(game.slug);
+      const normalizedSlug = canonicalSlug.toLowerCase();
       const isUpcoming =
         game.upcomingRelease === true || upcomingSlugs.has(normalizedSlug);
 
       if (isUpcoming) {
-        router.push(APP_ROUTES.release(game.slug));
+        router.push(APP_ROUTES.release(canonicalSlug));
         return;
       }
 
       try {
-        await activateGame(game.slug);
+        await activateGame(canonicalSlug);
       } catch {
         // Navigation still proceeds; the status page triggers activation again.
       }
 
-      router.push(APP_ROUTES.status(game.slug));
+      router.push(APP_ROUTES.status(canonicalSlug));
     },
     [router, upcomingSlugs],
   );
