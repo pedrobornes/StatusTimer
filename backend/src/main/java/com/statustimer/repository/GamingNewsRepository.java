@@ -18,6 +18,47 @@ public interface GamingNewsRepository extends JpaRepository<GamingNews, Long> {
 
     List<GamingNews> findByGame_Id(Long gameId);
 
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+            value = """
+                    UPDATE gaming_news
+                    SET game_id = :canonicalId,
+                        game_tag = :canonicalSlug
+                    WHERE game_id = :duplicateId
+                    """,
+            nativeQuery = true
+    )
+    int reassignGameIdToCanonical(
+            @Param("canonicalId") Long canonicalId,
+            @Param("canonicalSlug") String canonicalSlug,
+            @Param("duplicateId") Long duplicateId
+    );
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+            value = """
+                    UPDATE gaming_news
+                    SET game_id = :canonicalId,
+                        game_tag = :canonicalSlug
+                    WHERE LOWER(game_tag) = LOWER(:duplicateSlug)
+                      AND (game_id IS NULL OR game_id = :duplicateId)
+                    """,
+            nativeQuery = true
+    )
+    int reassignGameTagToCanonical(
+            @Param("canonicalId") Long canonicalId,
+            @Param("canonicalSlug") String canonicalSlug,
+            @Param("duplicateSlug") String duplicateSlug,
+            @Param("duplicateId") Long duplicateId
+    );
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+            value = "UPDATE gaming_news SET game_id = NULL WHERE game_id = :duplicateId",
+            nativeQuery = true
+    )
+    int detachGameId(@Param("duplicateId") Long duplicateId);
+
     @Query("""
             SELECT n FROM GamingNews n
             LEFT JOIN n.game g

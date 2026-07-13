@@ -19,7 +19,7 @@ public interface GameTelemetryHistoryRepository extends JpaRepository<GameTeleme
             LocalDateTime checkedAt
     );
 
-    @Modifying(clearAutomatically = true)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM GameTelemetryHistory h WHERE h.game.id = :gameId")
     int deleteByGame_Id(@Param("gameId") Long gameId);
 

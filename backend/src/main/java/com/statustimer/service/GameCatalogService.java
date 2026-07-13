@@ -16,7 +16,6 @@ import com.statustimer.dto.response.GameIndexableSlugResponse;
 import com.statustimer.dto.response.SyncGameCatalogResponse;
 import com.statustimer.config.GameTypeResolver;
 import com.statustimer.entity.Game;
-import com.statustimer.entity.GamingNews;
 import com.statustimer.entity.GameType;
 import com.statustimer.entity.LifecycleState;
 import com.statustimer.integration.IgdbSearchClient;
@@ -750,6 +749,8 @@ public class GameCatalogService {
     @Transactional
     public int reconcileDuplicateCatalogSlugs() {
         int reconciled = 0;
+        TransactionTemplate template = new TransactionTemplate(transactionManager);
+        template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
 
         for (Game game : List.copyOf(gameRepository.findAll())) {
             String slug = game.getSlug();
@@ -758,8 +759,15 @@ public class GameCatalogService {
                 continue;
             }
 
+            Long gameId = game.getId();
+            if (gameId == null) {
+                continue;
+            }
+
             try {
-                reconciled += reconcileDuplicateCatalogSlug(game, slug, canonicalSlug);
+                Integer updated = template.execute(status ->
+                        reconcileDuplicateCatalogSlugInTransaction(gameId, slug, canonicalSlug));
+                reconciled += updated == null ? 0 : updated;
             } catch (RuntimeException exception) {
                 log.warn(
                         "Failed to reconcile duplicate catalog slug '{}' -> '{}'",
@@ -775,6 +783,19 @@ public class GameCatalogService {
         }
 
         return reconciled;
+    }
+
+    private int reconcileDuplicateCatalogSlugInTransaction(
+            Long gameId,
+            String slug,
+            String canonicalSlug
+    ) {
+        Game game = gameRepository.findById(gameId).orElse(null);
+        if (game == null) {
+            return 0;
+        }
+
+        return reconcileDuplicateCatalogSlug(game, slug, canonicalSlug);
     }
 
     private int reconcileDuplicateCatalogSlug(Game game, String slug, String canonicalSlug) {
@@ -851,21 +872,27 @@ public class GameCatalogService {
             return;
         }
 
-        for (GamingNews news : gamingNewsRepository.findByGame_Id(duplicateId)) {
-            news.setGame(canonical);
-            if (news.getGameTag() == null || news.getGameTag().isBlank()) {
-                news.setGameTag(canonical.getSlug());
-            }
-            gamingNewsRepository.save(news);
-        }
+        gamingNewsRepository.reassignGameIdToCanonical(
+                canonicalId,
+                canonical.getSlug(),
+                duplicateId
+        );
+        gamingNewsRepository.reassignGameTagToCanonical(
+                canonicalId,
+                canonical.getSlug(),
+                duplicate.getSlug(),
+                duplicateId
+        );
 
         gameTelemetryRepository.findByGame_Slug(duplicate.getSlug())
                 .ifPresent(aliasTelemetry -> {
                     if (gameTelemetryRepository.findByGame_Slug(canonical.getSlug()).isPresent()) {
                         gameTelemetryRepository.delete(aliasTelemetry);
+                        gameTelemetryRepository.flush();
                     } else {
                         aliasTelemetry.setGame(canonical);
                         gameTelemetryRepository.save(aliasTelemetry);
+                        gameTelemetryRepository.flush();
                     }
                 });
 
@@ -875,6 +902,12 @@ public class GameCatalogService {
 
     private void deleteDuplicateCatalogGame(Game canonical, Game duplicate) {
         reassignDuplicateForeignKeys(canonical, duplicate);
+
+        Long duplicateId = duplicate.getId();
+        if (duplicateId != null) {
+            gamingNewsRepository.detachGameId(duplicateId);
+        }
+
         gameRepository.delete(duplicate);
         gameRepository.flush();
     }
