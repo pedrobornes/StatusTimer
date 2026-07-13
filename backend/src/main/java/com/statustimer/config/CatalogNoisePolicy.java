@@ -70,13 +70,24 @@ public final class CatalogNoisePolicy {
     }
 
     public static boolean isQuarantined(Game game) {
-        return game != null
-                && IndexabilityProperties.STALE_REASON_TWITCH_CATEGORY.equals(game.getStaleReason());
+        if (game == null || game.getStaleReason() == null) {
+            return false;
+        }
+
+        String staleReason = game.getStaleReason();
+        return IndexabilityProperties.STALE_REASON_TWITCH_CATEGORY.equals(staleReason)
+                || IndexabilityProperties.STALE_REASON_PROTECTED_TITLE_SPINOFF.equals(staleReason)
+                || IndexabilityProperties.STALE_REASON_EXCLUDED_CATALOG_PROFILE.equals(staleReason);
+    }
+
+    public static boolean isProtectedTitleSpinoff(Game game) {
+        return game != null && ManualProtectedCatalogPolicy.isProtectedTitleSpinoff(game.getSlug());
     }
 
     public static boolean shouldSkipCatalogSurfacing(Game game) {
         return isQuarantined(game)
                 || isTwitchCategoryNoise(game)
+                || isProtectedTitleSpinoff(game)
                 || CatalogMatureContentPolicy.shouldSkipCatalogSurfacing(game);
     }
 
@@ -100,6 +111,29 @@ public final class CatalogNoisePolicy {
             if (game.getLifecycleState() == null) {
                 game.setLifecycleState(LifecycleState.CATALOG);
             }
+        }
+
+        return true;
+    }
+
+    /**
+     * Marks IGDB spinoffs of manually protected tier-1 titles so they stay out of search and SEO.
+     *
+     * @return true when the game is quarantined (already or newly)
+     */
+    public static boolean applyQuarantineIfProtectedTitleSpinoff(Game game) {
+        if (game == null) {
+            return false;
+        }
+
+        if (!ManualProtectedCatalogPolicy.isProtectedTitleSpinoff(game.getSlug())) {
+            return false;
+        }
+
+        game.setStaleReason(IndexabilityProperties.STALE_REASON_PROTECTED_TITLE_SPINOFF);
+        game.setIsIndexable(false);
+        if (game.getLifecycleState() == null) {
+            game.setLifecycleState(LifecycleState.CATALOG);
         }
 
         return true;

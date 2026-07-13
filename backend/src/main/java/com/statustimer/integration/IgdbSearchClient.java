@@ -2,6 +2,7 @@ package com.statustimer.integration;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.statustimer.config.GameAssetPolicy;
+import com.statustimer.config.CatalogDiscoveryPolicy;
 import com.statustimer.config.CatalogMatureContentPolicy;
 import com.statustimer.config.IgdbProperties;
 import com.statustimer.util.IgdbExternalLinksSupport;
@@ -216,20 +217,11 @@ public class IgdbSearchClient {
         List<String> genreNames = parseNames(row.path("genres"));
         List<String> themeNames = parseNames(row.path("themes"));
         String slug = row.path("slug").asText("");
-        if (CatalogMatureContentPolicy.containsBannedWord(name)
-                || CatalogMatureContentPolicy.containsBannedWord(slug)) {
-            return Optional.empty();
-        }
 
-        if (CatalogMatureContentPolicy.hasMatureLabels(genreNames)
-                || CatalogMatureContentPolicy.hasMatureLabels(themeNames)) {
-            return Optional.empty();
-        }
-
-        return Optional.of(new IgdbGameMatch(
+        IgdbGameMatch candidate = new IgdbGameMatch(
                 igdbId,
                 name,
-                row.path("slug").asText(""),
+                slug,
                 logoUrl,
                 coverUrl,
                 resolveSteamAppId(row.path("external_games")),
@@ -243,7 +235,13 @@ public class IgdbSearchClient {
                 trailerVideoIds,
                 youtubeData.channelUrl(),
                 externalLinks
-        ));
+        );
+
+        if (CatalogDiscoveryPolicy.isExcludedIgdbMatch(candidate)) {
+            return Optional.empty();
+        }
+
+        return Optional.of(candidate);
     }
 
     private String resolveLogoUrl(JsonNode row, String coverImageId) {

@@ -15,6 +15,8 @@ public record IndexabilityProperties(
     public static final String STALE_REASON_STALE_TELEMETRY = "STALE_TELEMETRY";
     public static final String STALE_REASON_TWITCH_CATEGORY = "TWITCH_CATEGORY";
     public static final String STALE_REASON_MATURE_CONTENT = "MATURE_CONTENT";
+    public static final String STALE_REASON_PROTECTED_TITLE_SPINOFF = "PROTECTED_TITLE_SPINOFF";
+    public static final String STALE_REASON_EXCLUDED_CATALOG_PROFILE = "EXCLUDED_CATALOG_PROFILE";
 
     public IndexabilityProperties {
         if (monitoringAgeHours <= 0) {

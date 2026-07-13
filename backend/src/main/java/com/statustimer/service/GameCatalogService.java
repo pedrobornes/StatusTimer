@@ -1,11 +1,13 @@
 package com.statustimer.service;
 
+import com.statustimer.config.CatalogDiscoveryPolicy;
 import com.statustimer.config.CatalogMatureContentPolicy;
 import com.statustimer.config.CatalogNoisePolicy;
 import com.statustimer.config.GameAssetPolicy;
 import com.statustimer.config.CacheConfig;
 import com.statustimer.config.GameSlugMapper;
 import com.statustimer.config.KnownSteamAppRegistry;
+import com.statustimer.config.ManualProtectedCatalogPolicy;
 import com.statustimer.config.PinnedGamePolicy;
 import com.statustimer.config.SteamAppIdPolicy;
 import com.statustimer.config.TrackedGameCatalog;
@@ -58,11 +60,6 @@ public class GameCatalogService {
     private static final int STARTUP_STEAM_ENRICH_LIMIT = 10;
     private static final int STARTUP_IGDB_ENRICH_LIMIT = 6;
 
-    private static final Set<String> MANUAL_PROTECTED_SLUGS = Set.of(
-            "valorant",
-            "fortnite",
-            "counter-strike-2"
-    );
     private static final int IGDB_DISCOVERY_LIMIT = 8;
 
     private final GameRepository gameRepository;
@@ -399,7 +396,9 @@ public class GameCatalogService {
         appendTrackedCatalogMatches(trimmed, results, seenSlugs);
 
         int remaining = IGDB_DISCOVERY_LIMIT - results.size();
-        if (remaining > 0 && igdbSearchClient.isConfigured()) {
+        if (remaining > 0
+                && igdbSearchClient.isConfigured()
+                && !ManualProtectedCatalogPolicy.isExactProtectedTitleQuery(trimmed)) {
             try {
                 appendIgdbDiscoveryMatches(trimmed, results, seenSlugs, remaining);
             } catch (RuntimeException exception) {
@@ -557,6 +556,8 @@ public class GameCatalogService {
             }
 
             CatalogMatureContentPolicy.applyQuarantineIfMature(game);
+            CatalogDiscoveryPolicy.applyQuarantineIfExcluded(game);
+            CatalogNoisePolicy.applyQuarantineIfProtectedTitleSpinoff(game);
             gameRepository.save(game);
             if (CatalogNoisePolicy.shouldSkipCatalogSurfacing(game)) {
                 continue;
@@ -631,18 +632,26 @@ public class GameCatalogService {
                 .gameName(metadata.gameName())
                 .steamAppId(metadata.appId())
                 .featured(metadata.featured())
-                .manualLock(MANUAL_PROTECTED_SLUGS.contains(slug))
+                .manualLock(ManualProtectedCatalogPolicy.SLUGS.contains(slug))
                 .lifecycleState(LifecycleState.CATALOG)
                 .build();
     }
 
     private Game upsertFromIgdbDiscovery(IgdbGameMatch match) {
+        if (CatalogDiscoveryPolicy.isExcludedIgdbMatch(match)) {
+            return null;
+        }
+
         String slug = resolveDiscoverySlug(match);
         if (slug.isBlank()) {
             return null;
         }
 
-        if (CatalogMatureContentPolicy.isMatureIgdbMatch(match)) {
+        if (ManualProtectedCatalogPolicy.isProtectedTitleSpinoff(slug)) {
+            gameRepository.findBySlug(slug).ifPresent(spinoff -> {
+                CatalogNoisePolicy.applyQuarantineIfProtectedTitleSpinoff(spinoff);
+                gameRepository.save(spinoff);
+            });
             return null;
         }
 
@@ -655,7 +664,7 @@ public class GameCatalogService {
             return gameRepository.findBySlug(slug).orElse(null);
         }
 
-        if (MANUAL_PROTECTED_SLUGS.contains(slug)) {
+        if (ManualProtectedCatalogPolicy.SLUGS.contains(slug)) {
             return gameRepository.findBySlug(slug).orElse(null);
         }
 
@@ -780,6 +789,53 @@ public class GameCatalogService {
         }
 
         return reconciled;
+    }
+
+    @Transactional
+    public int reconcileProtectedTitleSpinoffs() {
+        int quarantined = 0;
+
+        for (Game game : List.copyOf(gameRepository.findAll())) {
+            if (!ManualProtectedCatalogPolicy.isProtectedTitleSpinoff(game.getSlug())) {
+                continue;
+            }
+
+            if (CatalogNoisePolicy.applyQuarantineIfProtectedTitleSpinoff(game)) {
+                gameRepository.save(game);
+                quarantined++;
+            }
+        }
+
+        if (quarantined > 0) {
+            log.info("Quarantined {} protected-title spinoff catalog row(s)", quarantined);
+        }
+
+        return quarantined;
+    }
+
+    @Transactional
+    public int reconcileExcludedCatalogProfiles() {
+        int quarantined = 0;
+
+        for (Game game : List.copyOf(gameRepository.findAll())) {
+            if (!CatalogDiscoveryPolicy.shouldSkipCatalogSurfacing(game)
+                    && !CatalogMatureContentPolicy.isMatureGame(game)) {
+                continue;
+            }
+
+            boolean changed = CatalogMatureContentPolicy.applyQuarantineIfMature(game)
+                    || CatalogDiscoveryPolicy.applyQuarantineIfExcluded(game);
+            if (changed) {
+                gameRepository.save(game);
+                quarantined++;
+            }
+        }
+
+        if (quarantined > 0) {
+            log.info("Quarantined {} excluded catalog profile row(s)", quarantined);
+        }
+
+        return quarantined;
     }
 
     private int reconcileDuplicateCatalogSlugInTransaction(
@@ -1009,7 +1065,7 @@ public class GameCatalogService {
                 continue;
             }
 
-            if (MANUAL_PROTECTED_SLUGS.contains(targetSlug)) {
+            if (ManualProtectedCatalogPolicy.SLUGS.contains(targetSlug)) {
                 if (updateTwitchMetricsOnly(payload, targetSlug)) {
                     updated++;
                 } else {

@@ -2,6 +2,7 @@ package com.statustimer.service;
 
 import com.statustimer.config.CatalogMonitoringPolicy;
 import com.statustimer.config.CatalogMatureContentPolicy;
+import com.statustimer.config.CatalogNoisePolicy;
 import com.statustimer.config.GameSlugMapper;
 import com.statustimer.dto.response.GameStatusDetailResponse;
 import com.statustimer.dto.response.GameTelemetryResponse;
@@ -50,7 +51,8 @@ public class GameStatusService {
 
         Optional<Game> existingGame = gameRepository.findBySlug(canonicalSlug);
         if (existingGame.isPresent()
-                && CatalogMatureContentPolicy.shouldSkipCatalogSurfacing(existingGame.get())) {
+                && (CatalogMatureContentPolicy.shouldSkipCatalogSurfacing(existingGame.get())
+                || CatalogNoisePolicy.shouldSkipCatalogSurfacing(existingGame.get()))) {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND,
                     "Game not found for slug: " + slug

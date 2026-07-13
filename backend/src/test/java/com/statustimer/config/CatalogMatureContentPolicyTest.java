@@ -50,6 +50,14 @@ class CatalogMatureContentPolicyTest {
     }
 
     @Test
+    void bansSexualDiscoverySlugsAndTitles() {
+        assertThat(CatalogMatureContentPolicy.containsBannedWord("sex")).isTrue();
+        assertThat(CatalogMatureContentPolicy.containsBannedWord("sex2")).isTrue();
+        assertThat(CatalogMatureContentPolicy.containsBannedWord("sex-any-cost-but-free")).isTrue();
+        assertThat(CatalogMatureContentPolicy.containsBannedWord("Sex Any Cost But Free")).isTrue();
+    }
+
+    @Test
     void doesNotBanGayAsSubstring() {
         assertThat(CatalogMatureContentPolicy.containsBannedWord("pagay")).isFalse();
         assertThat(CatalogMatureContentPolicy.containsBannedWord("pagay-adventure")).isFalse();

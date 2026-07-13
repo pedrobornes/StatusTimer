@@ -47,6 +47,18 @@ public class CatalogLifecycleMigrationRunner implements CommandLineRunner {
             log.warn("Failed to reconcile duplicate catalog slugs during startup", exception);
         }
 
+        try {
+            gameCatalogService.reconcileProtectedTitleSpinoffs();
+        } catch (RuntimeException exception) {
+            log.warn("Failed to quarantine protected-title spinoffs during startup", exception);
+        }
+
+        try {
+            gameCatalogService.reconcileExcludedCatalogProfiles();
+        } catch (RuntimeException exception) {
+            log.warn("Failed to quarantine excluded catalog profiles during startup", exception);
+        }
+
         int removedNewsDuplicates = 0;
         try {
             removedNewsDuplicates = gamingNewsService.reconcileDuplicateNews();

@@ -316,4 +316,42 @@ class GameCatalogServiceSearchTest {
                 .filter(result -> "mystery-upcoming-title".equals(result.slug()))
                 .anyMatch(result -> Boolean.TRUE.equals(result.upcomingRelease())));
     }
+
+    @Test
+    void searchHidesProtectedTitleSpinoffsForFortnite() {
+        gameRepository.save(Game.builder()
+                .slug("fortnite-2")
+                .gameName("Fortnite 2")
+                .lifecycleState(LifecycleState.CATALOG)
+                .build());
+        gameRepository.save(Game.builder()
+                .slug("fortnite-2-love-on-the-battlefield")
+                .gameName("Fortnite 2: Love on the Battlefield")
+                .lifecycleState(LifecycleState.CATALOG)
+                .build());
+
+        when(igdbSearchClient.search(anyString(), anyInt())).thenReturn(List.of());
+
+        List<GameCatalogSearchResponse> results = gameCatalogService.search("fortnite");
+
+        assertEquals(1, results.size());
+        assertEquals("fortnite", results.getFirst().slug());
+        assertFalse(results.stream().anyMatch(result -> result.slug().startsWith("fortnite-")));
+    }
+
+    @Test
+    void searchHidesVisualNovelSpam() {
+        gameRepository.save(Game.builder()
+                .slug("sex-any-cost-but-free")
+                .gameName("Sex Any Cost But Free")
+                .genreName("Visual Novel")
+                .lifecycleState(LifecycleState.CATALOG)
+                .build());
+
+        when(igdbSearchClient.search(anyString(), anyInt())).thenReturn(List.of());
+
+        List<GameCatalogSearchResponse> results = gameCatalogService.search("sex");
+
+        assertTrue(results.isEmpty());
+    }
 }

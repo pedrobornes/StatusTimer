@@ -44,7 +44,19 @@ public final class CatalogMatureContentPolicy {
     );
 
     private static final Set<String> BANNED_WHOLE_WORDS = Set.of(
-            "gay"
+            "gay",
+            "sex",
+            "porn",
+            "hentai",
+            "xxx",
+            "nsfw",
+            "nude",
+            "erotic"
+    );
+
+    private static final Pattern SEXUAL_SLUG_PREFIX = Pattern.compile(
+            "^(?:sex|porn|hentai|xxx|nsfw)(?:[0-9]+|-|$)",
+            Pattern.CASE_INSENSITIVE
     );
 
     private static final List<Pattern> BANNED_WHOLE_WORD_PATTERNS = BANNED_WHOLE_WORDS.stream()
@@ -60,8 +72,11 @@ public final class CatalogMatureContentPolicy {
         }
 
         String normalized = value.trim();
-        return BANNED_WHOLE_WORD_PATTERNS.stream()
-                .anyMatch(pattern -> pattern.matcher(normalized).find());
+        if (BANNED_WHOLE_WORD_PATTERNS.stream().anyMatch(pattern -> pattern.matcher(normalized).find())) {
+            return true;
+        }
+
+        return SEXUAL_SLUG_PREFIX.matcher(normalized).find();
     }
 
     public static boolean containsMatureLabel(String value) {
@@ -122,6 +137,10 @@ public final class CatalogMatureContentPolicy {
             return true;
         }
 
+        if (hasMatureLabels(game.getGenreNames())) {
+            return true;
+        }
+
         if (Boolean.TRUE.equals(game.getSteamAdultContent())) {
             return true;
         }
@@ -130,7 +149,7 @@ public final class CatalogMatureContentPolicy {
     }
 
     public static boolean shouldSkipCatalogSurfacing(Game game) {
-        return isMatureGame(game);
+        return isMatureGame(game) || CatalogDiscoveryPolicy.shouldSkipCatalogSurfacing(game);
     }
 
     /**
