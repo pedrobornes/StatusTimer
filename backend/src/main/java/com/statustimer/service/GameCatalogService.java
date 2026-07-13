@@ -558,6 +558,7 @@ public class GameCatalogService {
             CatalogMatureContentPolicy.applyQuarantineIfMature(game);
             CatalogDiscoveryPolicy.applyQuarantineIfExcluded(game);
             CatalogNoisePolicy.applyQuarantineIfProtectedTitleSpinoff(game);
+            CatalogNoisePolicy.applyQuarantineIfNoise(game);
             gameRepository.save(game);
             if (CatalogNoisePolicy.shouldSkipCatalogSurfacing(game)) {
                 continue;
@@ -808,6 +809,28 @@ public class GameCatalogService {
 
         if (quarantined > 0) {
             log.info("Quarantined {} protected-title spinoff catalog row(s)", quarantined);
+        }
+
+        return quarantined;
+    }
+
+    @Transactional
+    public int reconcileTwitchCategoryNoise() {
+        int quarantined = 0;
+
+        for (Game game : List.copyOf(gameRepository.findAll())) {
+            if (!CatalogNoisePolicy.isTwitchCategoryNoise(game)) {
+                continue;
+            }
+
+            if (CatalogNoisePolicy.applyQuarantineIfNoise(game)) {
+                gameRepository.save(game);
+                quarantined++;
+            }
+        }
+
+        if (quarantined > 0) {
+            log.info("Quarantined {} Twitch category noise row(s)", quarantined);
         }
 
         return quarantined;

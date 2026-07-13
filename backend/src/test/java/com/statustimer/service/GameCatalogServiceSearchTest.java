@@ -354,4 +354,19 @@ class GameCatalogServiceSearchTest {
 
         assertTrue(results.isEmpty());
     }
+
+    @Test
+    void searchHidesTwitchCategoryNoise() {
+        gameRepository.save(Game.builder()
+                .slug("tabletop-rpgs")
+                .gameName("Tabletop RPGs")
+                .lifecycleState(LifecycleState.CATALOG)
+                .build());
+
+        when(igdbSearchClient.search(anyString(), anyInt())).thenReturn(List.of());
+
+        List<GameCatalogSearchResponse> results = gameCatalogService.search("tabletop");
+
+        assertTrue(results.stream().noneMatch(result -> "tabletop-rpgs".equals(result.slug())));
+    }
 }

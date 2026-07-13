@@ -42,6 +42,7 @@ NON_GAME_CATEGORIES = frozenset(
         "games + demos",
         "animals, aquariums,and zoos",
         "animals, aquariums, and zoos",
+        "tabletop rpgs",
     }
 )
 

@@ -19,6 +19,12 @@ class CatalogNoisePolicyTest {
     }
 
     @Test
+    void detectsTabletopRpgsAsTwitchNoise() {
+        assertThat(CatalogNoisePolicy.isTwitchCategoryNoise("tabletop-rpgs", "Tabletop RPGs"))
+                .isTrue();
+    }
+
+    @Test
     void detectsAmericanIdolAsTwitchNoise() {
         assertThat(CatalogNoisePolicy.isTwitchCategoryNoise("american-idol", "American Idol"))
                 .isTrue();

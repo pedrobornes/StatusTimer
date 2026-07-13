@@ -54,6 +54,12 @@ public class CatalogLifecycleMigrationRunner implements CommandLineRunner {
         }
 
         try {
+            gameCatalogService.reconcileTwitchCategoryNoise();
+        } catch (RuntimeException exception) {
+            log.warn("Failed to quarantine Twitch category noise during startup", exception);
+        }
+
+        try {
             gameCatalogService.reconcileExcludedCatalogProfiles();
         } catch (RuntimeException exception) {
             log.warn("Failed to quarantine excluded catalog profiles during startup", exception);
