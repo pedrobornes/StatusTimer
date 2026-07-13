@@ -11,6 +11,8 @@ import static org.mockito.Mockito.never;
 
 import com.statustimer.dto.response.GameCatalogSearchResponse;
 import com.statustimer.entity.Game;
+import com.statustimer.entity.GamePlatform;
+import com.statustimer.entity.GamePlatformDetail;
 import com.statustimer.entity.LifecycleState;
 import com.statustimer.integration.IgdbSearchClient;
 import com.statustimer.integration.IgdbSearchClient.IgdbGameMatch;
@@ -286,5 +288,32 @@ class GameCatalogServiceSearchTest {
 
         assertEquals(1, canonicalMatches);
         assertFalse(results.stream().anyMatch(result -> "sluggy-adventure-tm".equals(result.slug())));
+    }
+
+    @Test
+    void searchMarksTbaReleasesWithPlatformTargetsAsUpcoming() {
+        Game tbaRelease = Game.builder()
+                .slug("mystery-upcoming-title")
+                .gameName("Mystery Upcoming Title")
+                .lifecycleState(LifecycleState.CATALOG)
+                .build();
+        tbaRelease.replacePlatforms(List.of(
+                GamePlatformDetail.builder()
+                        .platform(GamePlatform.PC)
+                        .releaseDate(null)
+                        .build()
+        ));
+        gameRepository.save(tbaRelease);
+
+        when(igdbSearchClient.search(anyString(), anyInt())).thenReturn(List.of());
+
+        List<GameCatalogSearchResponse> results = gameCatalogService.search("mystery upcoming");
+
+        assertEquals(1, results.stream()
+                .filter(result -> "mystery-upcoming-title".equals(result.slug()))
+                .count());
+        assertTrue(results.stream()
+                .filter(result -> "mystery-upcoming-title".equals(result.slug()))
+                .anyMatch(result -> Boolean.TRUE.equals(result.upcomingRelease())));
     }
 }

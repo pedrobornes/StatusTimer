@@ -927,8 +927,17 @@ public class GameCatalogService {
             return false;
         }
 
-        results.add(toSearchResponse(game, canonicalSlug));
+        Game searchableGame = loadGameForSearchResponse(canonicalSlug).orElse(game);
+        results.add(toSearchResponse(searchableGame, canonicalSlug));
         return true;
+    }
+
+    private Optional<Game> loadGameForSearchResponse(String canonicalSlug) {
+        if (canonicalSlug == null || canonicalSlug.isBlank()) {
+            return Optional.empty();
+        }
+
+        return gameRepository.findBySlugWithPlatforms(canonicalSlug);
     }
 
     private GameCatalogSearchResponse toSearchResponse(Game game) {
