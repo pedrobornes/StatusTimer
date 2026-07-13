@@ -5,6 +5,7 @@ import com.statustimer.entity.Game;
 import com.statustimer.repository.GameRepository;
 import com.statustimer.repository.GameTelemetryRepository;
 import com.statustimer.service.GameCatalogService;
+import com.statustimer.service.GamingNewsService;
 import com.statustimer.service.HarvestScheduleService;
 import com.statustimer.service.IndexabilityService;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class CatalogLifecycleMigrationRunner implements CommandLineRunner {
     private final GameRepository gameRepository;
     private final GameTelemetryRepository gameTelemetryRepository;
     private final GameCatalogService gameCatalogService;
+    private final GamingNewsService gamingNewsService;
     private final IndexabilityService indexabilityService;
     private final HarvestScheduleService harvestScheduleService;
 
@@ -40,6 +42,7 @@ public class CatalogLifecycleMigrationRunner implements CommandLineRunner {
         }
 
         gameCatalogService.reconcileDuplicateCatalogSlugs();
+        int removedNewsDuplicates = gamingNewsService.reconcileDuplicateNews();
         indexabilityService.recalculateAll();
         gameCatalogService.enforceAllPinnedGamePolicies();
         gameCatalogService.reconcileSteamAdultContentFlags();
@@ -48,6 +51,10 @@ public class CatalogLifecycleMigrationRunner implements CommandLineRunner {
 
         if (migrated > 0) {
             log.info("Backfilled lifecycle fields for {} tracked games", migrated);
+        }
+
+        if (removedNewsDuplicates > 0) {
+            log.info("Removed {} duplicate gaming news row(s)", removedNewsDuplicates);
         }
     }
 

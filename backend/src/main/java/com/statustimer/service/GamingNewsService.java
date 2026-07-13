@@ -8,13 +8,19 @@ import com.statustimer.entity.GamingNews;
 import com.statustimer.repository.GameRepository;
 import com.statustimer.repository.GamingNewsRepository;
 import com.statustimer.util.SlugUtils;
+import java.text.Normalizer;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -31,6 +37,7 @@ public class GamingNewsService {
     private static final int MAX_ITEMS_PER_GAME_IN_LATEST = 2;
     /** Safety cap while legacy MySQL columns may still be TEXT (64 KB). */
     private static final int MAX_CONTENT_CHARS = 60_000;
+    private static final Pattern NEWS_SLUG_NUMERIC_SUFFIX = Pattern.compile("-(\\d+)$");
 
     private final GamingNewsRepository gamingNewsRepository;
     private final GameRepository gameRepository;
@@ -48,6 +55,11 @@ public class GamingNewsService {
         return gamingNewsRepository.findAllByOrderByCreatedAtDesc().stream()
                 .sorted(Comparator.comparing(this::resolveSortTime).reversed())
                 .filter(entity -> matchesScrapeTier(entity, tierSlugs))
+                .collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toList(),
+                        this::deduplicateNews
+                ))
+                .stream()
                 .filter(entity -> {
                     String key = resolveGroupingKey(entity);
                     int current = perGameCount.getOrDefault(key, 0);
@@ -64,22 +76,15 @@ public class GamingNewsService {
     @Transactional(readOnly = true)
     public List<GamingNewsResponse> findByGameTag(String gameTag, int limit) {
         String canonicalSlug = gameTag == null ? "" : gameTag.trim();
-        List<GamingNews> linked = gamingNewsRepository.findByGame_SlugOrderByCreatedAtDesc(
+        List<GamingNews> matches = gamingNewsRepository.findAllForGameSlug(
                 canonicalSlug,
-                Pageable.ofSize(limit)
+                canonicalSlug,
+                Pageable.unpaged()
         );
 
-        if (!linked.isEmpty()) {
-            return linked.stream()
+        return deduplicateNews(matches).stream()
                 .sorted(Comparator.comparing(this::resolveSortTime).reversed())
-                .map(entity -> GamingNewsResponse.fromEntity(entity, gameCatalogService))
-                .toList();
-        }
-
-        return gamingNewsRepository
-                .findByGameTagOrderByCreatedAtDesc(canonicalSlug, Pageable.ofSize(limit))
-                .stream()
-                .sorted(Comparator.comparing(this::resolveSortTime).reversed())
+                .limit(limit)
                 .map(entity -> GamingNewsResponse.fromEntity(entity, gameCatalogService))
                 .toList();
     }
@@ -87,6 +92,11 @@ public class GamingNewsService {
     @Transactional
     @CacheEvict(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE, allEntries = true)
     public GamingNewsResponse create(CreateGamingNewsRequest request) {
+        Optional<GamingNews> existing = findDuplicateNews(request.gameTag(), request.title());
+        if (existing.isPresent()) {
+            return GamingNewsResponse.fromEntity(existing.get(), gameCatalogService);
+        }
+
         LocalDateTime ingestedAt = LocalDateTime.now();
         String baseSlug = buildNewsBaseSlug(request.gameTag(), request.title());
         String resolvedSlug = reserveUniqueNewsSlug(baseSlug);
@@ -104,6 +114,113 @@ public class GamingNewsService {
                 ),
                 gameCatalogService
         );
+    }
+
+    @Transactional
+    @CacheEvict(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE, allEntries = true)
+    public int reconcileDuplicateNews() {
+        Map<String, GamingNews> keepers = new LinkedHashMap<>();
+        List<GamingNews> duplicates = new ArrayList<>();
+
+        for (GamingNews item : gamingNewsRepository.findAllByOrderByCreatedAtDesc()) {
+            String dedupKey = buildNewsDedupKey(item);
+            GamingNews existing = keepers.get(dedupKey);
+            if (existing == null) {
+                keepers.put(dedupKey, item);
+                continue;
+            }
+
+            GamingNews preferred = pickPreferredDuplicate(existing, item);
+            GamingNews duplicate = preferred == existing ? item : existing;
+            keepers.put(dedupKey, preferred);
+            duplicates.add(duplicate);
+        }
+
+        if (!duplicates.isEmpty()) {
+            gamingNewsRepository.deleteAll(duplicates);
+        }
+
+        return duplicates.size();
+    }
+
+    private List<GamingNews> deduplicateNews(List<GamingNews> items) {
+        Map<String, GamingNews> unique = new LinkedHashMap<>();
+
+        items.stream()
+                .sorted(Comparator.comparing(this::resolveSortTime).reversed())
+                .forEach(item -> unique.putIfAbsent(buildNewsDedupKey(item), item));
+
+        return new ArrayList<>(unique.values());
+    }
+
+    private Optional<GamingNews> findDuplicateNews(String gameTag, String title) {
+        String normalizedTag = SlugUtils.toSlug(gameTag);
+        String normalizedTitle = normalizeNewsTitle(title);
+        if (normalizedTag.isBlank() || normalizedTitle.isBlank()) {
+            return Optional.empty();
+        }
+
+        return gamingNewsRepository.findAllForGameSlug(
+                        normalizedTag,
+                        normalizedTag,
+                        Pageable.unpaged()
+                ).stream()
+                .filter(item -> normalizedTitle.equals(normalizeNewsTitle(item.getTitle())))
+                .max(Comparator.comparing(this::resolveSortTime));
+    }
+
+    private String buildNewsDedupKey(GamingNews entity) {
+        return resolveGroupingKey(entity) + "|" + normalizeNewsTitle(entity.getTitle());
+    }
+
+    private GamingNews pickPreferredDuplicate(GamingNews left, GamingNews right) {
+        int leftPenalty = newsSlugSuffixPenalty(left.getNewsSlug());
+        int rightPenalty = newsSlugSuffixPenalty(right.getNewsSlug());
+        if (leftPenalty != rightPenalty) {
+            return leftPenalty < rightPenalty ? left : right;
+        }
+
+        LocalDateTime leftTime = resolveSortTime(left);
+        LocalDateTime rightTime = resolveSortTime(right);
+        if (!leftTime.isEqual(rightTime)) {
+            return leftTime.isAfter(rightTime) ? left : right;
+        }
+
+        long leftId = left.getId() == null ? Long.MIN_VALUE : left.getId();
+        long rightId = right.getId() == null ? Long.MIN_VALUE : right.getId();
+        return leftId < rightId ? left : right;
+    }
+
+    private int newsSlugSuffixPenalty(String slug) {
+        if (slug == null || slug.isBlank()) {
+            return Integer.MAX_VALUE;
+        }
+
+        Matcher matcher = NEWS_SLUG_NUMERIC_SUFFIX.matcher(slug);
+        if (!matcher.find()) {
+            return 0;
+        }
+
+        try {
+            return Integer.parseInt(matcher.group(1));
+        } catch (NumberFormatException ignored) {
+            return Integer.MAX_VALUE - 1;
+        }
+    }
+
+    private String normalizeNewsTitle(String title) {
+        if (title == null || title.isBlank()) {
+            return "";
+        }
+
+        String normalized = Normalizer.normalize(title, Normalizer.Form.NFKD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase()
+                .replaceAll("[!?.:;]+$", "")
+                .replaceAll("\\s+", " ")
+                .trim();
+
+        return normalized;
     }
 
     @Transactional(readOnly = true)
