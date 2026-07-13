@@ -19,6 +19,10 @@ public interface TelemetryDailyRollupRepository extends JpaRepository<TelemetryD
     );
 
     @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM TelemetryDailyRollup r WHERE r.game.id = :gameId")
+    int deleteByGame_Id(@Param("gameId") Long gameId);
+
+    @Modifying(clearAutomatically = true)
     @Query("DELETE FROM TelemetryDailyRollup r WHERE r.rollupDate < :cutoff")
     int deleteByRollupDateBefore(@Param("cutoff") LocalDate cutoff);
 }

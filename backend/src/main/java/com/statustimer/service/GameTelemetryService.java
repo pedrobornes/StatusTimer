@@ -234,12 +234,6 @@ public class GameTelemetryService {
                 gameTelemetryRepository.delete(aliasTelemetry);
             }
         });
-
-        gameRepository.findBySlug(aliasSlug).ifPresent(aliasGame -> {
-            if (gameRepository.findBySlug(canonicalSlug).isPresent()) {
-                gameRepository.delete(aliasGame);
-            }
-        });
     }
 
     @Transactional(readOnly = true)

@@ -15,8 +15,10 @@ import org.springframework.data.repository.query.Param;
 
 public interface GameRepository extends JpaRepository<Game, Long> {
 
-    @Query("SELECT g FROM Game g LEFT JOIN FETCH g.platforms WHERE g.slug = :slug")
     Optional<Game> findBySlug(String slug);
+
+    @Query("SELECT DISTINCT g FROM Game g LEFT JOIN FETCH g.platforms WHERE g.slug = :slug")
+    Optional<Game> findBySlugWithPlatforms(@Param("slug") String slug);
 
     Optional<Game> findByIgdbGameId(Long igdbGameId);
 

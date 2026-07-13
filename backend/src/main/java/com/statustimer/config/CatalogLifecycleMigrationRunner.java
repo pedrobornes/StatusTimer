@@ -41,8 +41,19 @@ public class CatalogLifecycleMigrationRunner implements CommandLineRunner {
             harvestScheduleService.ensureScheduleInitialized(game);
         }
 
-        gameCatalogService.reconcileDuplicateCatalogSlugs();
-        int removedNewsDuplicates = gamingNewsService.reconcileDuplicateNews();
+        try {
+            gameCatalogService.reconcileDuplicateCatalogSlugs();
+        } catch (RuntimeException exception) {
+            log.warn("Failed to reconcile duplicate catalog slugs during startup", exception);
+        }
+
+        int removedNewsDuplicates = 0;
+        try {
+            removedNewsDuplicates = gamingNewsService.reconcileDuplicateNews();
+        } catch (RuntimeException exception) {
+            log.warn("Failed to reconcile duplicate gaming news rows during startup", exception);
+        }
+
         indexabilityService.recalculateAll();
         gameCatalogService.enforceAllPinnedGamePolicies();
         gameCatalogService.reconcileSteamAdultContentFlags();

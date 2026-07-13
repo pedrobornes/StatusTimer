@@ -16,6 +16,7 @@ import com.statustimer.dto.response.GameIndexableSlugResponse;
 import com.statustimer.dto.response.SyncGameCatalogResponse;
 import com.statustimer.config.GameTypeResolver;
 import com.statustimer.entity.Game;
+import com.statustimer.entity.GamingNews;
 import com.statustimer.entity.GameType;
 import com.statustimer.entity.LifecycleState;
 import com.statustimer.integration.IgdbSearchClient;
@@ -24,7 +25,10 @@ import com.statustimer.integration.SteamStoreAppDetailsClient;
 import com.statustimer.integration.SteamStoreAppDetailsClient.SteamAppMetadata;
 import com.statustimer.dto.response.SteamStoreListingResponse;
 import com.statustimer.repository.GameRepository;
+import com.statustimer.repository.GameTelemetryHistoryRepository;
 import com.statustimer.repository.GameTelemetryRepository;
+import com.statustimer.repository.GamingNewsRepository;
+import com.statustimer.repository.TelemetryDailyRollupRepository;
 import com.statustimer.util.IgdbMetadataSupport;
 import com.statustimer.util.SearchQuerySupport;
 import com.statustimer.util.SlugUtils;
@@ -64,6 +68,9 @@ public class GameCatalogService {
 
     private final GameRepository gameRepository;
     private final GameTelemetryRepository gameTelemetryRepository;
+    private final GameTelemetryHistoryRepository gameTelemetryHistoryRepository;
+    private final TelemetryDailyRollupRepository telemetryDailyRollupRepository;
+    private final GamingNewsRepository gamingNewsRepository;
     private final IgdbSearchClient igdbSearchClient;
     private final GameSlugMapper gameSlugMapper;
     private final KnownSteamAppRegistry knownSteamAppRegistry;
@@ -751,30 +758,15 @@ public class GameCatalogService {
                 continue;
             }
 
-            Optional<Game> canonicalGame = gameRepository.findBySlug(canonicalSlug);
-            if (canonicalGame.isPresent()) {
-                mergeDuplicateIntoCanonical(canonicalGame.get(), game);
-                deleteDuplicateCatalogGame(game);
-                reconciled++;
-                continue;
-            }
-
-            game.setSlug(canonicalSlug);
             try {
-                gameRepository.saveAndFlush(game);
-                indexabilityService.recalculateForSlug(canonicalSlug);
-                reconciled++;
-            } catch (DataIntegrityViolationException exception) {
+                reconciled += reconcileDuplicateCatalogSlug(game, slug, canonicalSlug);
+            } catch (RuntimeException exception) {
                 log.warn(
-                        "Failed to rename duplicate catalog slug '{}' to '{}'; removing duplicate row",
+                        "Failed to reconcile duplicate catalog slug '{}' -> '{}'",
                         slug,
                         canonicalSlug,
                         exception
                 );
-                gameRepository.findBySlug(canonicalSlug).ifPresent(canonical -> {
-                    mergeDuplicateIntoCanonical(canonical, game);
-                    deleteDuplicateCatalogGame(game);
-                });
             }
         }
 
@@ -783,6 +775,34 @@ public class GameCatalogService {
         }
 
         return reconciled;
+    }
+
+    private int reconcileDuplicateCatalogSlug(Game game, String slug, String canonicalSlug) {
+        Optional<Game> canonicalGame = gameRepository.findBySlug(canonicalSlug);
+        if (canonicalGame.isPresent()) {
+            mergeDuplicateIntoCanonical(canonicalGame.get(), game);
+            deleteDuplicateCatalogGame(canonicalGame.get(), game);
+            return 1;
+        }
+
+        game.setSlug(canonicalSlug);
+        try {
+            gameRepository.saveAndFlush(game);
+            indexabilityService.recalculateForSlug(canonicalSlug);
+            return 1;
+        } catch (DataIntegrityViolationException exception) {
+            log.warn(
+                    "Failed to rename duplicate catalog slug '{}' to '{}'; removing duplicate row",
+                    slug,
+                    canonicalSlug,
+                    exception
+            );
+            gameRepository.findBySlug(canonicalSlug).ifPresent(canonical -> {
+                mergeDuplicateIntoCanonical(canonical, game);
+                deleteDuplicateCatalogGame(canonical, game);
+            });
+            return 1;
+        }
     }
 
     private void mergeDuplicateIntoCanonical(Game canonical, Game duplicate) {
@@ -824,10 +844,39 @@ public class GameCatalogService {
         }
     }
 
-    private void deleteDuplicateCatalogGame(Game duplicate) {
+    private void reassignDuplicateForeignKeys(Game canonical, Game duplicate) {
+        Long canonicalId = canonical.getId();
+        Long duplicateId = duplicate.getId();
+        if (canonicalId == null || duplicateId == null || canonicalId.equals(duplicateId)) {
+            return;
+        }
+
+        for (GamingNews news : gamingNewsRepository.findByGame_Id(duplicateId)) {
+            news.setGame(canonical);
+            if (news.getGameTag() == null || news.getGameTag().isBlank()) {
+                news.setGameTag(canonical.getSlug());
+            }
+            gamingNewsRepository.save(news);
+        }
+
         gameTelemetryRepository.findByGame_Slug(duplicate.getSlug())
-                .ifPresent(gameTelemetryRepository::delete);
+                .ifPresent(aliasTelemetry -> {
+                    if (gameTelemetryRepository.findByGame_Slug(canonical.getSlug()).isPresent()) {
+                        gameTelemetryRepository.delete(aliasTelemetry);
+                    } else {
+                        aliasTelemetry.setGame(canonical);
+                        gameTelemetryRepository.save(aliasTelemetry);
+                    }
+                });
+
+        gameTelemetryHistoryRepository.deleteByGame_Id(duplicateId);
+        telemetryDailyRollupRepository.deleteByGame_Id(duplicateId);
+    }
+
+    private void deleteDuplicateCatalogGame(Game canonical, Game duplicate) {
+        reassignDuplicateForeignKeys(canonical, duplicate);
         gameRepository.delete(duplicate);
+        gameRepository.flush();
     }
 
     private GameCatalogSearchResponse toSearchResponse(Game game) {

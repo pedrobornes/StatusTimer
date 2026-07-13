@@ -16,6 +16,8 @@ public interface GamingNewsRepository extends JpaRepository<GamingNews, Long> {
 
     List<GamingNews> findByGameTagOrderByCreatedAtDesc(String gameTag, Pageable pageable);
 
+    List<GamingNews> findByGame_Id(Long gameId);
+
     @Query("""
             SELECT n FROM GamingNews n
             LEFT JOIN n.game g

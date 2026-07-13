@@ -5,6 +5,7 @@ import com.statustimer.repository.GameRepository;
 import com.statustimer.service.GameCatalogService;
 import com.statustimer.service.GameTelemetryService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Order(-1)
 @RequiredArgsConstructor
+@Slf4j
 public class TrackedGameCatalogSeeder implements CommandLineRunner {
 
     private final GameRepository gameRepository;
@@ -32,7 +34,11 @@ public class TrackedGameCatalogSeeder implements CommandLineRunner {
             gameRepository.save(game);
         }
 
-        gameCatalogService.reconcileDuplicateCatalogSlugs();
+        try {
+            gameCatalogService.reconcileDuplicateCatalogSlugs();
+        } catch (RuntimeException exception) {
+            log.warn("Failed to reconcile duplicate catalog slugs during seeding", exception);
+        }
         gameTelemetryService.consolidateSlugAliases();
         gameCatalogService.enrichMissingLogos();
     }
