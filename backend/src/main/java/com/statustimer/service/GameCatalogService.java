@@ -10,6 +10,7 @@ import com.statustimer.config.KnownSteamAppRegistry;
 import com.statustimer.config.ManualProtectedCatalogPolicy;
 import com.statustimer.config.PinnedGamePolicy;
 import com.statustimer.config.SteamAppIdPolicy;
+import com.statustimer.config.SteamMetadataRefreshPolicy;
 import com.statustimer.config.TrackedGameCatalog;
 import com.statustimer.dto.request.GameCatalogEntryPayload;
 import com.statustimer.dto.request.SyncGameCatalogRequest;
@@ -72,6 +73,7 @@ public class GameCatalogService {
     private final KnownSteamAppRegistry knownSteamAppRegistry;
     private final IndexabilityService indexabilityService;
     private final SteamStoreAppDetailsClient steamStoreAppDetailsClient;
+    private final SteamMetadataRefreshPolicy steamMetadataRefreshPolicy;
     private final PlatformTransactionManager transactionManager;
 
     @Transactional(readOnly = true)
@@ -1282,6 +1284,34 @@ public class GameCatalogService {
     }
 
     @Transactional
+    public void refreshSteamStoreMetadataOnVisit(String slug) {
+        if (slug == null || slug.isBlank()) {
+            return;
+        }
+
+        if (steamStoreAppDetailsClient.isRateLimited()) {
+            return;
+        }
+
+        gameRepository.findBySlug(slug).ifPresent(game -> {
+            Integer appId = game.getSteamAppId();
+            if (appId == null || appId <= 0) {
+                return;
+            }
+
+            boolean incomplete = needsSteamStoreRefresh(game);
+            if (!incomplete && !steamMetadataRefreshPolicy.shouldRefreshOnVisit(slug)) {
+                return;
+            }
+
+            refreshSteamStoreMetadata(game);
+            applyPinnedGameType(game);
+            gameRepository.save(game);
+            steamMetadataRefreshPolicy.markRefreshed(slug);
+        });
+    }
+
+    @Transactional
     public void enrichCatalogProfileOnDemand(String slug) {
         if (slug == null || slug.isBlank()) {
             return;
@@ -1481,16 +1511,14 @@ public class GameCatalogService {
         int cleared = 0;
 
         for (Game game : gameRepository.findBySteamAdultContentTrueAndSteamAppIdIsNotNull()) {
-            boolean wasAdult = Boolean.TRUE.equals(game.getSteamAdultContent());
-            refreshSteamStoreMetadata(game);
-            if (wasAdult && !Boolean.TRUE.equals(game.getSteamAdultContent())) {
+            if (CatalogMatureContentPolicy.applyQuarantineIfMature(game)) {
                 cleared++;
+                gameRepository.save(game);
             }
-            gameRepository.save(game);
         }
 
         if (cleared > 0) {
-            log.info("Cleared steamAdultContent for {} games after relaxed Steam policy", cleared);
+            log.info("Re-evaluated steamAdultContent quarantine for {} games without Steam refresh", cleared);
         }
 
         return cleared;
@@ -1524,12 +1552,11 @@ public class GameCatalogService {
 
         for (Game game : gameRepository.findBySteamAppIdIsNotNull()) {
             GameType before = game.getGameType();
-            refreshSteamStoreMetadata(game);
             applyPinnedGameType(game);
             if (before != game.getGameType()) {
                 updated++;
+                gameRepository.save(game);
             }
-            gameRepository.save(game);
         }
 
         for (Game game : gameRepository.findBySteamAppIdIsNull()) {

@@ -82,6 +82,7 @@ class CatalogActivationServiceTest {
         assertThat(response.jobQueued()).isFalse();
         assertThat(game.getLifecycleState()).isEqualTo(LifecycleState.MONITORED);
         verify(harvestScheduleService).bumpScheduleAfterUserInterest(eq("apex-legends"));
+        verify(gameCatalogService).refreshSteamStoreMetadataOnVisit(eq("apex-legends"));
     }
 
     @Test

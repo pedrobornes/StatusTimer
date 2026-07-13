@@ -39,6 +39,7 @@ public class CatalogActivationService {
         }
 
         gameCatalogService.enrichCatalogProfileOnDemand(canonicalSlug);
+        gameCatalogService.refreshSteamStoreMetadataOnVisit(canonicalSlug);
         game = gameRepository.findBySlug(canonicalSlug).orElse(game);
 
         boolean catalogOnly = CatalogMonitoringPolicy.isCatalogOnlyProfile(game);

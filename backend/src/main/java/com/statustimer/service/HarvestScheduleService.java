@@ -122,6 +122,7 @@ public class HarvestScheduleService {
             LocalDateTime now = LocalDateTime.now();
             game.setNextTelemetryAt(now);
             game.setNextMetricsAt(now);
+            game.setNextNewsAt(now);
             gameRepository.save(game);
         });
     }
