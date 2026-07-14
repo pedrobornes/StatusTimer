@@ -1,4 +1,4 @@
-"""Official Fortnite news from fortnite.com with Epic MOTD fallback."""
+"""Official Fortnite news from fortnite.com with fortnite-api.com BR fallback."""
 
 from __future__ import annotations
 
@@ -28,12 +28,14 @@ FORTNITE_NEWS_LISTING_URL = "https://www.fortnite.com/news?lang=en-US"
 FORTNITE_NEWS_ARTICLE_TEMPLATE = "https://www.fortnite.com/news/{slug}?lang=en-US"
 FORTNITE_HOME_URL = "https://www.fortnite.com/?lang=en-US"
 
+FORTNITE_API_BR_NEWS_URL = "https://fortnite-api.com/v2/news/br"
+
 FORTNITE_CONTENT_API_TEMPLATE = (
     "https://fortnitecontent-website-prod07.ol.epicgames.com/content/api/pages/{page_slug}"
 )
+# Legacy Epic content pages kept as last-resort fallback (battleroyalenewsv2 removed: empty since 2022).
 FORTNITE_CONTENT_PAGES: tuple[str, ...] = (
     "fortnite-game/battleroyalenews",
-    "fortnite-game/battleroyalenewsv2",
     "fortnite-game/creativenews",
     "fortnite-game/savetheworldnews",
 )
@@ -149,10 +151,9 @@ class EpicNewsScraper:
         article_candidates = _collect_fortnite_site_articles(self._fortnite_session)
         if not article_candidates:
             logger.info(
-                "fortnite.com/news unavailable; using Epic MOTD fallback for %s",
+                "fortnite.com/news unavailable; trying fortnite-api.com BR news for %s",
                 target.game_name,
             )
-            article_candidates = []
 
         for candidate in article_candidates:
             if len(events) >= settings.epic_news_max_items:
@@ -169,19 +170,28 @@ class EpicNewsScraper:
             events.append(event)
 
         if not events:
-            for candidate in _collect_official_motd_candidates(self._session):
-                if len(events) >= settings.epic_news_max_items:
-                    break
+            events.extend(
+                _collect_motd_events(
+                    target,
+                    _collect_fortnite_api_br_motd_candidates(self._session),
+                    seen_titles=seen_titles,
+                    min_chars=min_chars,
+                )
+            )
 
-                event = _build_motd_event(target, candidate, min_chars=min_chars)
-                if event is None:
-                    continue
-
-                dedupe_key = _normalize_title_key(event.title)
-                if dedupe_key in seen_titles:
-                    continue
-                seen_titles.add(dedupe_key)
-                events.append(event)
+        if not events:
+            logger.info(
+                "fortnite-api.com BR news unavailable; using legacy Epic content fallback for %s",
+                target.game_name,
+            )
+            events.extend(
+                _collect_motd_events(
+                    target,
+                    _collect_legacy_epic_motd_candidates(self._session),
+                    seen_titles=seen_titles,
+                    min_chars=min_chars,
+                )
+            )
 
         return events
 
@@ -363,7 +373,92 @@ def _parse_fortnite_article(slug: str, source_url: str, html: str) -> _ArticleCa
     )
 
 
-def _collect_official_motd_candidates(session: requests.Session) -> list[_MotdCandidate]:
+def _collect_motd_events(
+    target: EpicNewsTarget,
+    candidates: list[_MotdCandidate],
+    *,
+    seen_titles: set[str],
+    min_chars: int,
+) -> list[ScrapedFeedEvent]:
+    events: list[ScrapedFeedEvent] = []
+
+    for candidate in candidates:
+        if len(events) >= settings.epic_news_max_items:
+            break
+
+        event = _build_motd_event(target, candidate, min_chars=min_chars)
+        if event is None:
+            continue
+
+        dedupe_key = _normalize_title_key(event.title)
+        if dedupe_key in seen_titles:
+            continue
+        seen_titles.add(dedupe_key)
+        events.append(event)
+
+    return events
+
+
+def _collect_fortnite_api_br_motd_candidates(session: requests.Session) -> list[_MotdCandidate]:
+    payload = fetch_json(session, FORTNITE_API_BR_NEWS_URL)
+    if not isinstance(payload, dict) or payload.get("status") != 200:
+        logger.info("fortnite-api.com BR news request returned no usable payload")
+        return []
+
+    data = payload.get("data")
+    if not isinstance(data, dict):
+        return []
+
+    page_date = _parse_iso_timestamp(data.get("date")) or datetime.now(timezone.utc)
+    motds = data.get("motds")
+    if not isinstance(motds, list):
+        return []
+
+    collected: list[_MotdCandidate] = []
+    seen_keys: set[str] = set()
+
+    for message in motds:
+        if not isinstance(message, dict):
+            continue
+
+        candidate = _motd_candidate_from_api_message(message, page_date)
+        if candidate is None:
+            continue
+
+        dedupe_key = f"{candidate.title}|{candidate.body[:120]}"
+        if dedupe_key in seen_keys:
+            continue
+        seen_keys.add(dedupe_key)
+        collected.append(candidate)
+
+    return collected
+
+
+def _motd_candidate_from_api_message(
+    message: dict[str, Any],
+    page_date: datetime,
+) -> _MotdCandidate | None:
+    if message.get("hidden") is True:
+        return None
+
+    title = str(message.get("title") or message.get("tabTitle") or "").strip()
+    body = str(message.get("body") or "").strip()
+    if not title or not body:
+        return None
+
+    message_id = message.get("id")
+    normalized_id = str(message_id).strip() if message_id is not None else None
+
+    return _MotdCandidate(
+        title=title,
+        body=body,
+        image_url=_resolve_message_image(message),
+        published_at=page_date,
+        message_id=normalized_id,
+    )
+
+
+def _collect_legacy_epic_motd_candidates(session: requests.Session) -> list[_MotdCandidate]:
     collected: list[_MotdCandidate] = []
     seen_keys: set[str] = set()
 

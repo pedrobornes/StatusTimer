@@ -7,8 +7,10 @@ from unittest.mock import Mock, patch
 from scrapers.epic_news import (
     EpicNewsScraper,
     EPIC_NEWS_TARGETS,
+    FORTNITE_CONTENT_PAGES,
     _ArticleCandidate,
     _MotdCandidate,
+    _collect_fortnite_api_br_motd_candidates,
     _extract_official_article_slugs,
     _is_fortnite_blocked_page,
     _is_low_signal_title,
@@ -51,6 +53,26 @@ MOTD_PAYLOAD = {
     },
 }
 
+FORTNITE_API_BR_PAYLOAD = {
+    "status": 200,
+    "data": {
+        "date": "2026-07-14T13:00:14Z",
+        "motds": [
+            {
+                "id": "a782e43b2875f7b5c259b217ca103314",
+                "title": "Fortnite: Runners Is Here!",
+                "body": (
+                    "Extract. Survive. Repeat! Choose a Sprite before each match for a "
+                    "Sprite Power, and rescue more during a match to build your Collection."
+                ),
+                "image": "https://cdn2.unrealengine.com/example.jpg",
+                "sortingPriority": 100,
+                "hidden": False,
+            }
+        ],
+    },
+}
+
 
 class EpicNewsTests(unittest.TestCase):
     def test_resolve_epic_news_target(self) -> None:
@@ -80,6 +102,9 @@ class EpicNewsTests(unittest.TestCase):
             _normalize_title_key("Fortnite Runners Is Here"),
         )
 
+    def test_legacy_content_pages_exclude_empty_battleroyalenewsv2(self) -> None:
+        self.assertNotIn("fortnite-game/battleroyalenewsv2", FORTNITE_CONTENT_PAGES)
+
     @patch("scrapers.epic_news._collect_fortnite_site_articles")
     def test_fetch_prefers_site_articles_over_motds(self, mock_site_articles) -> None:
         mock_site_articles.return_value = [
@@ -96,23 +121,57 @@ class EpicNewsTests(unittest.TestCase):
             )
         ]
 
-        with patch("scrapers.epic_news._collect_official_motd_candidates") as mock_motds:
+        with patch("scrapers.epic_news._collect_fortnite_api_br_motd_candidates") as mock_api_motds:
+            with patch("scrapers.epic_news._collect_legacy_epic_motd_candidates") as mock_legacy_motds:
+                scraper = EpicNewsScraper(session=Mock())
+                events = scraper.fetch_for_target(EPIC_NEWS_TARGETS[0])
+
+        self.assertEqual(len(events), 1)
+        self.assertTrue(events[0].external_id.startswith("fortnite-article-"))
+        mock_api_motds.assert_not_called()
+        mock_legacy_motds.assert_not_called()
+
+    @patch("scrapers.epic_news._collect_fortnite_site_articles")
+    @patch("scrapers.epic_news._collect_fortnite_api_br_motd_candidates")
+    def test_fetch_falls_back_to_fortnite_api_when_site_unavailable(
+        self,
+        mock_api_motds,
+        mock_site_articles,
+    ) -> None:
+        mock_site_articles.return_value = []
+        mock_api_motds.return_value = [
+            _MotdCandidate(
+                title="Fortnite: Runners Is Here!",
+                body=(
+                    "Extract. Survive. Repeat! Choose a Sprite before each match for a "
+                    "Sprite Power, and rescue more during a match to build your Collection."
+                ),
+                image_url="https://cdn2.unrealengine.com/example.jpg",
+                published_at=datetime(2026, 7, 14, 13, 0, 14, tzinfo=timezone.utc),
+                message_id="a782e43b2875f7b5c259b217ca103314",
+            )
+        ]
+
+        with patch("scrapers.epic_news._collect_legacy_epic_motd_candidates") as mock_legacy_motds:
             scraper = EpicNewsScraper(session=Mock())
             events = scraper.fetch_for_target(EPIC_NEWS_TARGETS[0])
 
         self.assertEqual(len(events), 1)
-        self.assertTrue(events[0].external_id.startswith("fortnite-article-"))
-        mock_motds.assert_not_called()
+        self.assertTrue(events[0].external_id.startswith("fortnite-motd-"))
+        mock_legacy_motds.assert_not_called()
 
     @patch("scrapers.epic_news._collect_fortnite_site_articles")
-    @patch("scrapers.epic_news._collect_official_motd_candidates")
-    def test_fetch_falls_back_to_motds_when_site_unavailable(
+    @patch("scrapers.epic_news._collect_fortnite_api_br_motd_candidates")
+    @patch("scrapers.epic_news._collect_legacy_epic_motd_candidates")
+    def test_fetch_falls_back_to_legacy_epic_content_when_api_unavailable(
         self,
-        mock_motds,
+        mock_legacy_motds,
+        mock_api_motds,
         mock_site_articles,
     ) -> None:
         mock_site_articles.return_value = []
-        mock_motds.return_value = [
+        mock_api_motds.return_value = []
+        mock_legacy_motds.return_value = [
             _MotdCandidate(
                 title="Fortnite: Runners Is Here!",
                 body=(
@@ -130,6 +189,16 @@ class EpicNewsTests(unittest.TestCase):
 
         self.assertEqual(len(events), 1)
         self.assertTrue(events[0].external_id.startswith("fortnite-motd-"))
+
+    @patch("scrapers.epic_news.fetch_json")
+    def test_collect_fortnite_api_br_motd_candidates(self, mock_fetch_json) -> None:
+        mock_fetch_json.return_value = FORTNITE_API_BR_PAYLOAD
+
+        candidates = _collect_fortnite_api_br_motd_candidates(Mock())
+
+        self.assertEqual(len(candidates), 1)
+        self.assertEqual(candidates[0].title, "Fortnite: Runners Is Here!")
+        self.assertEqual(candidates[0].message_id, "a782e43b2875f7b5c259b217ca103314")
 
     @patch("scrapers.epic_news._parse_fortnite_article")
     @patch("scrapers.epic_news._fetch_fortnite_html")
