@@ -445,7 +445,7 @@ public class GameTelemetryService {
         if (!suppressIncidentHistory) {
             appendHistorySnapshotIfNeeded(canonicalSlug, resolvedStatus, dataSource, checkedAt);
         }
-        touchTrackedGameAfterTelemetry(canonicalSlug, checkedAt);
+        touchTrackedGameAfterTelemetry(canonicalSlug, resolvedStatus, checkedAt);
         return isNew;
     }
 
@@ -474,7 +474,11 @@ public class GameTelemetryService {
                 || payload.status() == TelemetryStatus.MAINTENANCE;
     }
 
-    private void touchTrackedGameAfterTelemetry(String gameSlug, LocalDateTime checkedAt) {
+    private void touchTrackedGameAfterTelemetry(
+            String gameSlug,
+            TelemetryStatus status,
+            LocalDateTime checkedAt
+    ) {
         gameRepository.findBySlug(gameSlug).ifPresent(game -> {
             game.setLastTelemetryAt(checkedAt);
             game.setInitialTelemetryReady(true);
@@ -486,6 +490,9 @@ public class GameTelemetryService {
             gameRepository.save(game);
             catalogActivationService.markTelemetryReady(gameSlug);
             scrapeJobService.completeRunningJobsForSlug(gameSlug, ScrapeJobStatus.DONE);
+            if (status == TelemetryStatus.DOWN || status == TelemetryStatus.MAINTENANCE) {
+                harvestScheduleService.accelerateTelemetryForDegradedStatus(gameSlug);
+            }
             harvestScheduleService.recordTelemetrySuccess(gameSlug);
             indexabilityService.recalculateForSlug(gameSlug);
         });

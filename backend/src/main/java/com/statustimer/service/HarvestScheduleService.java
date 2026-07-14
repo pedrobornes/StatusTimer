@@ -5,10 +5,15 @@ import com.statustimer.dto.request.CompleteHarvestWorkRequest;
 import com.statustimer.dto.response.HarvestWorkTargetResponse;
 import com.statustimer.dto.response.HarvestWorkloadResponse;
 import com.statustimer.entity.Game;
+import com.statustimer.entity.GameTelemetry;
 import com.statustimer.entity.HarvestWorkType;
 import com.statustimer.entity.LifecycleState;
+import com.statustimer.entity.TelemetryStatus;
 import com.statustimer.repository.GameRepository;
+import com.statustimer.repository.GameTelemetryRepository;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -26,7 +31,13 @@ public class HarvestScheduleService {
             LifecycleState.INDEXABLE
     );
 
+    private static final Set<TelemetryStatus> DEGRADED_TELEMETRY = Set.of(
+            TelemetryStatus.DOWN,
+            TelemetryStatus.MAINTENANCE
+    );
+
     private final GameRepository gameRepository;
+    private final GameTelemetryRepository gameTelemetryRepository;
     private final GameCatalogService gameCatalogService;
     private final HarvestScheduleProperties harvestScheduleProperties;
 
@@ -127,16 +138,55 @@ public class HarvestScheduleService {
         });
     }
 
+    @Transactional
+    public void accelerateTelemetryForDegradedStatus(String slug) {
+        gameRepository.findBySlug(slug).ifPresent(game -> {
+            if (!isActiveMonitoring(game)) {
+                return;
+            }
+
+            game.setNextTelemetryAt(LocalDateTime.now());
+            gameRepository.save(game);
+        });
+    }
+
     private List<HarvestWorkTargetResponse> findTelemetryDue(LocalDateTime now) {
-        return gameRepository
+        int limit = harvestScheduleProperties.maxTelemetryPerCycle();
+        List<Game> dueGames = gameRepository
                 .findByLifecycleStateInAndNextTelemetryAtLessThanEqualOrderByScrapeTierAsc(
                         ACTIVE_MONITORING,
                         now,
-                        PageRequest.of(0, harvestScheduleProperties.maxTelemetryPerCycle())
-                )
-                .stream()
-                .map(this::toTargetResponse)
-                .toList();
+                        PageRequest.of(0, limit)
+                );
+
+        Set<String> includedSlugs = new LinkedHashSet<>();
+        List<HarvestWorkTargetResponse> targets = new ArrayList<>(dueGames.size());
+
+        for (Game game : dueGames) {
+            includedSlugs.add(game.getSlug());
+            targets.add(toTargetResponse(game));
+        }
+
+        if (targets.size() < limit) {
+            List<GameTelemetry> degraded = gameTelemetryRepository.findDegradedActiveMonitoring(
+                    DEGRADED_TELEMETRY,
+                    ACTIVE_MONITORING,
+                    PageRequest.of(0, limit - targets.size())
+            );
+
+            for (GameTelemetry telemetry : degraded) {
+                Game game = telemetry.getGame();
+                if (game == null || game.getSlug() == null || game.getSlug().isBlank()) {
+                    continue;
+                }
+
+                if (includedSlugs.add(game.getSlug())) {
+                    targets.add(toTargetResponse(game));
+                }
+            }
+        }
+
+        return targets;
     }
 
     private List<HarvestWorkTargetResponse> findMetricsDue(LocalDateTime now) {
@@ -172,10 +222,11 @@ public class HarvestScheduleService {
         int tier = java.util.Objects.requireNonNullElse(game.getScrapeTier(), 3);
 
         if (workType == HarvestWorkType.TELEMETRY) {
+            int scheduleTier = resolveTelemetryScheduleTier(game);
             if (success) {
                 game.setLastTelemetryAt(now);
                 game.setNextTelemetryAt(
-                        now.plusMinutes(harvestScheduleProperties.telemetryMinutesForTier(tier))
+                        now.plusMinutes(harvestScheduleProperties.telemetryMinutesForTier(scheduleTier))
                 );
             } else {
                 game.setNextTelemetryAt(
@@ -204,6 +255,16 @@ public class HarvestScheduleService {
         } else {
             game.setNextNewsAt(now.plusMinutes(harvestScheduleProperties.failedRetryMinutes()));
         }
+    }
+
+    private int resolveTelemetryScheduleTier(Game game) {
+        int configuredTier = java.util.Objects.requireNonNullElse(game.getScrapeTier(), 3);
+
+        return gameTelemetryRepository.findByGame_Slug(game.getSlug())
+                .map(GameTelemetry::getStatus)
+                .filter(DEGRADED_TELEMETRY::contains)
+                .map(status -> 1)
+                .orElse(configuredTier);
     }
 
     private HarvestWorkTargetResponse toTargetResponse(Game game) {

@@ -2,6 +2,7 @@ package com.statustimer.repository;
 
 import com.statustimer.entity.GameTelemetry;
 import com.statustimer.entity.GameTelemetryHistory;
+import com.statustimer.entity.LifecycleState;
 import com.statustimer.entity.TelemetryStatus;
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -18,6 +19,19 @@ public interface GameTelemetryRepository extends JpaRepository<GameTelemetry, Lo
 
     @Query("SELECT t FROM GameTelemetry t WHERE t.game.slug IN :slugs")
     List<GameTelemetry> findByGame_SlugIn(@Param("slugs") Collection<String> slugs);
+
+    @Query("""
+            SELECT t FROM GameTelemetry t
+            JOIN FETCH t.game g
+            WHERE t.status IN :statuses
+              AND g.lifecycleState IN :lifecycleStates
+            ORDER BY g.scrapeTier ASC, t.lastChecked ASC
+            """)
+    List<GameTelemetry> findDegradedActiveMonitoring(
+            @Param("statuses") Collection<TelemetryStatus> statuses,
+            @Param("lifecycleStates") Collection<LifecycleState> lifecycleStates,
+            Pageable pageable
+    );
 
     @Query("""
             SELECT h FROM GameTelemetryHistory h
