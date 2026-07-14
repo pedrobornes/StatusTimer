@@ -108,12 +108,22 @@ def _active_records(records: Any) -> list[dict[str, Any]]:
         if not isinstance(record, dict):
             continue
 
-        status = str(record.get("status", "")).lower()
-        if status in {"closed", "resolved", "completed", "archive"}:
-            continue
-        active.append(record)
+        if _is_active_riot_status_record(record):
+            active.append(record)
 
     return active
+
+
+def _is_active_riot_status_record(record: dict[str, Any]) -> bool:
+    maintenance_status = str(record.get("maintenance_status", "")).strip().lower()
+    if maintenance_status:
+        return maintenance_status not in {"complete", "completed"}
+
+    legacy_status = str(record.get("status", "")).strip().lower()
+    if legacy_status in {"closed", "resolved", "completed", "archive", "archived"}:
+        return False
+
+    return True
 
 
 def _summarize_records(records: list[dict[str, Any]], *, prefix: str) -> str:

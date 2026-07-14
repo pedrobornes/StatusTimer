@@ -269,7 +269,8 @@ public class GameTelemetryService {
         Set<String> seenGameSlugs = new HashSet<>();
 
         return gameTelemetryRepository
-                .findRecentIncidents(
+                .findActiveRecentIncidents(
+                        INCIDENT_STATUSES,
                         INCIDENT_STATUSES,
                         PageRequest.of(0, RECENT_INCIDENT_FETCH_LIMIT)
                 )
@@ -307,7 +308,12 @@ public class GameTelemetryService {
         String canonicalSlug = gameSlugMapper.resolveCanonicalSlug(gameSlug);
 
         return gameTelemetryRepository
-                .findRecentIncidentsByGameSlug(canonicalSlug, INCIDENT_STATUSES, pageable)
+                .findActiveRecentIncidentsByGameSlug(
+                        canonicalSlug,
+                        INCIDENT_STATUSES,
+                        INCIDENT_STATUSES,
+                        pageable
+                )
                 .stream()
                 .map(TelemetryIncidentResponse::fromEntity)
                 .toList();

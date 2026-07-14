@@ -32,6 +32,34 @@ public interface GameTelemetryRepository extends JpaRepository<GameTelemetry, Lo
 
     @Query("""
             SELECT h FROM GameTelemetryHistory h
+            JOIN GameTelemetry t ON t.game = h.game
+            WHERE t.status IN :activeStatuses
+              AND h.status IN :incidentStatuses
+            ORDER BY h.checkedAt DESC
+            """)
+    List<GameTelemetryHistory> findActiveRecentIncidents(
+            @Param("activeStatuses") Collection<TelemetryStatus> activeStatuses,
+            @Param("incidentStatuses") Collection<TelemetryStatus> incidentStatuses,
+            Pageable pageable
+    );
+
+    @Query("""
+            SELECT h FROM GameTelemetryHistory h
+            JOIN GameTelemetry t ON t.game = h.game
+            WHERE h.game.slug = :gameSlug
+              AND t.status IN :activeStatuses
+              AND h.status IN :incidentStatuses
+            ORDER BY h.checkedAt DESC
+            """)
+    List<GameTelemetryHistory> findActiveRecentIncidentsByGameSlug(
+            @Param("gameSlug") String gameSlug,
+            @Param("activeStatuses") Collection<TelemetryStatus> activeStatuses,
+            @Param("incidentStatuses") Collection<TelemetryStatus> incidentStatuses,
+            Pageable pageable
+    );
+
+    @Query("""
+            SELECT h FROM GameTelemetryHistory h
             WHERE h.status IN :statuses
             ORDER BY h.checkedAt DESC
             """)
