@@ -53,7 +53,7 @@ export default function GameLiveMetricsRow({
 
   return (
     <div
-      className={`mt-2 font-mono text-xs ${layoutClass} ${className ?? ""}`}
+      className={`mt-2 font-mono text-[11px] sm:text-xs ${layoutClass} ${className ?? ""}`}
       aria-label="Live audience metrics"
     >
       {showLivePlayers ? (

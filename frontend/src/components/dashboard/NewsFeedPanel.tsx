@@ -52,7 +52,7 @@ export default function NewsFeedPanel({
     ? "glass-panel flex min-h-0 flex-col self-start rounded-3xl p-6 md:p-8 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)]"
     : sidebar
       ? "glass-panel glow-ring rounded-3xl p-5 md:p-6"
-      : "glass-panel rounded-3xl p-6 md:p-8";
+      : "glass-panel min-w-0 max-w-full overflow-hidden rounded-3xl p-5 sm:p-6 md:p-8";
 
   const contentClass = fillHeight
     ? "scrollbar-subtle min-h-0 flex-1 overflow-y-auto pr-1"

@@ -107,7 +107,7 @@ export default memo(function GameTelemetryCard({
       <GameLiveMetricsRow
         livePlayers={telemetry.livePlayers}
         twitchViewers={telemetry.twitchViewers}
-        orientation="vertical"
+        orientation={embedded ? "horizontal" : "vertical"}
         className="mt-0"
         unifiedColors={unifiedMetricsColors}
         showLivePlayers={showLivePlayers}
@@ -126,15 +126,29 @@ export default memo(function GameTelemetryCard({
           {statusBadge}
         </div>
       ) : (
-        <div className="flex w-full items-stretch gap-3">
-          <GameBoxArtImage title={title} src={logoUrl} size="card" />
-          {metricsBlock}
+        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-stretch">
+          <div className="flex min-w-0 items-stretch gap-3">
+            <GameBoxArtImage title={title} src={logoUrl} size="card" />
+            <div className="flex min-w-0 flex-1 flex-col justify-center sm:hidden">
+              <GameLiveMetricsRow
+                livePlayers={telemetry.livePlayers}
+                twitchViewers={telemetry.twitchViewers}
+                orientation="horizontal"
+                className="mt-0"
+                unifiedColors={unifiedMetricsColors}
+                showLivePlayers={showLivePlayers}
+              />
+            </div>
+          </div>
+          <div className="hidden min-w-0 flex-1 flex-col justify-center sm:flex">
+            {metricsBlock}
+          </div>
           {statusBadge}
         </div>
       )}
 
       <div className="mt-4 w-full">
-        <h3 className="line-clamp-2 break-words whitespace-normal text-2xl font-bold tracking-tight text-white transition-colors duration-200 group-hover:text-emerald-400">
+        <h3 className="line-clamp-2 break-words whitespace-normal text-xl font-bold tracking-tight text-white transition-colors duration-200 group-hover:text-emerald-400 sm:text-2xl">
           {title}
         </h3>
         {(userRating || criticRating || genreBadges.length > 0) && (
@@ -167,8 +181,8 @@ export default memo(function GameTelemetryCard({
     <article
       className={
         embedded
-          ? "glass-panel flex h-full flex-col rounded-3xl p-6"
-          : "flex h-full flex-col rounded-2xl border border-white/8 bg-white/[0.04] p-6 transition hover:border-violet-400/25 hover:bg-white/[0.06]"
+          ? "glass-panel flex h-full flex-col rounded-3xl p-4 sm:p-6"
+          : "flex h-full flex-col rounded-2xl border border-white/8 bg-white/[0.04] p-4 transition hover:border-violet-400/25 hover:bg-white/[0.06] sm:p-6"
       }
     >
       <header className="mb-4">

@@ -7,7 +7,7 @@ import TelemetryRefreshBanner from "@/components/dashboard/telemetry/TelemetryRe
 import SteamStoreWidget from "@/components/dashboard/SteamStoreWidget";
 import GameExternalLinks from "@/components/GameExternalLinks";
 import ReleaseMediaPanel from "@/components/ReleaseMediaPanel";
-import ReleaseNewsPanel from "@/components/ReleaseNewsPanel";
+import NewsFeedPanel from "@/components/dashboard/NewsFeedPanel";
 import GameStatusSubNav from "@/components/GameStatusSubNav";
 import GamePageLayout from "@/components/GamePageLayout";
 import PageShell from "@/components/PageShell";
@@ -188,11 +188,14 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
             }
             content={
               <>
-                <ReleaseNewsPanel
-                  news={news}
-                  gameName={gameName}
-                  gameSlug={slug}
-                />
+                {hasNews ? (
+                  <NewsFeedPanel
+                    news={news}
+                    gameSlug={slug}
+                    sectionTitle="News & Patch Notes"
+                    eyebrow="Latest updates"
+                  />
+                ) : null}
                 <ReleaseMediaPanel
                   gameName={gameName}
                   media={gameMedia}
@@ -275,11 +278,14 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
             }
             content={
               <>
-                <ReleaseNewsPanel
-                  news={news}
-                  gameName={gameName}
-                  gameSlug={slug}
-                />
+                {hasNews ? (
+                  <NewsFeedPanel
+                    news={news}
+                    gameSlug={slug}
+                    sectionTitle="News & Patch Notes"
+                    eyebrow="Latest updates"
+                  />
+                ) : null}
                 <ReleaseMediaPanel
                   gameName={gameName}
                   media={gameMedia}
@@ -413,11 +419,14 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
                   />
                 ) : null}
 
-                <ReleaseNewsPanel
-                  news={news}
-                  gameName={gameName}
-                  gameSlug={slug}
-                />
+                {hasNews ? (
+                  <NewsFeedPanel
+                    news={news}
+                    gameSlug={slug}
+                    sectionTitle="News & Patch Notes"
+                    eyebrow="Latest updates"
+                  />
+                ) : null}
 
                 <ReleaseMediaPanel
                   gameName={gameName}

@@ -75,4 +75,37 @@ class GameTelemetryServiceIncidentTest {
         assertThat(incidents).extracting(TelemetryIncidentResponse::gameSlug)
                 .containsExactly("incident-live-game");
     }
+
+    @Test
+    void findRecentIncidentsDeduplicatesByGameSlugKeepingMostRecent() {
+        Game liveGame = gameRepository.findBySlug("incident-live-game").orElseThrow();
+        LocalDateTime checkedAt = LocalDateTime.now();
+
+        gameTelemetryHistoryRepository.save(GameTelemetryHistory.builder()
+                .game(liveGame)
+                .status(TelemetryStatus.MAINTENANCE)
+                .dataSource(TelemetrySource.STEAM_API)
+                .checkedAt(checkedAt)
+                .build());
+
+        gameTelemetryHistoryRepository.save(GameTelemetryHistory.builder()
+                .game(liveGame)
+                .status(TelemetryStatus.MAINTENANCE)
+                .dataSource(TelemetrySource.STEAM_API)
+                .checkedAt(checkedAt.minusMinutes(35))
+                .build());
+
+        gameTelemetryHistoryRepository.save(GameTelemetryHistory.builder()
+                .game(liveGame)
+                .status(TelemetryStatus.MAINTENANCE)
+                .dataSource(TelemetrySource.STEAM_API)
+                .checkedAt(checkedAt.minusMinutes(70))
+                .build());
+
+        java.util.List<TelemetryIncidentResponse> incidents = gameTelemetryService.findRecentIncidents();
+
+        assertThat(incidents).hasSize(1);
+        assertThat(incidents.getFirst().gameSlug()).isEqualTo("incident-live-game");
+        assertThat(incidents.getFirst().publishedAt()).isEqualTo(checkedAt);
+    }
 }

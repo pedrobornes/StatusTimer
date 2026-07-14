@@ -1,73 +1,38 @@
 import Link from "next/link";
-
 import { ArrowRight, FileText } from "lucide-react";
-
 import RelativeTime from "@/components/ui/RelativeTime";
-
 import { APP_ROUTES } from "@/config/routes";
-
 import {
-
   cleanNewsDisplayTitle,
-
   resolveNewsGameName,
-
 } from "@/lib/intelFeed";
-
 import {
-
   GAME_NEWS_PREVIEW_LIMIT,
-
   sortNewsByRecency,
-
 } from "@/lib/newsFeed";
-
 import { resolveRecordDate } from "@/utils/dateFormatter";
-
 import type { GamingNews } from "@/types/api";
 
-
-
 interface ReleaseNewsPanelProps {
-
   news: GamingNews[];
-
   gameName: string;
-
   gameSlug: string;
-
   previewLimit?: number;
-
   newsIndexHref?: string;
-
 }
-
-
 
 function resolveNewsDateIso(article: GamingNews): string | null {
-
   const resolved = resolveRecordDate(article as unknown as Record<string, unknown>);
-
   return resolved ? resolved.toISOString() : null;
-
 }
 
-
-
 export default function ReleaseNewsPanel({
-
   news,
-
   gameName,
-
   gameSlug,
-
   previewLimit = GAME_NEWS_PREVIEW_LIMIT,
-
   newsIndexHref,
-
 }: ReleaseNewsPanelProps) {
-
   const sortedNews = sortNewsByRecency(news);
 
   if (sortedNews.length === 0) {
@@ -75,20 +40,17 @@ export default function ReleaseNewsPanel({
   }
 
   const visibleNews = sortedNews.slice(0, previewLimit);
-
   const allNewsHref = newsIndexHref ?? APP_ROUTES.gameNews(gameSlug);
 
   return (
-
-    <section className="glass-panel rounded-3xl p-5 sm:p-6 md:p-8">
-
+    <section className="glass-panel min-w-0 max-w-full overflow-hidden rounded-3xl p-5 sm:p-6 md:p-8">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 items-center gap-3">
           <div className="rounded-2xl border border-fuchsia-400/20 bg-fuchsia-500/10 p-3">
             <FileText className="h-5 w-5 text-fuchsia-300" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs uppercase tracking-[0.35em] text-fuchsia-300/70">
+            <p className="text-xs uppercase tracking-[0.28em] text-fuchsia-300/70 sm:tracking-[0.35em]">
               Latest updates
             </p>
             <h2 className="heading-section text-xl uppercase text-white sm:text-2xl">
@@ -99,111 +61,63 @@ export default function ReleaseNewsPanel({
 
         <Link
           href={allNewsHref}
-          className="inline-flex shrink-0 items-center gap-1 self-start text-[11px] font-medium uppercase tracking-[0.16em] text-fuchsia-200/80 transition hover:text-fuchsia-100"
+          className="inline-flex max-w-full items-center gap-1 self-start text-[11px] font-medium uppercase tracking-[0.16em] text-fuchsia-200/80 transition hover:text-fuchsia-100"
         >
-          All {gameName} news
-          <ArrowRight className="h-3 w-3" aria-hidden />
+          <span className="truncate">All {gameName} news</span>
+          <ArrowRight className="h-3 w-3 shrink-0" aria-hidden />
         </Link>
       </div>
 
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {visibleNews.map((article, index) => {
+          const dateIso = resolveNewsDateIso(article);
+          const isFeatured = index === 0;
 
-
-      <div className="grid gap-4 lg:grid-cols-2">
-
-          {visibleNews.map((article, index) => {
-
-            const dateIso = resolveNewsDateIso(article);
-
-            const isFeatured = index === 0;
-
-
-
-            return (
-
-              <Link
-
-                key={article.id}
-
-                href={APP_ROUTES.newsArticle(article.slug)}
-
-                className={isFeatured ? "lg:col-span-2" : undefined}
-
-              >
-
-                <article className="group flex h-full flex-col rounded-2xl border border-white/8 bg-white/[0.03] p-4 transition hover:border-fuchsia-400/25 hover:bg-white/[0.05] md:p-5">
-
-                  <div className="mb-2 flex items-center justify-between gap-3">
-
-                    <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-fuchsia-200/70">
-
-                      {resolveNewsGameName(article)}
-
-                    </p>
-
-                    {dateIso ? (
-
-                      <RelativeTime
-
-                        value={dateIso}
-
-                        className="shrink-0 text-[11px] uppercase tracking-[0.14em] text-slate-500"
-
-                      />
-
-                    ) : null}
-
-                  </div>
-
-
-
-                  <h3
-
-                    className={`font-semibold text-white transition group-hover:text-fuchsia-100 ${
-
-                      isFeatured ? "text-xl leading-snug" : "text-base leading-snug"
-
-                    }`}
-
-                  >
-
-                    {cleanNewsDisplayTitle(article.title, article.gameTag)}
-
-                  </h3>
-
-
-
-                  <p
-
-                    className={`mt-2 flex-1 text-sm leading-6 text-slate-400 ${
-
-                      isFeatured ? "line-clamp-3" : "line-clamp-2"
-
-                    }`}
-
-                  >
-
-                    {article.content}
-
+          return (
+            <Link
+              key={article.id}
+              href={APP_ROUTES.newsArticle(article.slug)}
+              className={`min-w-0 ${isFeatured ? "lg:col-span-2" : ""}`}
+            >
+              <article className="group flex h-full min-w-0 flex-col rounded-2xl border border-white/8 bg-white/[0.03] p-4 transition hover:border-fuchsia-400/25 hover:bg-white/[0.05] md:p-5">
+                <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                  <p className="min-w-0 truncate text-[11px] font-medium uppercase tracking-[0.2em] text-fuchsia-200/70">
+                    {resolveNewsGameName(article)}
                   </p>
+                  {dateIso ? (
+                    <RelativeTime
+                      value={dateIso}
+                      className="shrink-0 text-[11px] uppercase tracking-[0.14em] text-slate-500"
+                    />
+                  ) : null}
+                </div>
 
+                <h3
+                  className={`break-words font-semibold text-white transition group-hover:text-fuchsia-100 ${
+                    isFeatured
+                      ? "text-lg leading-snug sm:text-xl"
+                      : "text-base leading-snug"
+                  }`}
+                >
+                  {cleanNewsDisplayTitle(article.title, article.gameTag)}
+                </h3>
 
+                <p
+                  className={`mt-2 flex-1 break-words text-sm leading-6 text-slate-400 ${
+                    isFeatured ? "line-clamp-3" : "line-clamp-2"
+                  }`}
+                >
+                  {article.content}
+                </p>
 
-                  <span className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-fuchsia-200/80 transition group-hover:text-fuchsia-100">
-
-                    Read article
-
-                    <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-
-                  </span>
-
-                </article>
-
-              </Link>
-
-            );
-
-          })}
-
+                <span className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-fuchsia-200/80 transition group-hover:text-fuchsia-100">
+                  Read article
+                  <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                </span>
+              </article>
+            </Link>
+          );
+        })}
       </div>
 
       {sortedNews.length > visibleNews.length ? (
@@ -218,8 +132,5 @@ export default function ReleaseNewsPanel({
         </div>
       ) : null}
     </section>
-
   );
-
 }
-

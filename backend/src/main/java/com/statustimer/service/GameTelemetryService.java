@@ -25,9 +25,11 @@ import com.statustimer.entity.GameTelemetryHistory;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -49,7 +51,7 @@ import org.springframework.web.server.ResponseStatusException;
 @Slf4j
 public class GameTelemetryService {
 
-    private static final int RECENT_INCIDENT_FETCH_LIMIT = 20;
+    private static final int RECENT_INCIDENT_FETCH_LIMIT = 50;
     private static final int RECENT_INCIDENT_RESPONSE_LIMIT = 5;
     private static final int PUBLIC_HISTORY_RESPONSE_LIMIT = 6;
     private static final int DASHBOARD_TELEMETRY_CANDIDATE_LIMIT = 50;
@@ -264,6 +266,7 @@ public class GameTelemetryService {
     @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_SHORT_CACHE, key = "'telemetryIncidents'")
     public List<TelemetryIncidentResponse> findRecentIncidents() {
         LocalDate today = LocalDate.now();
+        Set<String> seenGameSlugs = new HashSet<>();
 
         return gameTelemetryRepository
                 .findRecentIncidents(
@@ -272,6 +275,7 @@ public class GameTelemetryService {
                 )
                 .stream()
                 .filter(history -> isIncidentEligible(history, today))
+                .filter(history -> seenGameSlugs.add(history.getGame().getSlug()))
                 .limit(RECENT_INCIDENT_RESPONSE_LIMIT)
                 .map(TelemetryIncidentResponse::fromEntity)
                 .toList();

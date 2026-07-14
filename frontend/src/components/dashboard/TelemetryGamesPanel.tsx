@@ -2,6 +2,7 @@
 
 import { memo, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
+import GenreFilterChips from "@/components/ui/GenreFilterChips";
 import GamingStatusSection from "@/components/dashboard/GamingStatusSection";
 import GameTelemetrySortSelect from "@/components/ui/GameTelemetrySortSelect";
 import { TRACKED_GAME_SLUGS } from "@/config/routes";
@@ -145,34 +146,12 @@ function TelemetryGamesPanel({
         </div>
 
         {!normalizedQuery && availableGenres.length > 0 ? (
-          <div className="mt-4 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <div className="flex w-max gap-2 sm:w-auto sm:flex-wrap">
-            <button
-              type="button"
-              onClick={() => setGenreFilter("All")}
-              className={`shrink-0 rounded-xl border px-3 py-1.5 text-xs font-medium transition ${
-                genreFilter === "All"
-                  ? "border-cyan-400/35 bg-cyan-500/20 text-cyan-50"
-                  : "border-white/12 bg-white/[0.04] text-slate-300 hover:border-cyan-400/25 hover:text-white"
-              }`}
-            >
-              All genres
-            </button>
-            {availableGenres.map((genre) => (
-              <button
-                key={genre}
-                type="button"
-                onClick={() => setGenreFilter(genre)}
-                className={`shrink-0 rounded-xl border px-3 py-1.5 text-xs font-medium transition ${
-                  genreFilter === genre
-                    ? "border-cyan-400/35 bg-cyan-500/20 text-cyan-50"
-                    : "border-white/12 bg-white/[0.04] text-slate-300 hover:border-cyan-400/25 hover:text-white"
-                }`}
-              >
-                {genre}
-              </button>
-            ))}
-            </div>
+          <div className="mt-4">
+            <GenreFilterChips
+              options={availableGenres}
+              currentValue={genreFilter}
+              onChange={setGenreFilter}
+            />
           </div>
         ) : null}
 
