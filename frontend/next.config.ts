@@ -25,11 +25,6 @@ const nextConfig: NextConfig = {
         destination: "/games",
         permanent: true,
       },
-      {
-        source: "/favicon.ico",
-        destination: "/icon",
-        permanent: true,
-      },
     ];
   },
 };

@@ -1,0 +1,21 @@
+{
+  "name": "StatusTimer",
+  "short_name": "StatusTimer",
+  "description": "Live game server monitoring, release tracking, and patch notes.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0614",
+  "theme_color": "#0a0614",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
