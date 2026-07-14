@@ -358,6 +358,69 @@ class GameCatalogServiceSearchTest {
     }
 
     @Test
+    void searchIncludesIgdbDiscoveredGameWithoutLazyInitializationFailure() {
+        IgdbGameMatch alterMatch = new IgdbGameMatch(
+                4001L,
+                "Alter",
+                "alter",
+                null,
+                null,
+                null,
+                null,
+                null,
+                List.of("Adventure"),
+                List.of(),
+                0,
+                LocalDate.of(2026, 12, 1),
+                List.of(),
+                List.of(),
+                null,
+                Map.of()
+        );
+
+        when(igdbSearchClient.search(anyString(), anyInt())).thenReturn(List.of(alterMatch));
+
+        List<GameCatalogSearchResponse> results = gameCatalogService.search("The Alter");
+
+        assertTrue(results.stream().anyMatch(result -> "alter".equals(result.slug())));
+        assertTrue(results.stream()
+                .filter(result -> "alter".equals(result.slug()))
+                .anyMatch(result -> Boolean.TRUE.equals(result.upcomingRelease())));
+    }
+
+    @Test
+    void searchResolvesIgdbDiscoveredGameWhenPersistedSlugUsesAlias() {
+        IgdbGameMatch match = new IgdbGameMatch(
+                4002L,
+                "Mecha Chameleon",
+                "mecha-chameleon",
+                null,
+                null,
+                null,
+                null,
+                null,
+                List.of("Platform"),
+                List.of(),
+                0,
+                null,
+                List.of(),
+                List.of(),
+                null,
+                Map.of()
+        );
+
+        when(igdbSearchClient.search(anyString(), anyInt())).thenReturn(List.of(match));
+
+        List<GameCatalogSearchResponse> results = gameCatalogService.search("mecha chameleon");
+
+        assertTrue(results.stream().anyMatch(result -> "meccha-chameleon".equals(result.slug())));
+        assertEquals(
+                "meccha-chameleon",
+                gameRepository.findBySlug("meccha-chameleon").orElseThrow().getSlug()
+        );
+    }
+
+    @Test
     void searchHidesTwitchCategoryNoise() {
         gameRepository.save(Game.builder()
                 .slug("tabletop-rpgs")

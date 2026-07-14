@@ -506,7 +506,9 @@ public class GameCatalogService {
                     "IGDB discovery slug collision for '{}'; reloading existing catalog row",
                     match.name()
             );
-            return resolveExistingGameForIgdbMatch(match).orElse(null);
+            return resolveExistingGameForIgdbMatch(match)
+                    .map(this::reloadGameWithPlatforms)
+                    .orElse(null);
         }
     }
 
@@ -664,11 +666,15 @@ public class GameCatalogService {
         }
 
         if (PinnedGamePolicy.isPinned(slug) && !PinnedGamePolicy.matchesIgdbGame(slug, match)) {
-            return gameRepository.findBySlug(slug).orElse(null);
+            return gameRepository.findBySlug(slug)
+                    .map(this::reloadGameWithPlatforms)
+                    .orElse(null);
         }
 
         if (ManualProtectedCatalogPolicy.SLUGS.contains(slug)) {
-            return gameRepository.findBySlug(slug).orElse(null);
+            return gameRepository.findBySlug(slug)
+                    .map(this::reloadGameWithPlatforms)
+                    .orElse(null);
         }
 
         Optional<Game> existing = resolveExistingGameForIgdbMatch(match, slug);
@@ -709,7 +715,7 @@ public class GameCatalogService {
             return null;
         }
 
-        return saved;
+        return reloadGameWithPlatforms(saved);
     }
 
     private Optional<Game> resolveExistingGameForIgdbMatch(IgdbGameMatch match) {
@@ -1008,17 +1014,34 @@ public class GameCatalogService {
             return false;
         }
 
-        Game searchableGame = loadGameForSearchResponse(canonicalSlug).orElse(game);
+        Game searchableGame = reloadGameWithPlatforms(game);
         results.add(toSearchResponse(searchableGame, canonicalSlug));
         return true;
     }
 
-    private Optional<Game> loadGameForSearchResponse(String canonicalSlug) {
-        if (canonicalSlug == null || canonicalSlug.isBlank()) {
-            return Optional.empty();
+    private Game reloadGameWithPlatforms(Game game) {
+        if (game == null) {
+            return null;
         }
 
-        return gameRepository.findBySlugWithPlatforms(canonicalSlug);
+        Optional<Game> reloaded = Optional.ofNullable(game.getSlug())
+                .filter(slug -> !slug.isBlank())
+                .flatMap(gameRepository::findBySlugWithPlatforms);
+
+        if (reloaded.isEmpty()) {
+            String canonicalSlug = canonicalSearchSlug(game.getSlug());
+            if (canonicalSlug != null
+                    && !canonicalSlug.isBlank()
+                    && !canonicalSlug.equals(game.getSlug())) {
+                reloaded = gameRepository.findBySlugWithPlatforms(canonicalSlug);
+            }
+        }
+
+        if (reloaded.isEmpty() && game.getId() != null) {
+            reloaded = gameRepository.findById(game.getId());
+        }
+
+        return reloaded.orElse(game);
     }
 
     private GameCatalogSearchResponse toSearchResponse(Game game) {
