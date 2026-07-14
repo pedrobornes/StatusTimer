@@ -36,11 +36,19 @@ export default function IncidentLog({
   eyebrow = sidebar ? "Crash & Maintenance" : "Crash & Maintenance Log",
 }: IncidentLogProps) {
   const excludedSlugs = new Set(excludedGameSlugs.map((slug) => slug.toLowerCase()));
+  const seenIncidentSlugs = new Set<string>();
   const filteredIncidents = incidents.filter((incident) => {
     if (incident.status === "UPCOMING") {
       return false;
     }
-    return !excludedSlugs.has(incident.gameSlug.toLowerCase());
+
+    const slug = incident.gameSlug.toLowerCase();
+    if (excludedSlugs.has(slug) || seenIncidentSlugs.has(slug)) {
+      return false;
+    }
+
+    seenIncidentSlugs.add(slug);
+    return true;
   });
 
   const hasIssues = filteredIncidents.length > 0 || platformAlerts.length > 0;

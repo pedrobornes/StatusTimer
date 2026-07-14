@@ -54,16 +54,8 @@ export default function Navigation() {
 
   return (
     <nav className="sticky top-0 z-50 border-b border-violet-400/15 bg-mystic-950/95">
-      <div className="mx-auto flex max-w-7xl flex-col items-center gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-4 md:px-8">
-        <Link
-          href={APP_ROUTES.home}
-          className="inline-flex shrink-0 items-center gap-2 rounded-full border border-violet-400/25 bg-violet-500/10 px-2.5 py-1.5 text-xs font-semibold uppercase tracking-[0.24em] text-slate-200 transition-colors hover:border-violet-400/40 hover:text-white sm:gap-3 sm:px-3 sm:tracking-[0.3em]"
-        >
-          <StatusTimerSonarLogo className="h-8 w-8 shrink-0" />
-          <span className="hidden sm:inline">StatusTimer</span>
-        </Link>
-
-        <div className="inline-flex w-full justify-center sm:w-auto">
+      <div className="mx-auto flex max-w-7xl items-center gap-2 px-3 py-3 sm:justify-between sm:gap-4 sm:px-4 md:px-8">
+        <div className="flex min-w-0 flex-1 justify-center sm:order-2 sm:flex-none sm:justify-end">
           <div className="inline-flex items-center gap-1 rounded-2xl border border-white/10 bg-white/[0.05] p-1">
             {NAV_ITEMS.map(({ href, label, icon: Icon, isActive }) => {
               const active = isActive(pathname);
@@ -85,6 +77,14 @@ export default function Navigation() {
             })}
           </div>
         </div>
+
+        <Link
+          href={APP_ROUTES.home}
+          className="order-2 inline-flex shrink-0 items-center gap-2 rounded-full border border-violet-400/25 bg-violet-500/10 px-2.5 py-1.5 text-xs font-semibold uppercase tracking-[0.24em] text-slate-200 transition-colors hover:border-violet-400/40 hover:text-white sm:order-1 sm:gap-3 sm:px-3 sm:tracking-[0.3em]"
+        >
+          <StatusTimerSonarLogo className="h-8 w-8 shrink-0" />
+          <span className="hidden sm:inline">StatusTimer</span>
+        </Link>
       </div>
     </nav>
   );

@@ -48,7 +48,7 @@ export default function GameLiveMetricsRow({
 }: GameLiveMetricsRowProps) {
   const isVertical = orientation === "vertical";
   const layoutClass = isVertical
-    ? "flex flex-col gap-2"
+    ? "flex flex-col justify-center gap-1.5 sm:gap-2"
     : "flex items-center gap-4";
 
   return (
