@@ -1,6 +1,7 @@
 import { FETCH_REVALIDATE_NEWS } from "@/config/cache";
 import type { MetadataRoute } from "next";
 import { APP_ROUTES } from "@/config/routes";
+import { hasNumericNewsSlugSuffix } from "@/lib/seo/newsSlugs";
 import { isIndexableNewsContent } from "@/lib/seo/newsIndexability";
 import { getGamingNews } from "@/services/newsService";
 import { getUpcomingReleases } from "@/services/releasesService";
@@ -25,6 +26,7 @@ export function toNewsSitemapEntries(
 ): MetadataRoute.Sitemap {
   return articles
     .filter((article) => isIndexableNewsContent(article.content))
+    .filter((article) => !hasNumericNewsSlugSuffix(article.slug))
     .map((article) => ({
       url: `${siteUrl}${APP_ROUTES.newsArticle(article.slug)}`,
       lastModified: new Date(article.publishedAt ?? article.createdAt),

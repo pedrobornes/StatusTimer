@@ -1,6 +1,8 @@
-import { redirect } from "next/navigation";
+import { permanentRedirect } from "next/navigation";
 import { APP_ROUTES } from "@/config/routes";
 import { resolveCanonicalGameSlug } from "@/lib/gameSlugs";
+import { resolveCanonicalNewsArticleSlug } from "@/lib/seo/newsSlugs";
+import { getGamingNewsBySlug } from "@/services/newsService";
 
 interface LegacyStatusNewsArticlePageProps {
   params: Promise<{ slug: string; newsSlug: string }>;
@@ -11,11 +13,21 @@ export default async function LegacyStatusNewsArticlePage({
   params,
 }: LegacyStatusNewsArticlePageProps) {
   const { slug, newsSlug } = await params;
-  const canonicalSlug = resolveCanonicalGameSlug(slug);
+  const canonicalGameSlug = resolveCanonicalGameSlug(slug);
 
-  if (canonicalSlug !== slug) {
-    redirect(APP_ROUTES.gameNewsArticle(canonicalSlug, newsSlug));
+  if (canonicalGameSlug !== slug) {
+    permanentRedirect(APP_ROUTES.gameNewsArticle(canonicalGameSlug, newsSlug));
   }
 
-  redirect(APP_ROUTES.newsArticle(newsSlug));
+  try {
+    const article = await getGamingNewsBySlug(newsSlug);
+    const canonicalNewsSlug = await resolveCanonicalNewsArticleSlug(
+      newsSlug,
+      article,
+      getGamingNewsBySlug,
+    );
+    permanentRedirect(APP_ROUTES.newsArticle(canonicalNewsSlug));
+  } catch {
+    permanentRedirect(APP_ROUTES.newsArticle(newsSlug));
+  }
 }

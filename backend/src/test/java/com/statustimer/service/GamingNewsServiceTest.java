@@ -155,6 +155,89 @@ class GamingNewsServiceTest {
     }
 
     @Test
+    void createReturnsExistingArticleWhenBaseSlugAlreadyTakenBySameStory() {
+        Game tft = Game.builder().slug("teamfight-tactics").gameName("Teamfight Tactics").build();
+        GamingNews existing = GamingNews.builder()
+                .id(11L)
+                .title("Space Gods Tactician's Crown Primer")
+                .content("Existing copy")
+                .newsSlug("teamfight-tactics-space-gods-tactician-s-crown-primer")
+                .game(tft)
+                .gameTag("teamfight-tactics")
+                .createdAt(NOW)
+                .publishedAt(NOW)
+                .build();
+
+        when(gamingNewsRepository.findAllForGameSlug(
+                "teamfight-tactics",
+                "teamfight-tactics",
+                Pageable.unpaged()
+        )).thenReturn(List.of());
+        when(gamingNewsRepository.findByNewsSlug("teamfight-tactics-space-gods-tactician-s-crown-primer"))
+                .thenReturn(java.util.Optional.of(existing));
+        when(gameCatalogService.resolveGameName("teamfight-tactics")).thenReturn("Teamfight Tactics");
+        when(gameCatalogService.resolveCoverUrl("teamfight-tactics", null)).thenReturn(null);
+
+        var response = gamingNewsService.create(new CreateGamingNewsRequest(
+                "Space Gods Tactician's Crown Primer",
+                "Re-ingest attempt",
+                "teamfight-tactics",
+                NOW
+        ));
+
+        assertThat(response.id()).isEqualTo(11L);
+        assertThat(response.slug())
+                .isEqualTo("teamfight-tactics-space-gods-tactician-s-crown-primer");
+        verify(gamingNewsRepository, never()).save(any(GamingNews.class));
+        verify(gamingNewsRepository, never()).existsByNewsSlug(any());
+    }
+
+    @Test
+    void createUsesSuffixWhenBaseSlugTakenByDifferentStory() {
+        Game wow = Game.builder().slug("world-of-warcraft").gameName("World of Warcraft").build();
+        GamingNews differentStory = GamingNews.builder()
+                .id(20L)
+                .title("Weekly Reset Reminder")
+                .content("Other story")
+                .newsSlug("world-of-warcraft-hotfixes-july-7-2026")
+                .game(wow)
+                .gameTag("world-of-warcraft")
+                .createdAt(NOW)
+                .publishedAt(NOW)
+                .build();
+
+        when(gamingNewsRepository.findAllForGameSlug(
+                "world-of-warcraft",
+                "world-of-warcraft",
+                Pageable.unpaged()
+        )).thenReturn(List.of());
+        when(gamingNewsRepository.findByNewsSlug("world-of-warcraft-hotfixes-july-7-2026"))
+                .thenReturn(java.util.Optional.of(differentStory));
+        when(gamingNewsRepository.existsByNewsSlug("world-of-warcraft-hotfixes-july-7-2026"))
+                .thenReturn(true);
+        when(gamingNewsRepository.existsByNewsSlug("world-of-warcraft-hotfixes-july-7-2026-2"))
+                .thenReturn(false);
+        when(gameRepository.findBySlug("world-of-warcraft")).thenReturn(java.util.Optional.of(wow));
+        when(gameCatalogService.resolveGameName("world-of-warcraft")).thenReturn("World of Warcraft");
+        when(gameCatalogService.resolveCoverUrl("world-of-warcraft", null)).thenReturn(null);
+        when(gamingNewsRepository.save(any(GamingNews.class))).thenAnswer(invocation -> {
+            GamingNews saved = invocation.getArgument(0);
+            saved.setId(21L);
+            return saved;
+        });
+
+        var response = gamingNewsService.create(new CreateGamingNewsRequest(
+                "Hotfixes: July 7, 2026",
+                "Patch details",
+                "world-of-warcraft",
+                NOW
+        ));
+
+        assertThat(response.slug()).isEqualTo("world-of-warcraft-hotfixes-july-7-2026-2");
+        verify(gamingNewsRepository).save(any(GamingNews.class));
+    }
+
+    @Test
     void reconcileDuplicateNewsDeletesExtraRows() {
         Game palworld = Game.builder().slug("palworld").gameName("Palworld").build();
         GamingNews keeper = GamingNews.builder()

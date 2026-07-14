@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import GameNewsArticleView from "@/components/GameNewsArticleView";
 import JsonLdScript from "@/components/seo/JsonLdScript";
 import { APP_ROUTES } from "@/config/routes";
@@ -15,6 +15,7 @@ import { resolveNewsGameContext } from "@/lib/newsRoutes";
 import { buildNewsArticleJsonLd } from "@/lib/seo/jsonLd";
 import { isIndexableNewsContent } from "@/lib/seo/newsIndexability";
 import { buildNewsArticleMetadata } from "@/lib/seo/newsMetadata";
+import { resolveCanonicalNewsArticleSlug } from "@/lib/seo/newsSlugs";
 import { getGamingNewsBySlug } from "@/services/newsService";
 import { getUpcomingReleases } from "@/services/releasesService";
 import { getGameStatusDetail } from "@/services/telemetryService";
@@ -25,14 +26,25 @@ interface NewsArticlePageProps {
   params: Promise<{ slug: string }>;
 }
 
+async function loadNewsArticle(slug: string) {
+  const article = await getGamingNewsBySlug(slug);
+  const canonicalSlug = await resolveCanonicalNewsArticleSlug(
+    slug,
+    article,
+    getGamingNewsBySlug,
+  );
+
+  return { article, canonicalSlug };
+}
+
 export async function generateMetadata({
   params,
 }: NewsArticlePageProps): Promise<Metadata> {
   const { slug } = await params;
 
   try {
-    const article = await getGamingNewsBySlug(slug);
-    return buildNewsArticleMetadata(article);
+    const { article, canonicalSlug } = await loadNewsArticle(slug);
+    return buildNewsArticleMetadata(article, canonicalSlug);
   } catch {
     return { title: "News | StatusTimer" };
   }
@@ -43,11 +55,16 @@ export default async function NewsArticlePage({ params }: NewsArticlePageProps) 
   const siteUrl = getSiteUrl();
 
   try {
-    const article = await getGamingNewsBySlug(newsSlug);
+    const { article, canonicalSlug } = await loadNewsArticle(newsSlug);
+
+    if (canonicalSlug !== newsSlug) {
+      permanentRedirect(APP_ROUTES.newsArticle(canonicalSlug));
+    }
+
     const gameSlug = resolveCanonicalGameSlug(article.gameTag);
     const gameName = resolveNewsGameName(article);
     const displayTitle = cleanNewsDisplayTitle(article.title, article.gameTag);
-    const pageUrl = `${siteUrl}${APP_ROUTES.newsArticle(newsSlug)}`;
+    const pageUrl = `${siteUrl}${APP_ROUTES.newsArticle(canonicalSlug)}`;
     const indexable = isIndexableNewsContent(article.content);
 
     const [releases, statusDetail] = await Promise.all([

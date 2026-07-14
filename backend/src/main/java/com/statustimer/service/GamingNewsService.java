@@ -99,7 +99,16 @@ public class GamingNewsService {
 
         LocalDateTime ingestedAt = LocalDateTime.now();
         String baseSlug = buildNewsBaseSlug(request.gameTag(), request.title());
-        String resolvedSlug = reserveUniqueNewsSlug(baseSlug);
+        String dedupKey = buildNewsDedupKey(request.gameTag(), request.title());
+        Optional<GamingNews> baseSlugMatch = gamingNewsRepository.findByNewsSlug(baseSlug);
+        if (baseSlugMatch.isPresent()
+                && dedupKey.equals(buildNewsDedupKey(baseSlugMatch.get()))) {
+            return GamingNewsResponse.fromEntity(baseSlugMatch.get(), gameCatalogService);
+        }
+
+        String resolvedSlug = baseSlugMatch.isPresent()
+                ? reserveUniqueNewsSlug(baseSlug)
+                : baseSlug;
         Game linkedGame = resolveLinkedGame(request.gameTag());
         CreateGamingNewsRequest normalized = new CreateGamingNewsRequest(
                 request.title(),
@@ -171,6 +180,15 @@ public class GamingNewsService {
 
     private String buildNewsDedupKey(GamingNews entity) {
         return resolveGroupingKey(entity) + "|" + normalizeNewsTitle(entity.getTitle());
+    }
+
+    private String buildNewsDedupKey(String gameTag, String title) {
+        String groupingKey = SlugUtils.toSlug(gameTag);
+        if (groupingKey.isBlank()) {
+            groupingKey = "unknown";
+        }
+
+        return groupingKey + "|" + normalizeNewsTitle(title);
     }
 
     private GamingNews pickPreferredDuplicate(GamingNews left, GamingNews right) {

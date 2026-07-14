@@ -41,10 +41,13 @@ function buildNewsArticleTitle(
   return `${displayTitle} | ${gameName} News`;
 }
 
-export function buildNewsArticleMetadata(article: GamingNews): Metadata {
+export function buildNewsArticleMetadata(
+  article: GamingNews,
+  canonicalSlug = article.slug,
+): Metadata {
   const gameName = resolveNewsGameName(article);
   const displayTitle = cleanNewsDisplayTitle(article.title, article.gameTag);
-  const canonicalPath = `/news/${article.slug}`;
+  const canonicalPath = `/news/${canonicalSlug}`;
   const canonicalUrl = `${siteUrl}${canonicalPath}`;
   const indexable = isIndexableNewsContent(article.content);
   const pageTitle = buildNewsArticleTitle(article, gameName, displayTitle);
