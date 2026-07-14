@@ -157,7 +157,6 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
             subNav={
               <GameStatusSubNav
                 slug={slug}
-                layout="sidebar"
                 hasNews={hasNews}
                 hasMedia={hasMedia}
               />
@@ -252,7 +251,6 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
             subNav={
               <GameStatusSubNav
                 slug={slug}
-                layout="sidebar"
                 hasNews={hasNews}
                 hasMedia={hasMedia}
               />
@@ -388,7 +386,6 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
             subNav={
               <GameStatusSubNav
                 slug={slug}
-                layout="sidebar"
                 hasNews={hasNews}
                 hasMedia={hasMedia}
               />
@@ -415,19 +412,14 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
                   <SteamStoreWidget steamAppId={steamAppId} gameName={gameName} />
                 ) : null}
                 <GameExternalLinks links={externalLinks} />
+                {!isCatalogProfile && !isSinglePlayerProfile && showIndexableContent ? (
+                  <IncidentLog incidents={incidents} sidebar />
+                ) : null}
                 <AdSlot format="skyscraper" slotId={`status-${slug}-skyscraper`} />
               </>
             }
             content={
               <>
-                {!isCatalogProfile && !isSinglePlayerProfile && showIndexableContent ? (
-                  <IncidentLog
-                    incidents={incidents}
-                    sectionTitle="Recent Problems"
-                    eyebrow="Crash & Maintenance Log"
-                  />
-                ) : null}
-
                 {hasNews ? (
                   <NewsFeedPanel
                     news={news}

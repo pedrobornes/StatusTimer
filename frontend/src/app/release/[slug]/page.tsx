@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
 import { APP_ROUTES } from "@/config/routes";
 import { getSiteUrl } from "@/config/site";
+import IncidentLog from "@/components/dashboard/telemetry/IncidentLog";
 import GameExternalLinks from "@/components/GameExternalLinks";
 import GameAssetImage from "@/components/ui/GameAssetImage";
 import GenreBadge from "@/components/ui/GenreBadge";
@@ -22,6 +23,7 @@ import { resolveReleaseGenres } from "@/lib/genres";
 import { resolveGameMedia, hasGameMedia } from "@/lib/gameMedia";
 import { resolveReleaseBoxArtUrl, resolveReleaseHeroUrl } from "@/lib/releases";
 import { redirectLaunchedReleaseToStatus } from "@/lib/releaseRoutes";
+import { isSinglePlayerGame } from "@/lib/gameType";
 import { resolveCanonicalGameSlug } from "@/lib/gameSlugs";
 import { toSlug } from "@/lib/slug";
 import { getGamingNews } from "@/services/newsService";
@@ -147,6 +149,8 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
     const genreBadges = resolveReleaseGenres(release);
     const hasNews = gameNews.length > 0;
     const hasMedia = hasGameMedia(gameMedia);
+    const incidents = statusDetail?.incidents ?? [];
+    const showIncidentLog = telemetry !== null && !isSinglePlayerGame(telemetry);
     const pageUrl = `${siteUrl}${APP_ROUTES.release(canonicalSlug)}`;
     const releaseJsonLd = buildReleasePageJsonLd({
       gameName: release.gameName,
@@ -196,7 +200,6 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
             <GameStatusSubNav
               slug={canonicalSlug}
               variant="release"
-              layout="sidebar"
               hasNews={hasNews}
               hasMedia={hasMedia}
             />
@@ -225,6 +228,10 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
               </section>
 
               <GameExternalLinks links={externalLinks} />
+
+              {showIncidentLog ? (
+                <IncidentLog incidents={incidents} sidebar />
+              ) : null}
             </>
           }
           content={

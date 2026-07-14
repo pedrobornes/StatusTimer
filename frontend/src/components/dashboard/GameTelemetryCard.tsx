@@ -84,36 +84,42 @@ export default memo(function GameTelemetryCard({
   const statusBadge = (
     <div className="shrink-0 self-start">
       {isSinglePlayer ? (
-        <div
-          title="Single Player"
-          className="rounded-full border border-slate-400/25 bg-slate-500/10 px-2 py-1 text-[10px] font-medium text-slate-100 sm:px-3 sm:text-xs"
-        >
-          <span className="sm:hidden" aria-hidden>
-            1P
-          </span>
-          <span className="hidden sm:inline">Single Player</span>
+        <div className="rounded-full border border-slate-400/25 bg-slate-500/10 px-3 py-1 text-xs font-medium text-slate-100">
+          Single Player
         </div>
       ) : catalogOnly ? (
-        <div className="rounded-full border border-cyan-400/25 bg-cyan-500/10 px-2 py-1 text-[10px] font-medium text-cyan-100 sm:px-3 sm:text-xs">
-          <span className="sm:hidden" aria-hidden>
-            Live
-          </span>
-          <span className="hidden sm:inline">Live profile</span>
+        <div className="rounded-full border border-cyan-400/25 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-100">
+          Live profile
         </div>
       ) : serverStatusPending ? (
-        <div
-          title="Checking servers"
-          className="flex items-center gap-1.5 rounded-full border border-violet-400/25 bg-violet-500/10 px-2 py-1 text-[10px] font-medium text-violet-100 sm:gap-2 sm:px-3 sm:text-xs"
-        >
+        <div className="flex items-center gap-2 rounded-full border border-violet-400/25 bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-100">
           <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-violet-300" />
-          <span className="hidden sm:inline">Checking servers</span>
+          Checking servers
         </div>
       ) : (
-        <StatusBadge
-          status={upcoming ? "UPCOMING" : telemetry.status}
-          compact
-        />
+        <StatusBadge status={upcoming ? "UPCOMING" : telemetry.status} />
       )}
+    </div>
+  );
+
+  const mobileStatusBadge = (
+    <div className="mt-2 sm:hidden">
+      {isSinglePlayer ? (
+        <div className="inline-flex rounded-full border border-slate-400/25 bg-slate-500/10 px-3 py-1 text-xs font-medium text-slate-100">
+          Single Player
+        </div>
+      ) : catalogOnly ? (
+        <div className="inline-flex rounded-full border border-cyan-400/25 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-100">
+          Live profile
+        </div>
+      ) : serverStatusPending ? (
+        <div className="inline-flex items-center gap-2 rounded-full border border-violet-400/25 bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-100">
+          <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-violet-300" />
+          Checking servers
+        </div>
+      ) : showServerStatus ? (
+        <StatusBadge status={upcoming ? "UPCOMING" : telemetry.status} />
+      ) : null}
     </div>
   );
 
@@ -135,7 +141,7 @@ export default memo(function GameTelemetryCard({
       <div className="flex w-full min-w-0 items-stretch gap-2 sm:gap-3">
         <GameBoxArtImage title={title} src={logoUrl} size="card" />
         {metricsBlock}
-        {statusBadge}
+        <div className="hidden shrink-0 self-start sm:block">{statusBadge}</div>
       </div>
 
       <div className="mt-4 w-full min-w-0">
@@ -164,6 +170,7 @@ export default memo(function GameTelemetryCard({
             ) : null}
           </div>
         )}
+        {mobileStatusBadge}
       </div>
     </>
   );
