@@ -38,12 +38,12 @@ export default function Dashboard({
 
   return (
     <div className="mystery-grid min-h-screen">
-      <div className="mx-auto w-full max-w-[1400px] px-4 py-8 md:px-8 md:py-12">
-        <header className="mb-10">
-          <div className="mb-4 flex items-center gap-4 md:gap-5">
-            <StatusTimerSonarLogo className="h-14 w-14 shrink-0 md:h-16 md:w-16" />
-            <div>
-              <h1 className="heading-display text-4xl text-white md:text-5xl">
+      <div className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:py-8 md:px-8 md:py-12">
+        <header className="mb-6 md:mb-10">
+          <div className="mb-4 flex items-center gap-3 sm:gap-4 md:gap-5">
+            <StatusTimerSonarLogo className="h-12 w-12 shrink-0 sm:h-14 sm:w-14 md:h-16 md:w-16" />
+            <div className="min-w-0">
+              <h1 className="heading-display text-2xl text-white sm:text-4xl md:text-5xl">
                 Gaming status hub
               </h1>
             </div>
@@ -57,7 +57,7 @@ export default function Dashboard({
           </div>
         </header>
 
-        <div className="grid gap-8 xl:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)] xl:items-start">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)] lg:items-start">
           <div className="min-w-0 space-y-8">
             <TelemetryGrid
               gameTelemetry={gameTelemetry}

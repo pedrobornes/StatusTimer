@@ -11,6 +11,7 @@ import ReleaseCountdownPanel from "@/components/ReleaseCountdownPanel";
 import ReleaseMediaPanel from "@/components/ReleaseMediaPanel";
 import ReleaseNewsPanel from "@/components/ReleaseNewsPanel";
 import GameStatusSubNav from "@/components/GameStatusSubNav";
+import GamePageLayout from "@/components/GamePageLayout";
 import SteamStoreWidget from "@/components/dashboard/SteamStoreWidget";
 import PageShell from "@/components/PageShell";
 import DashboardError from "@/components/dashboard/DashboardError";
@@ -190,23 +191,8 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
         coverUrl={coverUrl}
         coverAlt={release.gameName}
       >
-        <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="space-y-8">
-            <ReleaseNewsPanel
-              news={gameNews}
-              gameName={release.gameName}
-              gameSlug={canonicalSlug}
-              newsIndexHref={APP_ROUTES.releaseNews(canonicalSlug)}
-            />
-
-            <ReleaseMediaPanel
-              gameName={release.gameName}
-              media={gameMedia}
-              gameSlug={canonicalSlug}
-            />
-          </div>
-
-          <aside className="space-y-6 xl:sticky xl:top-24 xl:self-start">
+        <GamePageLayout
+          subNav={
             <GameStatusSubNav
               slug={canonicalSlug}
               variant="release"
@@ -214,31 +200,50 @@ export default async function ReleasePage({ params }: ReleasePageProps) {
               hasNews={hasNews}
               hasMedia={hasMedia}
             />
+          }
+          priority={
+            <>
+              <ReleaseCountdownPanel
+                platforms={release.platforms}
+                fallbackReleaseDate={release.releaseDate}
+                userRating={userRating}
+                criticRating={criticRating}
+              />
 
-            <ReleaseCountdownPanel
-              platforms={release.platforms}
-              fallbackReleaseDate={release.releaseDate}
-              userRating={userRating}
-              criticRating={criticRating}
-            />
+              {steamAppId ? (
+                <SteamStoreWidget
+                  steamAppId={steamAppId}
+                  gameName={release.gameName}
+                />
+              ) : null}
 
-            {steamAppId ? (
-              <SteamStoreWidget
-                steamAppId={steamAppId}
+              <section className="glass-panel rounded-3xl p-5">
+                <HypeCounterButton
+                  releaseId={release.id}
+                  initialHypeCount={release.hypeCount}
+                />
+              </section>
+
+              <GameExternalLinks links={externalLinks} />
+            </>
+          }
+          content={
+            <>
+              <ReleaseNewsPanel
+                news={gameNews}
                 gameName={release.gameName}
+                gameSlug={canonicalSlug}
+                newsIndexHref={APP_ROUTES.releaseNews(canonicalSlug)}
               />
-            ) : null}
 
-            <section className="glass-panel rounded-3xl p-5">
-              <HypeCounterButton
-                releaseId={release.id}
-                initialHypeCount={release.hypeCount}
+              <ReleaseMediaPanel
+                gameName={release.gameName}
+                media={gameMedia}
+                gameSlug={canonicalSlug}
               />
-            </section>
-
-            <GameExternalLinks links={externalLinks} />
-          </aside>
-        </div>
+            </>
+          }
+        />
 
         <nav className="mt-10 flex flex-col items-center justify-center gap-3 border-t border-white/8 pt-6 sm:flex-row sm:gap-4">
           <Link

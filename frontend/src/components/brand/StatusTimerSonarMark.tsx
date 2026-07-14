@@ -1,0 +1,40 @@
+interface StatusTimerSonarMarkProps {
+  showBackground?: boolean;
+}
+
+export default function StatusTimerSonarMark({
+  showBackground = true,
+}: StatusTimerSonarMarkProps) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 64 64"
+      fill="none"
+      width="64"
+      height="64"
+    >
+      {showBackground ? (
+        <rect width="64" height="64" rx="14" fill="#0a0614" />
+      ) : null}
+      <circle cx="32" cy="32" r="24" stroke="#1e3a2f" strokeWidth="1.5" />
+      <circle cx="32" cy="32" r="16" stroke="#2d5a47" strokeWidth="1.5" />
+      <circle cx="32" cy="32" r="8" stroke="#3d7a5c" strokeWidth="1.5" />
+      <path
+        d="M32 8 A24 24 0 0 1 56 32"
+        stroke="#34d399"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        opacity="0.9"
+      />
+      <path
+        d="M32 32 L32 8"
+        stroke="#34d399"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        opacity="0.35"
+      />
+      <circle cx="32" cy="32" r="2.5" fill="#6ee7b7" />
+      <circle cx="44" cy="22" r="2" fill="#34d399" opacity="0.85" />
+    </svg>
+  );
+}

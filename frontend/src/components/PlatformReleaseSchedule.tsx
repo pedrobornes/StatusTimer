@@ -19,7 +19,7 @@ export default function PlatformReleaseSchedule({
 
   const containerClass =
     layout === "grid"
-      ? "grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+      ? "grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
       : "space-y-3";
 
   return (

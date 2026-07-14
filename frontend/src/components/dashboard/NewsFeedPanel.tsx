@@ -49,7 +49,7 @@ export default function NewsFeedPanel({
     return APP_ROUTES.newsArticle(article.slug);
   };
   const panelClass = fillHeight
-    ? "glass-panel flex min-h-0 flex-col self-start rounded-3xl p-6 md:p-8 xl:sticky xl:top-24 xl:max-h-[calc(100vh-7rem)]"
+    ? "glass-panel flex min-h-0 flex-col self-start rounded-3xl p-6 md:p-8 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)]"
     : sidebar
       ? "glass-panel glow-ring rounded-3xl p-5 md:p-6"
       : "glass-panel rounded-3xl p-6 md:p-8";

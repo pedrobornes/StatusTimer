@@ -19,7 +19,7 @@ export default function GameExternalLinks({ links }: GameExternalLinksProps) {
   }
 
   return (
-    <section className="glass-panel rounded-3xl p-6">
+    <section className="glass-panel rounded-3xl p-5 sm:p-6">
       <div className="mb-4 flex items-center gap-3">
         <div className="rounded-xl border border-violet-400/20 bg-violet-500/10 p-2.5">
           <Link2 className="h-4 w-4 text-violet-300" />

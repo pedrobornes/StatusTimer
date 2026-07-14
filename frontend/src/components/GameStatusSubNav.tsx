@@ -105,7 +105,7 @@ export default function GameStatusSubNav({
   const navClassName =
     layout === "sidebar"
       ? "flex w-full flex-wrap gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-1.5"
-      : "mx-auto mb-8 flex w-fit flex-wrap justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-1.5";
+      : "mx-auto mb-6 flex w-full max-w-full flex-wrap justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-1.5 sm:mb-8 sm:w-fit";
 
   const linkClassName =
     layout === "sidebar"

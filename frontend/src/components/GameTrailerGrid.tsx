@@ -17,7 +17,7 @@ export default function GameTrailerGrid({
     maxVisible === undefined ? videoIds : videoIds.slice(0, maxVisible);
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {visibleVideoIds.map((videoId, index) => (
         <div
           key={`${videoId}-${index}`}

@@ -36,8 +36,8 @@ export default function ReleaseMediaPanel({
   );
 
   return (
-    <section className="glass-panel rounded-3xl p-6 md:p-8">
-      <div className="mb-6 flex items-center gap-3">
+    <section className="glass-panel rounded-3xl p-5 sm:p-6 md:p-8">
+      <div className="mb-6 flex min-w-0 items-center gap-3">
         <div className="rounded-2xl border border-violet-400/20 bg-violet-500/10 p-3">
           <Clapperboard className="h-5 w-5 text-violet-300" />
         </div>
@@ -45,7 +45,7 @@ export default function ReleaseMediaPanel({
           <p className="text-xs uppercase tracking-[0.35em] text-violet-300/70">
             Game media
           </p>
-          <h2 className="heading-section text-2xl uppercase text-white">
+          <h2 className="heading-section text-xl uppercase text-white sm:text-2xl">
             Trailers & Screenshots
           </h2>
         </div>

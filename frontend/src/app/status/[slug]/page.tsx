@@ -9,6 +9,7 @@ import GameExternalLinks from "@/components/GameExternalLinks";
 import ReleaseMediaPanel from "@/components/ReleaseMediaPanel";
 import ReleaseNewsPanel from "@/components/ReleaseNewsPanel";
 import GameStatusSubNav from "@/components/GameStatusSubNav";
+import GamePageLayout from "@/components/GamePageLayout";
 import PageShell from "@/components/PageShell";
 import GameStatusFaq from "@/components/seo/GameStatusFaq";
 import JsonLdScript from "@/components/seo/JsonLdScript";
@@ -152,50 +153,54 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
           coverUrl={coverUrl}
           coverAlt={gameName}
         >
-          <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
-            <div className="space-y-8">
-              <section aria-labelledby="server-status-heading">
-                <h2 id="server-status-heading" className="sr-only">
-                  {gameName} server status
-                </h2>
-                <PendingTelemetryGate gameSlug={slug} />
-                {hasPartialTelemetry ? (
-                  <GameTelemetryCard
-                    telemetry={telemetry}
-                    linkToStatusPage={false}
-                    linkToProfile={false}
-                    platforms={releasePlatforms}
-                    serverStatusPending
-                    embedded
-                  />
-                ) : null}
-              </section>
-
-              <ReleaseNewsPanel
-                news={news}
-                gameName={gameName}
-                gameSlug={slug}
-              />
-              <ReleaseMediaPanel
-                gameName={gameName}
-                media={gameMedia}
-                gameSlug={canonicalSlug}
-              />
-            </div>
-
-            <aside className="space-y-6 xl:sticky xl:top-24 xl:self-start">
+          <GamePageLayout
+            subNav={
               <GameStatusSubNav
                 slug={slug}
                 layout="sidebar"
                 hasNews={hasNews}
                 hasMedia={hasMedia}
               />
-              {steamAppId ? (
-                <SteamStoreWidget steamAppId={steamAppId} gameName={gameName} />
-              ) : null}
-              <GameExternalLinks links={externalLinks} />
-            </aside>
-          </div>
+            }
+            priority={
+              <>
+                <section aria-labelledby="server-status-heading">
+                  <h2 id="server-status-heading" className="sr-only">
+                    {gameName} server status
+                  </h2>
+                  <PendingTelemetryGate gameSlug={slug} />
+                  {hasPartialTelemetry ? (
+                    <GameTelemetryCard
+                      telemetry={telemetry}
+                      linkToStatusPage={false}
+                      linkToProfile={false}
+                      platforms={releasePlatforms}
+                      serverStatusPending
+                      embedded
+                    />
+                  ) : null}
+                </section>
+                {steamAppId ? (
+                  <SteamStoreWidget steamAppId={steamAppId} gameName={gameName} />
+                ) : null}
+                <GameExternalLinks links={externalLinks} />
+              </>
+            }
+            content={
+              <>
+                <ReleaseNewsPanel
+                  news={news}
+                  gameName={gameName}
+                  gameSlug={slug}
+                />
+                <ReleaseMediaPanel
+                  gameName={gameName}
+                  media={gameMedia}
+                  gameSlug={canonicalSlug}
+                />
+              </>
+            }
+          />
         </PageShell>
       );
     }
@@ -237,48 +242,52 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
           coverUrl={coverUrl}
           coverAlt={gameName}
         >
-          <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
-            <div className="space-y-8">
-              <section aria-labelledby="server-status-heading">
-                <h2 id="server-status-heading" className="sr-only">
-                  {gameName} server status
-                </h2>
-                <TelemetryRefreshBanner gameSlug={slug} />
-                <GameTelemetryCard
-                  telemetry={telemetry}
-                  linkToStatusPage={false}
-                  linkToProfile={false}
-                  platforms={releasePlatforms}
-                  serverStatusPending
-                  embedded
-                />
-              </section>
-
-              <ReleaseNewsPanel
-                news={news}
-                gameName={gameName}
-                gameSlug={slug}
-              />
-              <ReleaseMediaPanel
-                gameName={gameName}
-                media={gameMedia}
-                gameSlug={canonicalSlug}
-              />
-            </div>
-
-            <aside className="space-y-6 xl:sticky xl:top-24 xl:self-start">
+          <GamePageLayout
+            subNav={
               <GameStatusSubNav
                 slug={slug}
                 layout="sidebar"
                 hasNews={hasNews}
                 hasMedia={hasMedia}
               />
-              {steamAppId ? (
-                <SteamStoreWidget steamAppId={steamAppId} gameName={gameName} />
-              ) : null}
-              <GameExternalLinks links={externalLinks} />
-            </aside>
-          </div>
+            }
+            priority={
+              <>
+                <section aria-labelledby="server-status-heading">
+                  <h2 id="server-status-heading" className="sr-only">
+                    {gameName} server status
+                  </h2>
+                  <TelemetryRefreshBanner gameSlug={slug} />
+                  <GameTelemetryCard
+                    telemetry={telemetry}
+                    linkToStatusPage={false}
+                    linkToProfile={false}
+                    platforms={releasePlatforms}
+                    serverStatusPending
+                    embedded
+                  />
+                </section>
+                {steamAppId ? (
+                  <SteamStoreWidget steamAppId={steamAppId} gameName={gameName} />
+                ) : null}
+                <GameExternalLinks links={externalLinks} />
+              </>
+            }
+            content={
+              <>
+                <ReleaseNewsPanel
+                  news={news}
+                  gameName={gameName}
+                  gameSlug={slug}
+                />
+                <ReleaseMediaPanel
+                  gameName={gameName}
+                  media={gameMedia}
+                  gameSlug={canonicalSlug}
+                />
+              </>
+            }
+          />
         </PageShell>
       );
     }
@@ -363,64 +372,69 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
           coverUrl={coverUrl}
           coverAlt={gameName}
         >
-          <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
-            <div className="space-y-8">
-              {!isCatalogProfile && !isSinglePlayerProfile && showIndexableContent ? (
-                <IncidentLog
-                  incidents={incidents}
-                  sectionTitle="Recent Problems"
-                  eyebrow="Crash & Maintenance Log"
-                />
-              ) : null}
-
-              <ReleaseNewsPanel
-                news={news}
-                gameName={gameName}
-                gameSlug={slug}
-              />
-
-              <ReleaseMediaPanel
-                gameName={gameName}
-                media={gameMedia}
-                gameSlug={canonicalSlug}
-              />
-
-              {!isCatalogProfile && !isSinglePlayerProfile && showIndexableContent ? (
-                <GameStatusFaq items={faqItems} />
-              ) : null}
-
-              <div className="mt-8">
-                <AdSlot format="leaderboard" slotId={`status-${slug}-leaderboard`} />
-              </div>
-            </div>
-
-            <aside className="space-y-6 xl:sticky xl:top-24 xl:self-start">
+          <GamePageLayout
+            subNav={
               <GameStatusSubNav
                 slug={slug}
                 layout="sidebar"
                 hasNews={hasNews}
                 hasMedia={hasMedia}
               />
-              <section aria-labelledby="server-status-heading">
-                <h2 id="server-status-heading" className="sr-only">
-                  {sidebarStatusLabel}
-                </h2>
-                <GameTelemetryCard
-                  telemetry={telemetry}
-                  linkToStatusPage={false}
-                  linkToProfile={false}
-                  platforms={releasePlatforms}
-                  catalogOnly={isCatalogProfile}
-                  embedded
+            }
+            priority={
+              <>
+                <section aria-labelledby="server-status-heading">
+                  <h2 id="server-status-heading" className="sr-only">
+                    {sidebarStatusLabel}
+                  </h2>
+                  <GameTelemetryCard
+                    telemetry={telemetry}
+                    linkToStatusPage={false}
+                    linkToProfile={false}
+                    platforms={releasePlatforms}
+                    catalogOnly={isCatalogProfile}
+                    embedded
+                  />
+                </section>
+                {steamAppId ? (
+                  <SteamStoreWidget steamAppId={steamAppId} gameName={gameName} />
+                ) : null}
+                <GameExternalLinks links={externalLinks} />
+                <AdSlot format="skyscraper" slotId={`status-${slug}-skyscraper`} />
+              </>
+            }
+            content={
+              <>
+                {!isCatalogProfile && !isSinglePlayerProfile && showIndexableContent ? (
+                  <IncidentLog
+                    incidents={incidents}
+                    sectionTitle="Recent Problems"
+                    eyebrow="Crash & Maintenance Log"
+                  />
+                ) : null}
+
+                <ReleaseNewsPanel
+                  news={news}
+                  gameName={gameName}
+                  gameSlug={slug}
                 />
-              </section>
-              {steamAppId ? (
-                <SteamStoreWidget steamAppId={steamAppId} gameName={gameName} />
-              ) : null}
-              <GameExternalLinks links={externalLinks} />
-              <AdSlot format="skyscraper" slotId={`status-${slug}-skyscraper`} />
-            </aside>
-          </div>
+
+                <ReleaseMediaPanel
+                  gameName={gameName}
+                  media={gameMedia}
+                  gameSlug={canonicalSlug}
+                />
+
+                {!isCatalogProfile && !isSinglePlayerProfile && showIndexableContent ? (
+                  <GameStatusFaq items={faqItems} />
+                ) : null}
+
+                <div className="mt-8">
+                  <AdSlot format="leaderboard" slotId={`status-${slug}-leaderboard`} />
+                </div>
+              </>
+            }
+          />
         </PageShell>
       </>
     );

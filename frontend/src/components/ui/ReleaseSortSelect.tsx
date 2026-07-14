@@ -15,7 +15,7 @@ const SORT_OPTIONS: { value: ReleaseSortMode; label: string }[] = [
 ];
 
 const selectClassName =
-  "w-full min-w-[200px] appearance-none rounded-2xl border border-cyan-400/20 bg-white/[0.04] bg-[length:12px] bg-[right_14px_center] bg-no-repeat px-4 py-2.5 pr-10 text-sm text-white outline-none transition focus:border-cyan-400/45 focus:bg-white/[0.06] focus:ring-2 focus:ring-cyan-500/20";
+  "w-full appearance-none rounded-2xl border border-cyan-400/20 bg-white/[0.04] bg-[length:12px] bg-[right_14px_center] bg-no-repeat px-4 py-2.5 pr-10 text-sm text-white outline-none transition focus:border-cyan-400/45 focus:bg-white/[0.06] focus:ring-2 focus:ring-cyan-500/20 sm:min-w-[200px]";
 
 const selectStyle = {
   backgroundImage:

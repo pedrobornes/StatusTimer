@@ -56,8 +56,8 @@ export default function Footer() {
 
   return (
     <footer className="mt-auto border-t border-violet-400/10 bg-black/20 backdrop-blur-sm">
-      <div className="mx-auto max-w-7xl px-4 py-10 md:px-8">
-        <div className="glass-panel rounded-2xl p-6 md:p-8">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:py-10 md:px-8">
+        <div className="glass-panel rounded-2xl p-5 sm:p-6 md:p-8">
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
             <div className="lg:col-span-1">
               <p className="text-sm font-bold tracking-wide text-white">

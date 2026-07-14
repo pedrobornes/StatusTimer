@@ -81,41 +81,57 @@ export default memo(function GameTelemetryCard({
       ? profileHref
       : null;
 
+  const statusBadge = (
+    <div className="shrink-0 self-start">
+      {isSinglePlayer ? (
+        <div className="rounded-full border border-slate-400/25 bg-slate-500/10 px-3 py-1 text-xs font-medium text-slate-100">
+          Single Player
+        </div>
+      ) : catalogOnly ? (
+        <div className="rounded-full border border-cyan-400/25 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-100">
+          Live profile
+        </div>
+      ) : serverStatusPending ? (
+        <div className="flex items-center gap-2 rounded-full border border-violet-400/25 bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-100">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-violet-300" />
+          Checking servers
+        </div>
+      ) : (
+        <StatusBadge status={upcoming ? "UPCOMING" : telemetry.status} />
+      )}
+    </div>
+  );
+
+  const metricsBlock = (
+    <div className="flex min-w-0 flex-1 flex-col justify-center">
+      <GameLiveMetricsRow
+        livePlayers={telemetry.livePlayers}
+        twitchViewers={telemetry.twitchViewers}
+        orientation="vertical"
+        className="mt-0"
+        unifiedColors={unifiedMetricsColors}
+        showLivePlayers={showLivePlayers}
+      />
+    </div>
+  );
+
   const headerContent = (
     <>
-      <div className="flex w-full items-stretch gap-3">
-        <GameBoxArtImage title={title} src={logoUrl} size="card" />
-
-        <div className="flex min-w-0 flex-1 flex-col justify-center">
-          <GameLiveMetricsRow
-            livePlayers={telemetry.livePlayers}
-            twitchViewers={telemetry.twitchViewers}
-            orientation="vertical"
-            className="mt-0"
-            unifiedColors={unifiedMetricsColors}
-            showLivePlayers={showLivePlayers}
-          />
+      {embedded ? (
+        <div className="flex w-full flex-col gap-3">
+          <div className="flex min-w-0 items-stretch gap-3">
+            <GameBoxArtImage title={title} src={logoUrl} size="card" />
+            {metricsBlock}
+          </div>
+          {statusBadge}
         </div>
-
-        <div className="shrink-0 self-start">
-          {isSinglePlayer ? (
-            <div className="rounded-full border border-slate-400/25 bg-slate-500/10 px-3 py-1 text-xs font-medium text-slate-100">
-              Single Player
-            </div>
-          ) : catalogOnly ? (
-            <div className="rounded-full border border-cyan-400/25 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-100">
-              Live profile
-            </div>
-          ) : serverStatusPending ? (
-            <div className="flex items-center gap-2 rounded-full border border-violet-400/25 bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-100">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-violet-300" />
-              Checking servers
-            </div>
-          ) : (
-            <StatusBadge status={upcoming ? "UPCOMING" : telemetry.status} />
-          )}
+      ) : (
+        <div className="flex w-full items-stretch gap-3">
+          <GameBoxArtImage title={title} src={logoUrl} size="card" />
+          {metricsBlock}
+          {statusBadge}
         </div>
-      </div>
+      )}
 
       <div className="mt-4 w-full">
         <h3 className="line-clamp-2 break-words whitespace-normal text-2xl font-bold tracking-tight text-white transition-colors duration-200 group-hover:text-emerald-400">

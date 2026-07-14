@@ -20,7 +20,7 @@ export default async function ReleasesPage() {
         subtitle="Upcoming launches with hype counters, release windows, and genre filters."
         badge="Releases"
       >
-        <div className="glass-panel rounded-3xl p-6 md:p-8">
+        <div className="glass-panel rounded-3xl p-5 sm:p-6 md:p-8">
           <ReleasesHub releases={releases} />
         </div>
       </PageShell>

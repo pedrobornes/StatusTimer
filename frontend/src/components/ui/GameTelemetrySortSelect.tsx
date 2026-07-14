@@ -74,7 +74,7 @@ export default function GameTelemetrySortSelect({
         id={id}
         value={value}
         onChange={(event) => onChange(event.target.value as TelemetrySortMode)}
-        className={`${selectClassName} min-w-[220px] sm:w-auto`}
+        className={`${selectClassName} w-full sm:min-w-[220px] sm:w-auto`}
         style={selectStyle}
       >
         {options}

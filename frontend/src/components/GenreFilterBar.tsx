@@ -16,7 +16,8 @@ export default function GenreFilterBar({
   const options: ReleaseGenreFilter[] = [ALL_GENRES_FILTER, ...genres];
 
   return (
-    <div className="mb-6 flex flex-wrap gap-2">
+    <div className="mb-6 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex w-max gap-2 sm:w-auto sm:flex-wrap">
       {options.map((genre) => {
         const isActive = currentGenre === genre;
 
@@ -25,7 +26,7 @@ export default function GenreFilterBar({
             key={genre}
             type="button"
             onClick={() => onGenreChange(genre)}
-            className={`rounded-xl border px-3 py-1.5 text-xs font-medium uppercase tracking-[0.16em] transition ${
+            className={`shrink-0 rounded-xl border px-3 py-1.5 text-xs font-medium uppercase tracking-[0.16em] transition ${
               isActive
                 ? "border-cyan-400/35 bg-cyan-500/20 text-cyan-50"
                 : "border-white/12 bg-white/[0.04] text-slate-300 hover:border-cyan-400/25 hover:text-white"
@@ -35,6 +36,7 @@ export default function GenreFilterBar({
           </button>
         );
       })}
+      </div>
     </div>
   );
 }

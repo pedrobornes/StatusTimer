@@ -24,17 +24,17 @@ export default function UpcomingReleasesPanel({
     "No upcoming games found right now. Check back soon for new reveals!";
 
   return (
-    <section className="glass-panel rounded-3xl p-6 md:p-8">
+    <section className="glass-panel rounded-3xl p-5 sm:p-6 md:p-8">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-3">
             <Rocket className="h-5 w-5 text-cyan-300" />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-xs font-medium uppercase tracking-[0.35em] text-cyan-200/85">
               Countdown Radar
             </p>
-            <h2 className="heading-section text-2xl uppercase text-white">
+            <h2 className="heading-section text-xl uppercase text-white sm:text-2xl">
               UPCOMING RELEASES
             </h2>
           </div>

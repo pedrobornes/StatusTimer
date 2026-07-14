@@ -33,7 +33,7 @@ export default function AdSlot({ format, slotId, className = "" }: AdSlotProps) 
     return null;
   }
 
-  const skyscraperOnly = format === "skyscraper" ? "hidden xl:flex" : "flex";
+  const skyscraperOnly = format === "skyscraper" ? "hidden lg:flex" : "flex";
 
   return (
     <div

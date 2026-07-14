@@ -33,15 +33,15 @@ export default function TelemetryGrid({
   );
 
   return (
-    <section className="glass-panel glow-ring rounded-3xl p-6 md:p-8">
+    <section className="glass-panel glow-ring rounded-3xl p-5 sm:p-6 md:p-8">
       <div className="mb-6 space-y-4">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="flex min-w-0 items-center gap-3">
             <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-3">
               <Activity className="h-5 w-5 text-emerald-300" />
             </div>
             <div className="min-w-0">
-              <h2 className="heading-section text-2xl text-white">
+              <h2 className="heading-section text-xl text-white sm:text-2xl">
                 Tracked games
               </h2>
               <p className="mt-1 text-sm text-slate-400">

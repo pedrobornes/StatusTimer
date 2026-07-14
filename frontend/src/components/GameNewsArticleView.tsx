@@ -70,8 +70,8 @@ export default function GameNewsArticleView({
         />
       )}
 
-      <section className="glass-panel mb-6 rounded-3xl border border-white/16 bg-[#211b3a]/90 p-6 shadow-[0_18px_50px_rgba(5,3,12,0.34)] md:p-8">
-        <div className="mb-6 flex items-start gap-4 border-b border-white/10 pb-5 md:gap-5">
+      <section className="glass-panel mb-6 rounded-3xl border border-white/16 bg-[#211b3a]/90 p-5 shadow-[0_18px_50px_rgba(5,3,12,0.34)] sm:p-6 md:p-8">
+        <div className="mb-6 flex items-start gap-3 border-b border-white/10 pb-5 sm:gap-4 md:gap-5">
           <Link
             href={context.profileHref}
             className="shrink-0 transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300"
@@ -80,7 +80,7 @@ export default function GameNewsArticleView({
             <GameAssetImage
               name={gameName}
               src={boxArtUrl}
-              className="h-24 w-16 rounded-xl md:h-28 md:w-20"
+              className="h-20 w-14 shrink-0 rounded-xl sm:h-24 sm:w-16 md:h-28 md:w-20"
               imageClassName="object-cover"
             />
           </Link>
