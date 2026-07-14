@@ -103,7 +103,7 @@ export default memo(function GameTelemetryCard({
   );
 
   const mobileStatusBadge = (
-    <div className="mt-2 sm:hidden">
+    <div className="mt-2 w-fit sm:hidden">
       {isSinglePlayer ? (
         <div className="inline-flex rounded-full border border-slate-400/25 bg-slate-500/10 px-3 py-1 text-xs font-medium text-slate-100">
           Single Player
