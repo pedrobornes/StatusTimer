@@ -15,6 +15,7 @@ public final class CatalogMonitoringPolicy {
             "pubg",
             "fortnite",
             "league-of-legends",
+            "teamfight-tactics",
             "minecraft",
             "roblox",
             "apex-legends",

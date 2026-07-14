@@ -191,6 +191,13 @@ MONITORED_GAME_TARGETS: tuple[MonitoredGameTarget, ...] = (
         fallback_port=443,
     ),
     _target(
+        slug="teamfight-tactics",
+        display_name="Teamfight Tactics",
+        strategy=ProbeStrategy.RIOT,
+        fallback_host="teamfighttactics.leagueoflegends.com",
+        fallback_port=443,
+    ),
+    _target(
         slug="minecraft",
         display_name="Minecraft",
         strategy=ProbeStrategy.STEAM,

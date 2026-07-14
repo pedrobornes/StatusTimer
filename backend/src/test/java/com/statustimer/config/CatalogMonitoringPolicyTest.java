@@ -40,7 +40,12 @@ class CatalogMonitoringPolicyTest {
     }
 
     @Test
-    void monitoredNonSteamTitleSupportsServerProbe() {
+    void riotTitlesSupportServerProbe() {
         assertTrue(CatalogMonitoringPolicy.supportsServerProbe("valorant", null));
+        assertTrue(CatalogMonitoringPolicy.supportsServerProbe("league-of-legends", null));
+        assertTrue(CatalogMonitoringPolicy.supportsServerProbe("teamfight-tactics", null));
+        assertFalse(CatalogMonitoringPolicy.isCatalogOnlyProfile(
+                Game.builder().slug("teamfight-tactics").build()
+        ));
     }
 }
