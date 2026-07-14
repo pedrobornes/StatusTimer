@@ -195,6 +195,119 @@ class GameCatalogServiceSyncTest {
         assertEquals(730, gameCatalogService.resolveAppId("counter-strike"));
     }
 
+    @Test
+    void syncCatalogUpdatesExistingRowInsteadOfInsertingDuplicateSlug() {
+        gameRepository.save(Game.builder()
+                .slug("mario-tennis-open")
+                .gameName("Mario Tennis Open")
+                .lifecycleState(LifecycleState.CATALOG)
+                .build());
+
+        var response = gameCatalogService.syncCatalog(new SyncGameCatalogRequest(
+                List.of(catalogEntry(
+                        "mario-tennis-open",
+                        "Mario Tennis Open",
+                        null,
+                        null,
+                        null,
+                        "12345",
+                        12,
+                        null,
+                        4_200L
+                ))
+        ));
+
+        assertEquals(0, response.created());
+        assertEquals(1, response.updated());
+        assertEquals(1, gameRepository.findBySlug("mario-tennis-open").stream().count());
+
+        Game updated = gameRepository.findBySlug("mario-tennis-open").orElseThrow();
+        assertEquals("12345", updated.getTwitchGameId());
+        assertEquals(12, updated.getTwitchRank());
+        assertEquals(4_200L, updated.getTwitchViewers());
+    }
+
+    @Test
+    void syncCatalogDeduplicatesDuplicateSlugsInSameBatch() {
+        var response = gameCatalogService.syncCatalog(new SyncGameCatalogRequest(
+                List.of(
+                        catalogEntry(
+                                "mario-tennis-open",
+                                "Mario Tennis Open",
+                                null,
+                                null,
+                                null,
+                                "12345",
+                                12,
+                                null,
+                                4_200L
+                        ),
+                        catalogEntry(
+                                "mario-tennis-open",
+                                "Mario Tennis Open",
+                                null,
+                                null,
+                                null,
+                                "12345",
+                                8,
+                                null,
+                                9_800L
+                        )
+                )
+        ));
+
+        assertEquals(1, response.created());
+        assertEquals(1, response.updated());
+        assertEquals(0, response.skipped());
+        assertEquals(1, gameRepository.findBySlug("mario-tennis-open").stream().count());
+
+        Game updated = gameRepository.findBySlug("mario-tennis-open").orElseThrow();
+        assertEquals(8, updated.getTwitchRank());
+        assertEquals(9_800L, updated.getTwitchViewers());
+    }
+
+    private GameCatalogEntryPayload catalogEntry(
+            String slug,
+            String gameName,
+            Integer steamAppId,
+            String logoUrl,
+            String coverUrl,
+            String twitchGameId,
+            Integer twitchRank,
+            Long livePlayers,
+            Long twitchViewers
+    ) {
+        return new GameCatalogEntryPayload(
+                slug,
+                gameName,
+                steamAppId,
+                logoUrl,
+                coverUrl,
+                twitchGameId,
+                twitchRank,
+                livePlayers,
+                twitchViewers,
+                false,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                List.of(),
+                List.of(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+    }
+
     private void ensureGame(String slug, String gameName, boolean featured) {
         if (gameRepository.findBySlug(slug).isPresent()) {
             return;

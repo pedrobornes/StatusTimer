@@ -70,42 +70,8 @@ public class IgdbApiClient {
             return Optional.empty();
         }
 
-        throttleBeforeRequest();
-
         try {
-            String token = ensureAccessToken();
-            HttpRequest request = HttpRequest.newBuilder(URI.create(API_BASE + "/games"))
-                    .timeout(Duration.ofSeconds(20))
-                    .header("Client-ID", properties.getClientId())
-                    .header("Authorization", "Bearer " + token)
-                    .header("Accept", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(body))
-                    .build();
-
-            HttpResponse<String> response = httpClient.send(
-                    request,
-                    HttpResponse.BodyHandlers.ofString()
-            );
-
-            if (response.statusCode() == 429) {
-                rateLimitedUntilMs = System.currentTimeMillis() + RATE_LIMIT_COOLDOWN_MS;
-                log.warn(
-                        "IGDB games query rate limited (HTTP 429); pausing IGDB enrichment for {}s",
-                        RATE_LIMIT_COOLDOWN_MS / 1000
-                );
-                return Optional.empty();
-            }
-
-            if (response.statusCode() != 200) {
-                log.warn(
-                        "IGDB games query failed with HTTP {}: {}",
-                        response.statusCode(),
-                        response.body()
-                );
-                return Optional.empty();
-            }
-
-            return Optional.of(objectMapper.readTree(response.body()));
+            return executeGamesQuery(body, false);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             log.warn("IGDB games query interrupted");
@@ -114,6 +80,51 @@ public class IgdbApiClient {
             log.warn("IGDB games query failed", exception);
             return Optional.empty();
         }
+    }
+
+    private Optional<JsonNode> executeGamesQuery(String body, boolean isRetry) throws Exception {
+        throttleBeforeRequest();
+
+        String token = ensureAccessToken();
+        HttpResponse<String> response = sendGamesQuery(body, token);
+
+        if (response.statusCode() == 429) {
+            rateLimitedUntilMs = System.currentTimeMillis() + RATE_LIMIT_COOLDOWN_MS;
+            log.warn(
+                    "IGDB games query rate limited (HTTP 429); pausing IGDB enrichment for {}s",
+                    RATE_LIMIT_COOLDOWN_MS / 1000
+            );
+            return Optional.empty();
+        }
+
+        if (response.statusCode() == 401 && !isRetry) {
+            log.warn("IGDB games query returned HTTP 401; refreshing OAuth token and retrying once");
+            invalidateAccessToken();
+            return executeGamesQuery(body, true);
+        }
+
+        if (response.statusCode() != 200) {
+            log.warn(
+                    "IGDB games query failed with HTTP {}: {}",
+                    response.statusCode(),
+                    response.body()
+            );
+            return Optional.empty();
+        }
+
+        return Optional.of(objectMapper.readTree(response.body()));
+    }
+
+    private HttpResponse<String> sendGamesQuery(String body, String token) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder(URI.create(API_BASE + "/games"))
+                .timeout(Duration.ofSeconds(20))
+                .header("Client-ID", properties.getClientId())
+                .header("Authorization", "Bearer " + token)
+                .header("Accept", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .build();
+
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
     }
 
     private synchronized void throttleBeforeRequest() {
@@ -129,7 +140,12 @@ public class IgdbApiClient {
         lastRequestAtMs = System.currentTimeMillis();
     }
 
-    private String ensureAccessToken() throws Exception {
+    private synchronized void invalidateAccessToken() {
+        accessToken = null;
+        tokenExpiresAt = Instant.EPOCH;
+    }
+
+    private synchronized String ensureAccessToken() throws Exception {
         if (accessToken != null && Instant.now().isBefore(tokenExpiresAt)) {
             return accessToken;
         }

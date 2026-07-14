@@ -1063,7 +1063,7 @@ public class GameCatalogService {
         return List.of();
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = DataIntegrityViolationException.class)
     public SyncGameCatalogResponse syncCatalog(SyncGameCatalogRequest request) {
         if (request.entries() == null || request.entries().isEmpty()) {
             throw new ResponseStatusException(
@@ -1077,69 +1077,13 @@ public class GameCatalogService {
         int skipped = 0;
 
         for (GameCatalogEntryPayload payload : request.entries()) {
-            if (payload.slug() == null || payload.slug().isBlank()) {
-                skipped++;
-                continue;
-            }
-
-            String targetSlug = gameSlugMapper.getSteamSlug(payload.slug().trim());
-
-            if (CatalogNoisePolicy.isTwitchCategoryNoise(targetSlug, payload.gameName())) {
-                gameRepository.findBySlug(targetSlug).ifPresent(CatalogNoisePolicy::applyQuarantineIfNoise);
-                skipped++;
-                continue;
-            }
-
-            if (ManualProtectedCatalogPolicy.SLUGS.contains(targetSlug)) {
-                if (updateTwitchMetricsOnly(payload, targetSlug)) {
-                    updated++;
-                } else {
-                    skipped++;
-                }
-                continue;
-            }
-
-            Optional<Game> existing = gameRepository.findBySlug(targetSlug);
-            if (existing.isPresent() && Boolean.TRUE.equals(existing.get().getManualLock())) {
-                if (updateTwitchMetricsOnly(payload, targetSlug)) {
-                    updated++;
-                } else {
-                    skipped++;
-                }
-                continue;
-            }
-
-            Game game = existing.orElseGet(() -> Game.builder()
-                    .slug(targetSlug)
-                    .manualLock(false)
-                    .featured(false)
-                    .build());
-
-            boolean isNew = game.getId() == null;
-
-            game.setGameName(resolveRequiredName(payload));
-            resolveSteamAppIdForSync(game, payload);
-            applyTwitchFields(game, payload);
-            applyLiveMetricsFields(game, payload);
-
-            if (!Boolean.TRUE.equals(game.getManualLock())) {
-                applyGameAssets(game, payload);
-                applySteamStoreFields(game, payload);
-            }
-
-            applyPinnedGameType(game);
-
-            if (payload.featured() != null) {
-                game.setFeatured(payload.featured());
-            }
-
-            gameRepository.save(game);
-            indexabilityService.recalculateForSlug(targetSlug);
-
-            if (isNew) {
+            SyncCatalogEntryOutcome outcome = syncCatalogEntry(payload);
+            if (outcome == SyncCatalogEntryOutcome.CREATED) {
                 created++;
-            } else {
+            } else if (outcome == SyncCatalogEntryOutcome.UPDATED) {
                 updated++;
+            } else {
+                skipped++;
             }
         }
 
@@ -1149,6 +1093,99 @@ public class GameCatalogService {
                 skipped,
                 request.entries().size()
         );
+    }
+
+    private SyncCatalogEntryOutcome syncCatalogEntry(GameCatalogEntryPayload payload) {
+        if (payload.slug() == null || payload.slug().isBlank()) {
+            return SyncCatalogEntryOutcome.SKIPPED;
+        }
+
+        String targetSlug = gameSlugMapper.getSteamSlug(payload.slug().trim());
+
+        if (CatalogNoisePolicy.isTwitchCategoryNoise(targetSlug, payload.gameName())) {
+            gameRepository.findBySlug(targetSlug).ifPresent(CatalogNoisePolicy::applyQuarantineIfNoise);
+            return SyncCatalogEntryOutcome.SKIPPED;
+        }
+
+        if (ManualProtectedCatalogPolicy.SLUGS.contains(targetSlug)) {
+            return updateTwitchMetricsOnly(payload, targetSlug)
+                    ? SyncCatalogEntryOutcome.UPDATED
+                    : SyncCatalogEntryOutcome.SKIPPED;
+        }
+
+        Optional<Game> existing = gameRepository.findBySlug(targetSlug);
+        if (existing.isPresent() && Boolean.TRUE.equals(existing.get().getManualLock())) {
+            return updateTwitchMetricsOnly(payload, targetSlug)
+                    ? SyncCatalogEntryOutcome.UPDATED
+                    : SyncCatalogEntryOutcome.SKIPPED;
+        }
+
+        Game game = existing.orElseGet(() -> Game.builder()
+                .slug(targetSlug)
+                .manualLock(false)
+                .featured(false)
+                .build());
+
+        boolean isNew = game.getId() == null;
+        applySyncCatalogFields(game, payload);
+
+        return persistSyncedCatalogGame(game, targetSlug, isNew, payload);
+    }
+
+    private void applySyncCatalogFields(Game game, GameCatalogEntryPayload payload) {
+        game.setGameName(resolveRequiredName(payload));
+        resolveSteamAppIdForSync(game, payload);
+        applyTwitchFields(game, payload);
+        applyLiveMetricsFields(game, payload);
+
+        if (!Boolean.TRUE.equals(game.getManualLock())) {
+            applyGameAssets(game, payload);
+            applySteamStoreFields(game, payload);
+        }
+
+        applyPinnedGameType(game);
+
+        if (payload.featured() != null) {
+            game.setFeatured(payload.featured());
+        }
+    }
+
+    private SyncCatalogEntryOutcome persistSyncedCatalogGame(
+            Game game,
+            String targetSlug,
+            boolean isNew,
+            GameCatalogEntryPayload payload
+    ) {
+        try {
+            gameRepository.save(game);
+            gameRepository.flush();
+            indexabilityService.recalculateForSlug(targetSlug);
+            return isNew ? SyncCatalogEntryOutcome.CREATED : SyncCatalogEntryOutcome.UPDATED;
+        } catch (DataIntegrityViolationException exception) {
+            if (!isNew) {
+                throw exception;
+            }
+
+            log.debug(
+                    "Catalog sync slug collision for '{}'; reloading existing catalog row",
+                    targetSlug
+            );
+
+            Game existing = gameRepository.findBySlug(targetSlug)
+                    .orElseThrow(() -> exception);
+
+            applySyncCatalogFields(existing, payload);
+            gameRepository.save(existing);
+            gameRepository.flush();
+            indexabilityService.recalculateForSlug(targetSlug);
+            return SyncCatalogEntryOutcome.UPDATED;
+        }
+    }
+
+    private enum SyncCatalogEntryOutcome {
+        SKIPPED,
+        CREATED,
+        UPDATED
     }
 
     @Transactional

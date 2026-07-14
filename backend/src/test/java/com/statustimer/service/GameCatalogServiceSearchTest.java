@@ -67,7 +67,9 @@ class GameCatalogServiceSearchTest {
         List<GameCatalogSearchResponse> results = gameCatalogService.search("grand");
 
         assertFalse(results.isEmpty());
-        assertTrue(results.stream().anyMatch(result -> "grand-theft-auto-vi".equals(result.slug())));
+        assertTrue(results.stream().anyMatch(result ->
+                "grand-theft-auto-6".equals(result.slug())
+                        && "Grand Theft Auto VI".equals(result.gameName())));
     }
 
     @Test
