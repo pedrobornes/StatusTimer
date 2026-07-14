@@ -148,6 +148,47 @@ export default function IntelFeedContent({ content }: IntelFeedContentProps) {
           );
         }
 
+        if (block.kind === "table") {
+          return (
+            <div
+              key={`table-${index}`}
+              className="overflow-x-auto rounded-2xl border border-white/10"
+            >
+              <table className="min-w-full border-collapse text-left text-sm text-slate-200">
+                <thead className="bg-white/[0.04] text-xs uppercase tracking-[0.12em] text-violet-100">
+                  <tr>
+                    {block.headers.map((header, headerIndex) => (
+                      <th
+                        key={`table-${index}-header-${headerIndex}`}
+                        className="border-b border-white/10 px-4 py-3 font-semibold"
+                      >
+                        <IntelInlineText text={header} />
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {block.rows.map((row, rowIndex) => (
+                    <tr
+                      key={`table-${index}-row-${rowIndex}`}
+                      className="border-b border-white/6 last:border-b-0 odd:bg-white/[0.02]"
+                    >
+                      {block.headers.map((_, cellIndex) => (
+                        <td
+                          key={`table-${index}-cell-${rowIndex}-${cellIndex}`}
+                          className="px-4 py-3 align-top text-[15px] leading-7 text-slate-200/90"
+                        >
+                          <IntelInlineText text={row[cellIndex] ?? ""} />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        }
+
         return (
           <p
             key={`paragraph-${index}`}

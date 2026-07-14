@@ -71,6 +71,29 @@ class TextUtilsTests(unittest.TestCase):
         self.assertNotIn("bar-red.png", markdown)
         self.assertNotIn("\n-\n", markdown)
 
+    def test_markdown_from_html_handles_steam_bb_tables_and_h1(self) -> None:
+        raw_html = """
+        <div class="bb_h1">Twitch Drops content</div>
+        <div class="bb_table">
+          <div class="bb_table_tr">
+            <div class="bb_table_th"><p class="bb_paragraph"><b>Quantity</b></p></div>
+            <div class="bb_table_th"><p class="bb_paragraph"><b>Watch time</b></p></div>
+            <div class="bb_table_th"><p class="bb_paragraph"><b>Reward</b></p></div>
+          </div>
+          <div class="bb_table_tr">
+            <div class="bb_table_td"><p class="bb_paragraph">1st gift</p></div>
+            <div class="bb_table_td"><p class="bb_paragraph">1 hour</p></div>
+            <div class="bb_table_td"><p class="bb_paragraph">Sheriff charm</p></div>
+          </div>
+        </div>
+        """
+        markdown = markdown_from_html(raw_html)
+        self.assertIn("# Twitch Drops content", markdown)
+        self.assertIn("| Quantity | Watch time | Reward |", markdown)
+        self.assertIn("| --- | --- | --- |", markdown)
+        self.assertIn("| 1st gift | 1 hour | Sheriff charm |", markdown)
+        self.assertNotIn("** Quantity **", markdown)
+
     def test_markdown_from_html_spaces_inline_bold_markers(self) -> None:
         raw_html = (
             "<p>Great news!<strong>BOMBANANA Demo</strong>now officially supports"

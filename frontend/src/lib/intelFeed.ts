@@ -229,6 +229,8 @@ const HEADING_LINE_PATTERN = /^(#{1,3})\s+(.+)$/;
 const BULLET_LINE_PATTERN = /^[-*•·]\s+(.+)$/;
 const NUMBERED_LINE_PATTERN = /^\d+[.)]\s+(.+)$/;
 const IMAGE_LINE_PATTERN = /^!\[([^\]]*)\]\(([^)]+)\)$/;
+const TABLE_ROW_LINE_PATTERN = /^\|.+\|$/;
+const TABLE_DIVIDER_LINE_PATTERN = /^\|(\s*:?-+:?\s*\|)+\s*$/;
 const STANDALONE_IMAGE_LINK_LINE_PATTERN =
   /^\[(https?:\/\/[^\]]+\.(?:png|jpe?g|gif|webp|avif)(?:\?[^\]]*)?)\]\([^)]+\)$/i;
 
@@ -239,7 +241,8 @@ export type IntelContentBlock =
   | { kind: "paragraph"; text: string }
   | { kind: "ul"; items: string[] }
   | { kind: "ol"; items: string[] }
-  | { kind: "image"; src: string; alt: string };
+  | { kind: "image"; src: string; alt: string }
+  | { kind: "table"; headers: string[]; rows: string[][] };
 
 export type IntelInlinePart =
   | { type: "text"; value: string }
@@ -321,6 +324,58 @@ function normalizeContentLines(content: string): string[] {
   }
 
   return rawLines;
+}
+
+function parseTableRow(line: string): string[] {
+  const trimmed = line.trim();
+  const inner = trimmed.endsWith("|") ? trimmed.slice(1, -1) : trimmed.slice(1);
+  return inner.split("|").map((cell) => cell.trim().replace(/\\\|/g, "|"));
+}
+
+function isTableDividerLine(line: string): boolean {
+  return TABLE_DIVIDER_LINE_PATTERN.test(line.trim());
+}
+
+function tryParseTableBlock(
+  lines: string[],
+  startIndex: number,
+): { block: Extract<IntelContentBlock, { kind: "table" }>; nextIndex: number } | null {
+  const firstLine = lines[startIndex]?.trim();
+  if (!firstLine || !TABLE_ROW_LINE_PATTERN.test(firstLine) || isTableDividerLine(firstLine)) {
+    return null;
+  }
+
+  const headers = parseTableRow(firstLine);
+  let index = startIndex + 1;
+
+  if (index < lines.length && isTableDividerLine(lines[index])) {
+    index += 1;
+  }
+
+  const rows: string[][] = [];
+  while (index < lines.length) {
+    const line = lines[index]?.trim();
+    if (!line || !TABLE_ROW_LINE_PATTERN.test(line)) {
+      break;
+    }
+
+    if (isTableDividerLine(line)) {
+      index += 1;
+      continue;
+    }
+
+    rows.push(parseTableRow(line));
+    index += 1;
+  }
+
+  if (rows.length === 0) {
+    return null;
+  }
+
+  return {
+    block: { kind: "table", headers, rows },
+    nextIndex: index,
+  };
 }
 
 function parseLineKind(line: string): {
@@ -418,7 +473,16 @@ export function parseIntelContentBlocks(content: string): IntelContentBlock[] {
     flushNumbered();
   };
 
-  for (const line of lines) {
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    const line = lines[lineIndex];
+    const tableBlock = tryParseTableBlock(lines, lineIndex);
+    if (tableBlock) {
+      flushLists();
+      blocks.push(tableBlock.block);
+      lineIndex = tableBlock.nextIndex - 1;
+      continue;
+    }
+
     const parsed = parseLineKind(line);
 
     if (parsed.kind === "image" && parsed.imageSrc) {

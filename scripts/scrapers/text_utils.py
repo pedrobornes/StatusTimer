@@ -40,7 +40,7 @@ _BB_CODE_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
 )
 
 _BB_HEADING_PATTERN = re.compile(
-    r'<div class="bb_h([23])"[^>]*>(.*?)</div>',
+    r'<div class="bb_h([1234])"[^>]*>(.*?)</div>',
     re.DOTALL | re.IGNORECASE,
 )
 _IMAGE_LINK_LINE_PATTERN = re.compile(r"^\[([^\]]+)\]\(([^)]+)\)\s*$")
@@ -66,6 +66,12 @@ class _MarkdownExtractor(HTMLParser):
     _BLOCK_TAGS = {"p", "div", "section", "article", "header", "footer", "main"}
     _HEADING_TAGS = {"h1", "h2", "h3", "h4", "h5", "h6"}
     _LIST_TAGS = {"ul", "ol"}
+    _STEAM_DIV_ROLES = {
+        "bb_table": "table",
+        "bb_table_tr": "tr",
+        "bb_table_th": "th",
+        "bb_table_td": "td",
+    }
 
     def __init__(self) -> None:
         super().__init__()
@@ -77,10 +83,100 @@ class _MarkdownExtractor(HTMLParser):
         self._ordered_counters: list[int] = []
         self._link_href: str | None = None
         self._list_item_depth = 0
+        self._semantic_stack: list[str] = []
+        self._table_rows: list[list[str]] = []
+        self._current_row: list[str] = []
+        self._in_table_cell = False
+        self._cell_parts: list[str] = []
 
     def _append(self, text: str) -> None:
-        if text:
-            self._chunks.append(text)
+        if not text:
+            return
+
+        if self._in_table_cell:
+            self._cell_parts.append(text)
+            return
+
+        self._chunks.append(text)
+
+    def _inside_table(self) -> bool:
+        return any(role == "table" for role in self._semantic_stack)
+
+    @staticmethod
+    def _steam_div_role(attrs: list[tuple[str, str | None]]) -> str | None:
+        for key, value in attrs:
+            if key != "class" or not value:
+                continue
+
+            for token in value.split():
+                role = _MarkdownExtractor._STEAM_DIV_ROLES.get(token)
+                if role is not None:
+                    return role
+
+        return None
+
+    def _start_table(self) -> None:
+        self._flush_block_break()
+        self._semantic_stack.append("table")
+        self._table_rows = []
+        self._current_row = []
+
+    def _start_table_row(self) -> None:
+        self._current_row = []
+        self._semantic_stack.append("tr")
+
+    def _start_table_cell(self, role: str) -> None:
+        self._in_table_cell = True
+        self._cell_parts = []
+        self._semantic_stack.append(role)
+
+    def _finalize_table_cell(self) -> None:
+        raw = "".join(self._cell_parts)
+        raw = _WHITESPACE_PATTERN.sub(" ", raw)
+        raw = re.sub(r"\s*\n+\s*", " / ", raw).strip()
+        raw = re.sub(r"\*\*([^*]+)\*\*", lambda match: match.group(1).strip(), raw)
+        self._current_row.append(raw)
+        self._cell_parts = []
+        self._in_table_cell = False
+
+    def _finalize_table_row(self) -> None:
+        if self._current_row and any(cell.strip() for cell in self._current_row):
+            self._table_rows.append(self._current_row[:])
+        self._current_row = []
+
+    def _emit_table_markdown(self) -> None:
+        if self._current_row and any(cell.strip() for cell in self._current_row):
+            self._table_rows.append(self._current_row[:])
+        self._current_row = []
+
+        rows = [row for row in self._table_rows if any(cell.strip() for cell in row)]
+        self._table_rows = []
+        if not rows:
+            return
+
+        column_count = max(len(row) for row in rows)
+        lines: list[str] = []
+
+        for index, row in enumerate(rows):
+            padded = row + [""] * (column_count - len(row))
+            escaped = [cell.replace("|", "\\|").strip() for cell in padded[:column_count]]
+            lines.append("| " + " | ".join(escaped) + " |")
+            if index == 0:
+                lines.append("| " + " | ".join("---" for _ in range(column_count)) + " |")
+
+        self._chunks.append("\n\n" + "\n".join(lines) + "\n\n")
+
+    def _close_semantic(self, role: str) -> None:
+        if role in {"th", "td"}:
+            self._finalize_table_cell()
+            return
+
+        if role == "tr":
+            self._finalize_table_row()
+            return
+
+        if role == "table":
+            self._emit_table_markdown()
 
     def _flush_block_break(self) -> None:
         if not self._chunks:
@@ -96,16 +192,46 @@ class _MarkdownExtractor(HTMLParser):
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         normalized = tag.lower()
         if normalized in self._HEADING_TAGS:
+            if self._in_table_cell:
+                return
             self._flush_block_break()
             self._heading_level = int(normalized[1])
             return
 
+        if normalized == "table":
+            self._start_table()
+            return
+
+        if normalized == "tr":
+            self._start_table_row()
+            return
+
+        if normalized in {"th", "td"}:
+            self._start_table_cell(normalized)
+            return
+
+        if normalized == "div":
+            steam_role = self._steam_div_role(attrs)
+            if steam_role == "table":
+                self._start_table()
+                return
+            if steam_role == "tr":
+                self._start_table_row()
+                return
+            if steam_role in {"th", "td"}:
+                self._start_table_cell(steam_role)
+                return
+
         if normalized in self._BLOCK_TAGS:
+            if self._in_table_cell or self._inside_table():
+                return
             if self._list_item_depth == 0:
                 self._flush_block_break()
             return
 
         if normalized == "img":
+            if self._in_table_cell:
+                return
             src = next((value for key, value in attrs if key == "src" and value), None)
             if src and not _is_decorative_image_url(src):
                 self._flush_block_break()
@@ -115,12 +241,16 @@ class _MarkdownExtractor(HTMLParser):
             return
 
         if normalized == "ol":
+            if self._in_table_cell:
+                return
             self._flush_block_break()
             self._ordered_list_depth += 1
             self._ordered_counters.append(0)
             return
 
         if normalized == "ul":
+            if self._in_table_cell:
+                return
             self._flush_block_break()
             return
 
@@ -128,7 +258,15 @@ class _MarkdownExtractor(HTMLParser):
             self._append("\n")
             return
 
+        if normalized == "hr":
+            if self._in_table_cell:
+                return
+            self._append("\n\n---\n\n")
+            return
+
         if normalized == "li":
+            if self._in_table_cell:
+                return
             if self._list_item_depth > 0:
                 self._append("\n")
             else:
@@ -161,11 +299,40 @@ class _MarkdownExtractor(HTMLParser):
     def handle_endtag(self, tag: str) -> None:
         normalized = tag.lower()
         if normalized in self._HEADING_TAGS:
+            if self._in_table_cell:
+                return
             self._append("\n\n")
             self._heading_level = None
             return
 
+        if normalized == "table" and self._semantic_stack and self._semantic_stack[-1] == "table":
+            self._semantic_stack.pop()
+            self._close_semantic("table")
+            return
+
+        if normalized == "tr" and self._semantic_stack and self._semantic_stack[-1] == "tr":
+            self._semantic_stack.pop()
+            self._close_semantic("tr")
+            return
+
+        if normalized in {"th", "td"} and self._semantic_stack and self._semantic_stack[-1] in {"th", "td"}:
+            role = self._semantic_stack.pop()
+            self._close_semantic(role)
+            return
+
+        if normalized == "div" and self._semantic_stack and self._semantic_stack[-1] in {
+            "table",
+            "tr",
+            "th",
+            "td",
+        }:
+            role = self._semantic_stack.pop()
+            self._close_semantic(role)
+            return
+
         if normalized == "ol":
+            if self._in_table_cell:
+                return
             if self._ordered_list_depth > 0:
                 self._ordered_list_depth -= 1
                 self._ordered_counters.pop()
@@ -173,15 +340,21 @@ class _MarkdownExtractor(HTMLParser):
             return
 
         if normalized == "li":
+            if self._in_table_cell:
+                return
             self._list_item_depth = max(0, self._list_item_depth - 1)
             self._append("\n")
             return
 
         if normalized == "ul":
+            if self._in_table_cell:
+                return
             self._append("\n\n")
             return
 
         if normalized in self._BLOCK_TAGS:
+            if self._in_table_cell or self._inside_table():
+                return
             if self._list_item_depth == 0:
                 self._append("\n\n")
             return
@@ -222,6 +395,13 @@ class _MarkdownExtractor(HTMLParser):
             self._heading_level = None
             return
 
+        if self._in_table_cell:
+            if not text.strip():
+                self._append(" ")
+                return
+            self._append(text.strip())
+            return
+
         self._append(text)
 
     def get_markdown(self) -> str:
@@ -250,6 +430,10 @@ def _normalize_markdown_bullets(markdown: str) -> str:
             continue
 
         if line.startswith(("#", "-", "*", "1.")) or re.match(r"^\d+[.)]\s+", line):
+            lines.append(line)
+            continue
+
+        if line.startswith("|"):
             lines.append(line)
             continue
 
