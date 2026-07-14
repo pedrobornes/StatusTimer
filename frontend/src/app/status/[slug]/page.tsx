@@ -164,7 +164,10 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
             }
             priority={
               <>
-                <section aria-labelledby="server-status-heading">
+                <section
+                  aria-labelledby="server-status-heading"
+                  className="min-w-0 max-w-full overflow-hidden"
+                >
                   <h2 id="server-status-heading" className="sr-only">
                     {gameName} server status
                   </h2>
@@ -256,7 +259,10 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
             }
             priority={
               <>
-                <section aria-labelledby="server-status-heading">
+                <section
+                  aria-labelledby="server-status-heading"
+                  className="min-w-0 max-w-full overflow-hidden"
+                >
                   <h2 id="server-status-heading" className="sr-only">
                     {gameName} server status
                   </h2>
@@ -389,7 +395,10 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
             }
             priority={
               <>
-                <section aria-labelledby="server-status-heading">
+                <section
+                  aria-labelledby="server-status-heading"
+                  className="min-w-0 max-w-full overflow-hidden"
+                >
                   <h2 id="server-status-heading" className="sr-only">
                     {sidebarStatusLabel}
                   </h2>

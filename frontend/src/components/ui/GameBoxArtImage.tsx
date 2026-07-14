@@ -13,7 +13,7 @@ interface GameBoxArtImageProps {
 }
 
 const SIZE_CLASS: Record<GameBoxArtSize, string> = {
-  card: "h-20 w-[3.75rem] sm:h-[6.5rem] sm:w-[4.875rem]",
+  card: "h-[4.25rem] w-14 sm:h-[6.5rem] sm:w-[4.875rem]",
   compact: "h-12 w-9",
 };
 

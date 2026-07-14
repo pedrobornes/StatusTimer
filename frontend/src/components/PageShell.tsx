@@ -36,7 +36,7 @@ export default function PageShell({
         </div>
       ) : null}
 
-      <div className="relative mx-auto w-full max-w-[1400px] px-4 py-5 sm:py-6 md:px-8 md:py-10">
+      <div className="relative mx-auto w-full min-w-0 max-w-[1400px] px-4 py-5 sm:py-6 md:px-8 md:py-10">
         <header className="mb-6 md:mb-10">
           {customHeader ? (
             customHeader

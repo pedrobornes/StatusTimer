@@ -23,17 +23,23 @@ function MetricSlot({
   const hasValue = value != null;
 
   return (
-    <span className="inline-flex items-center gap-1.5">
+    <span className="flex min-w-0 max-w-full items-center gap-1 sm:gap-1.5">
       <span
-        className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-black/25 ${
+        className={`inline-block h-2 w-2 shrink-0 rounded-full ring-1 ring-black/25 sm:h-2.5 sm:w-2.5 ${
           hasValue ? activeDotClassName : inactiveDotClassName
         }`}
         aria-hidden
       />
-      <span className={hasValue ? "font-bold text-white" : "font-bold text-zinc-500"}>
+      <span
+        className={`min-w-0 truncate ${hasValue ? "font-bold text-white" : "font-bold text-zinc-500"}`}
+      >
         {formatCompactNumber(value)}
       </span>
-      <span className={hasValue ? "text-zinc-300" : "text-zinc-500"}>{label}</span>
+      <span
+        className={`shrink-0 ${hasValue ? "text-zinc-300" : "text-zinc-500"}`}
+      >
+        {label}
+      </span>
     </span>
   );
 }
@@ -48,12 +54,12 @@ export default function GameLiveMetricsRow({
 }: GameLiveMetricsRowProps) {
   const isVertical = orientation === "vertical";
   const layoutClass = isVertical
-    ? "flex flex-col justify-center gap-1.5 sm:gap-2"
-    : "flex items-center gap-4";
+    ? "flex min-w-0 max-w-full flex-col justify-center gap-1 sm:gap-2"
+    : "flex min-w-0 max-w-full items-center gap-4";
 
   return (
     <div
-      className={`mt-2 font-mono text-[11px] sm:text-xs ${layoutClass} ${className ?? ""}`}
+      className={`min-w-0 max-w-full font-mono text-[10px] sm:text-xs ${layoutClass} ${className ?? ""}`}
       aria-label="Live audience metrics"
     >
       {showLivePlayers ? (

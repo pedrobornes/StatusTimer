@@ -84,20 +84,35 @@ export default memo(function GameTelemetryCard({
   const statusBadge = (
     <div className="shrink-0 self-start">
       {isSinglePlayer ? (
-        <div className="rounded-full border border-slate-400/25 bg-slate-500/10 px-3 py-1 text-xs font-medium text-slate-100">
-          Single Player
+        <div
+          title="Single Player"
+          className="rounded-full border border-slate-400/25 bg-slate-500/10 px-2 py-1 text-[10px] font-medium text-slate-100 sm:px-3 sm:text-xs"
+        >
+          <span className="sm:hidden" aria-hidden>
+            1P
+          </span>
+          <span className="hidden sm:inline">Single Player</span>
         </div>
       ) : catalogOnly ? (
-        <div className="rounded-full border border-cyan-400/25 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-100">
-          Live profile
+        <div className="rounded-full border border-cyan-400/25 bg-cyan-500/10 px-2 py-1 text-[10px] font-medium text-cyan-100 sm:px-3 sm:text-xs">
+          <span className="sm:hidden" aria-hidden>
+            Live
+          </span>
+          <span className="hidden sm:inline">Live profile</span>
         </div>
       ) : serverStatusPending ? (
-        <div className="flex items-center gap-2 rounded-full border border-violet-400/25 bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-100">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-violet-300" />
-          Checking servers
+        <div
+          title="Checking servers"
+          className="flex items-center gap-1.5 rounded-full border border-violet-400/25 bg-violet-500/10 px-2 py-1 text-[10px] font-medium text-violet-100 sm:gap-2 sm:px-3 sm:text-xs"
+        >
+          <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-violet-300" />
+          <span className="hidden sm:inline">Checking servers</span>
         </div>
       ) : (
-        <StatusBadge status={upcoming ? "UPCOMING" : telemetry.status} />
+        <StatusBadge
+          status={upcoming ? "UPCOMING" : telemetry.status}
+          compact
+        />
       )}
     </div>
   );
@@ -117,13 +132,13 @@ export default memo(function GameTelemetryCard({
 
   const headerContent = (
     <>
-      <div className="flex w-full items-stretch gap-3">
+      <div className="flex w-full min-w-0 items-stretch gap-2 sm:gap-3">
         <GameBoxArtImage title={title} src={logoUrl} size="card" />
         {metricsBlock}
         {statusBadge}
       </div>
 
-      <div className="mt-4 w-full">
+      <div className="mt-4 w-full min-w-0">
         <h3 className="line-clamp-2 break-words whitespace-normal text-xl font-bold tracking-tight text-white transition-colors duration-200 group-hover:text-emerald-400 sm:text-2xl">
           {title}
         </h3>
@@ -157,13 +172,13 @@ export default memo(function GameTelemetryCard({
     <article
       className={
         embedded
-          ? "glass-panel flex h-full flex-col rounded-3xl p-4 sm:p-6"
-          : "flex h-full flex-col rounded-2xl border border-white/8 bg-white/[0.04] p-4 transition hover:border-violet-400/25 hover:bg-white/[0.06] sm:p-6"
+          ? "glass-panel flex h-full min-w-0 max-w-full flex-col overflow-hidden rounded-3xl p-4 sm:p-6"
+          : "flex h-full min-w-0 max-w-full flex-col overflow-hidden rounded-2xl border border-white/8 bg-white/[0.04] p-4 transition hover:border-violet-400/25 hover:bg-white/[0.06] sm:p-6"
       }
     >
-      <header className="mb-4">
+      <header className="mb-4 min-w-0">
         {headerHref ? (
-          <Link href={headerHref} className="group block">
+          <Link href={headerHref} className="group block min-w-0">
             {headerContent}
           </Link>
         ) : (

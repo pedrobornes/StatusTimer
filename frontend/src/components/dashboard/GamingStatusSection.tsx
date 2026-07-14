@@ -28,7 +28,7 @@ export default memo(function GamingStatusSection({
   const paginatedGames = games.slice(pageStart, pageStart + pageSize);
 
   return (
-    <section className="glass-panel rounded-3xl p-5 sm:p-6 md:p-8">
+    <section className="glass-panel min-w-0 overflow-hidden rounded-3xl p-5 sm:p-6 md:p-8">
       <div className="mb-6 flex min-w-0 items-center gap-3">
         <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-3">
           <Gamepad2 className="h-5 w-5 text-emerald-300" />
@@ -47,13 +47,14 @@ export default memo(function GamingStatusSection({
         </p>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {paginatedGames.map((entry) => (
-              <GameTelemetryCard
-                key={entry.gameSlug}
-                telemetry={entry}
-                platforms={platformsBySlug[entry.gameSlug] ?? []}
-              />
+              <div key={entry.gameSlug} className="min-w-0">
+                <GameTelemetryCard
+                  telemetry={entry}
+                  platforms={platformsBySlug[entry.gameSlug] ?? []}
+                />
+              </div>
             ))}
           </div>
 

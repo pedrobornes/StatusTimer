@@ -33,7 +33,7 @@ export default function TelemetryGrid({
   );
 
   return (
-    <section className="glass-panel glow-ring rounded-3xl p-5 sm:p-6 md:p-8">
+    <section className="glass-panel glow-ring min-w-0 overflow-hidden rounded-3xl p-5 sm:p-6 md:p-8">
       <div className="mb-6 space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="flex min-w-0 items-center gap-3">
@@ -69,12 +69,11 @@ export default function TelemetryGrid({
           the latest updates.
         </p>
       ) : (
-        <div className="grid gap-5 transition-all duration-300 ease-out sm:grid-cols-2">
+        <div className="grid min-w-0 gap-5 transition-all duration-300 ease-out sm:grid-cols-2">
           {sortedTelemetry.map((telemetry) => (
-            <GameTelemetryCard
-              key={telemetry.gameSlug}
-              telemetry={telemetry}
-            />
+            <div key={telemetry.gameSlug} className="min-w-0">
+              <GameTelemetryCard telemetry={telemetry} />
+            </div>
           ))}
         </div>
       )}
