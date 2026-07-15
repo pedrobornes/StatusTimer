@@ -74,6 +74,11 @@ export default memo(function GameTelemetryCard({
   const showServerStatus = !catalogOnly && !isSinglePlayer;
   const showTimeline =
     showStatusTimeline && showServerStatus && !serverStatusPending && !upcoming;
+  const relocateMetricsForMaintenance =
+    showServerStatus &&
+    !serverStatusPending &&
+    !upcoming &&
+    telemetry.status === "MAINTENANCE";
 
   const headerHref = linkToStatusPage
     ? statusHref
@@ -136,11 +141,28 @@ export default memo(function GameTelemetryCard({
     </div>
   );
 
+  const maintenanceMetricsBlock = (
+    <div className="mt-2">
+      <GameLiveMetricsRow
+        livePlayers={telemetry.livePlayers}
+        twitchViewers={telemetry.twitchViewers}
+        orientation="horizontal"
+        className="mt-0"
+        unifiedColors={unifiedMetricsColors}
+        showLivePlayers={showLivePlayers}
+      />
+    </div>
+  );
+
   const headerContent = (
     <>
       <div className="flex w-full min-w-0 items-stretch gap-2 sm:gap-3">
         <GameBoxArtImage title={title} src={logoUrl} size="card" />
-        {metricsBlock}
+        {relocateMetricsForMaintenance ? (
+          <div className="min-w-0 flex-1" aria-hidden />
+        ) : (
+          metricsBlock
+        )}
         <div className="hidden shrink-0 self-start sm:block">{statusBadge}</div>
       </div>
 
@@ -170,6 +192,7 @@ export default memo(function GameTelemetryCard({
             ) : null}
           </div>
         )}
+        {relocateMetricsForMaintenance ? maintenanceMetricsBlock : null}
         {mobileStatusBadge}
       </div>
     </>
