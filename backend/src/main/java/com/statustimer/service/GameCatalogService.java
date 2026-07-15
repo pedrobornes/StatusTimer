@@ -323,8 +323,11 @@ public class GameCatalogService {
 
     @Transactional(readOnly = true)
     public Long resolveLivePlayers(String slug) {
+        if (!canTrackSteamPlayers(slug)) {
+            return null;
+        }
+
         return findBySlug(slug)
-                .filter(game -> game.getSteamAppId() != null && game.getSteamAppId() > 0)
                 .map(Game::getLivePlayers)
                 .orElse(null);
     }
@@ -335,9 +338,8 @@ public class GameCatalogService {
             return false;
         }
 
-        return findBySlug(slug)
-                .map(game -> game.getSteamAppId() != null && game.getSteamAppId() > 0)
-                .orElse(false);
+        Integer appId = resolveAppId(slug);
+        return appId != null && appId > 0;
     }
 
     @Transactional(readOnly = true)
@@ -653,6 +655,37 @@ public class GameCatalogService {
                 log.warn("Failed to resolve tracked catalog match '{}' during search", slug, exception);
             }
         }
+    }
+
+    @Transactional
+    public void ensureCatalogMetricsScheduleReady(String slug) {
+        String canonicalSlug = gameSlugMapper.resolveCanonicalSlug(slug);
+        if (canonicalSlug == null || canonicalSlug.isBlank()) {
+            return;
+        }
+
+        gameRepository.findBySlug(canonicalSlug).ifPresent(game -> {
+            if (game.getLifecycleState() != LifecycleState.CATALOG) {
+                return;
+            }
+
+            knownSteamAppRegistry.resolveAppId(canonicalSlug).ifPresent(knownAppId -> {
+                if (SteamAppIdPolicy.mayAssignSteamAppId(canonicalSlug, knownAppId)) {
+                    game.setSteamAppId(knownAppId);
+                }
+            });
+
+            boolean hasSteamTracking = game.getSteamAppId() != null && game.getSteamAppId() > 0;
+            boolean hasTwitchTracking = game.getTwitchGameId() != null && !game.getTwitchGameId().isBlank();
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime nextMetricsAt = game.getNextMetricsAt();
+            boolean metricsStillFresh = nextMetricsAt != null && nextMetricsAt.isAfter(now);
+            if ((hasSteamTracking || hasTwitchTracking) && !metricsStillFresh) {
+                game.setNextMetricsAt(now);
+            }
+
+            gameRepository.save(game);
+        });
     }
 
     @Transactional
@@ -1215,8 +1248,22 @@ public class GameCatalogService {
         boolean upcomingRelease = match.firstReleaseDate() != null
                 && match.firstReleaseDate().isAfter(LocalDate.now());
 
+        Long id = null;
+        Long livePlayers = null;
+        Long twitchViewers = null;
+        Optional<Game> persisted = gameRepository.findBySlug(responseSlug);
+        if (persisted.isPresent()) {
+            Game game = persisted.get();
+            id = game.getId();
+            livePlayers = game.getLivePlayers();
+            twitchViewers = game.getTwitchViewers();
+            if (steamAppId == null || steamAppId <= 0) {
+                steamAppId = resolveAppId(responseSlug);
+            }
+        }
+
         return new GameCatalogSearchResponse(
-                null,
+                id,
                 responseSlug,
                 match.name(),
                 logoUrl == null ? GameAssetPolicy.LOGO_NONE : logoUrl.trim(),
@@ -1226,8 +1273,8 @@ public class GameCatalogService {
                 match.criticRating(),
                 genreName,
                 genreNames,
-                null,
-                null,
+                livePlayers,
+                twitchViewers,
                 upcomingRelease,
                 match.firstReleaseDate() == null ? null : match.firstReleaseDate().atStartOfDay()
         );

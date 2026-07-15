@@ -31,6 +31,11 @@ class KnownSteamAppRegistryTest {
     }
 
     @Test
+    void resolvesResidentEvilVillage() {
+        assertEquals(1196590, registry.resolveAppId("resident-evil-village").orElseThrow());
+    }
+
+    @Test
     void returnsEmptyForUnknownSlug() {
         assertTrue(registry.resolveAppId("minecraft").isEmpty());
     }

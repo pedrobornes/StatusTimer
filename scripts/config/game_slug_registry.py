@@ -50,6 +50,7 @@ BLOCKED_STEAM_APP_IDS_BY_SLUG: dict[str, frozenset[int]] = {
 KNOWN_STEAM_APP_IDS: dict[str, int] = {
     "arma-reforger": 1874880,
     "sea-of-thieves": 1172620,
+    "resident-evil-village": 1196590,
 }
 
 

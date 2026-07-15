@@ -3,6 +3,7 @@ package com.statustimer.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -44,6 +45,124 @@ class HarvestScheduleServiceTest {
 
     @InjectMocks
     private HarvestScheduleService harvestScheduleService;
+
+    @Test
+    void bumpScheduleAfterUserInterestIgnoresCatalogProfiles() {
+        Game game = Game.builder()
+                .slug("resident-evil-village")
+                .lifecycleState(LifecycleState.CATALOG)
+                .steamAppId(1196590)
+                .nextMetricsAt(LocalDateTime.now().plusHours(6))
+                .build();
+
+        when(gameRepository.findBySlug("resident-evil-village")).thenReturn(Optional.of(game));
+
+        harvestScheduleService.bumpScheduleAfterUserInterest("resident-evil-village");
+
+        verify(gameRepository, never()).save(any());
+    }
+
+    @Test
+    void completeWorkCatalogMetricsUsesFreshnessWindowInsteadOfRecurringSchedule() {
+        when(harvestScheduleProperties.catalogMetricsFreshnessMinutes()).thenReturn(60);
+
+        Game game = Game.builder()
+                .slug("resident-evil-village")
+                .lifecycleState(LifecycleState.CATALOG)
+                .steamAppId(1196590)
+                .nextMetricsAt(LocalDateTime.now())
+                .build();
+
+        when(gameRepository.findBySlug("resident-evil-village")).thenReturn(Optional.of(game));
+
+        harvestScheduleService.completeWork(new CompleteHarvestWorkRequest(List.of(
+                new CompleteHarvestWorkRequest.HarvestWorkResultPayload(
+                        "resident-evil-village",
+                        HarvestWorkType.METRICS,
+                        true
+                )
+        )));
+
+        ArgumentCaptor<Game> saved = ArgumentCaptor.forClass(Game.class);
+        verify(gameRepository).save(saved.capture());
+
+        Game updated = saved.getValue();
+        assertThat(updated.getNextMetricsAt()).isAfter(LocalDateTime.now().plusMinutes(59));
+        assertThat(updated.getNextMetricsAt()).isBefore(LocalDateTime.now().plusMinutes(61));
+    }
+
+    @Test
+    void completeWorkCatalogMetricsFailureClearsScheduleForNextVisit() {
+        Game game = Game.builder()
+                .slug("resident-evil-village")
+                .lifecycleState(LifecycleState.CATALOG)
+                .steamAppId(1196590)
+                .nextMetricsAt(LocalDateTime.now())
+                .build();
+
+        when(gameRepository.findBySlug("resident-evil-village")).thenReturn(Optional.of(game));
+
+        harvestScheduleService.completeWork(new CompleteHarvestWorkRequest(List.of(
+                new CompleteHarvestWorkRequest.HarvestWorkResultPayload(
+                        "resident-evil-village",
+                        HarvestWorkType.METRICS,
+                        false
+                )
+        )));
+
+        ArgumentCaptor<Game> saved = ArgumentCaptor.forClass(Game.class);
+        verify(gameRepository).save(saved.capture());
+
+        assertThat(saved.getValue().getNextMetricsAt()).isNull();
+    }
+
+    @Test
+    void getDueWorkloadIncludesCatalogMetricsProfilesAfterMonitoredGames() {
+        when(harvestScheduleProperties.maxTelemetryPerCycle()).thenReturn(50);
+        when(harvestScheduleProperties.maxMetricsPerCycle()).thenReturn(50);
+        when(harvestScheduleProperties.maxCatalogMetricsPerCycle()).thenReturn(5);
+        when(harvestScheduleProperties.maxNewsPerCycle()).thenReturn(20);
+
+        Game catalogGame = Game.builder()
+                .slug("resident-evil-village")
+                .gameName("Resident Evil Village")
+                .lifecycleState(LifecycleState.CATALOG)
+                .steamAppId(1196590)
+                .nextMetricsAt(LocalDateTime.now().minusMinutes(5))
+                .build();
+
+        when(gameRepository.findByLifecycleStateInAndNextTelemetryAtLessThanEqualOrderByScrapeTierAsc(
+                eq(Set.of(LifecycleState.MONITORED, LifecycleState.INDEXABLE)),
+                any(LocalDateTime.class),
+                any(Pageable.class)
+        )).thenReturn(List.of());
+        when(gameTelemetryRepository.findDegradedActiveMonitoring(
+                any(),
+                any(),
+                any(Pageable.class)
+        )).thenReturn(List.of());
+        when(gameRepository.findByLifecycleStateInAndNextMetricsAtLessThanEqualOrderByScrapeTierAsc(
+                eq(Set.of(LifecycleState.MONITORED, LifecycleState.INDEXABLE)),
+                any(LocalDateTime.class),
+                any(Pageable.class)
+        )).thenReturn(List.of());
+        when(gameRepository.findCatalogMetricsDue(
+                eq(LifecycleState.CATALOG),
+                any(LocalDateTime.class),
+                any(Pageable.class)
+        )).thenReturn(List.of(catalogGame));
+        when(gameRepository.findByLifecycleStateInAndNextNewsAtLessThanEqualOrderByScrapeTierAsc(
+                any(),
+                any(),
+                any(Pageable.class)
+        )).thenReturn(List.of());
+        when(gameCatalogService.resolveAppId("resident-evil-village")).thenReturn(1196590);
+
+        var workload = harvestScheduleService.getDueWorkload();
+
+        assertThat(workload.metricsDue()).hasSize(1);
+        assertThat(workload.metricsDue().getFirst().slug()).isEqualTo("resident-evil-village");
+    }
 
     @Test
     void bumpScheduleAfterUserInterestAlsoBumpsNews() {
@@ -105,6 +224,7 @@ class HarvestScheduleServiceTest {
     void getDueWorkloadIncludesDegradedGamesEvenWhenNextTelemetryIsLater() {
         when(harvestScheduleProperties.maxTelemetryPerCycle()).thenReturn(50);
         when(harvestScheduleProperties.maxMetricsPerCycle()).thenReturn(50);
+        when(harvestScheduleProperties.maxCatalogMetricsPerCycle()).thenReturn(5);
         when(harvestScheduleProperties.maxNewsPerCycle()).thenReturn(20);
 
         Game degradedGame = Game.builder()
@@ -133,8 +253,13 @@ class HarvestScheduleServiceTest {
         )).thenReturn(List.of(telemetry));
 
         when(gameRepository.findByLifecycleStateInAndNextMetricsAtLessThanEqualOrderByScrapeTierAsc(
+                eq(Set.of(LifecycleState.MONITORED, LifecycleState.INDEXABLE)),
                 any(),
-                any(),
+                any(Pageable.class)
+        )).thenReturn(List.of());
+        when(gameRepository.findCatalogMetricsDue(
+                eq(LifecycleState.CATALOG),
+                any(LocalDateTime.class),
                 any(Pageable.class)
         )).thenReturn(List.of());
         when(gameRepository.findByLifecycleStateInAndNextNewsAtLessThanEqualOrderByScrapeTierAsc(

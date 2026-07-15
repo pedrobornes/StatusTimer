@@ -15,7 +15,8 @@ public class KnownSteamAppRegistry {
             Map.entry("infinity-nikki", 3164330),
             Map.entry("assassin-s-creed-black-flag-resynced", 3751950),
             Map.entry("arma-reforger", 1874880),
-            Map.entry("sea-of-thieves", 1172620)
+            Map.entry("sea-of-thieves", 1172620),
+            Map.entry("resident-evil-village", 1196590)
     );
 
     public Optional<Integer> resolveAppId(String slug) {

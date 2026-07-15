@@ -151,7 +151,7 @@ public record GameTelemetryResponse(
                 ? game.getTrailerVideoIds()
                 : List.of();
         GameType gameType = game.getGameType() != null ? game.getGameType() : GameType.MULTIPLAYER;
-        boolean playersTrackable = game.getSteamAppId() != null && game.getSteamAppId() > 0;
+        boolean playersTrackable = catalogService.canTrackSteamPlayers(slug);
 
         return new GameTelemetryResponse(
                 game.getId(),

@@ -6,7 +6,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record HarvestScheduleProperties(
         int maxTelemetryPerCycle,
         int maxMetricsPerCycle,
+        int maxCatalogMetricsPerCycle,
         int maxNewsPerCycle,
+        int catalogMetricsFreshnessMinutes,
         int telemetryMinutesTier1,
         int telemetryMinutesTier2,
         int telemetryMinutesTier3,
@@ -24,6 +26,12 @@ public record HarvestScheduleProperties(
         }
         if (maxMetricsPerCycle <= 0) {
             maxMetricsPerCycle = 50;
+        }
+        if (maxCatalogMetricsPerCycle <= 0) {
+            maxCatalogMetricsPerCycle = 5;
+        }
+        if (catalogMetricsFreshnessMinutes <= 0) {
+            catalogMetricsFreshnessMinutes = 60;
         }
         if (maxNewsPerCycle <= 0) {
             maxNewsPerCycle = 20;

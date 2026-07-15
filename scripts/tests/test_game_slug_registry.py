@@ -41,6 +41,9 @@ class GameSlugRegistryTests(unittest.TestCase):
         self.assertEqual(1172620, resolve_harvest_steam_app_id("sea-of-thieves", None))
         self.assertEqual(1172620, resolve_harvest_steam_app_id("sea-of-thieves", 999999))
 
+    def test_resolve_harvest_steam_app_id_uses_known_registry_for_resident_evil_village(self) -> None:
+        self.assertEqual(1196590, resolve_harvest_steam_app_id("resident-evil-village", None))
+
 
 if __name__ == "__main__":
     unittest.main()

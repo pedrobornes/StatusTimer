@@ -61,6 +61,7 @@ class CatalogActivationServiceTest {
         assertThat(game.getLifecycleState()).isEqualTo(LifecycleState.CATALOG);
         verify(harvestScheduleService, never()).ensureScheduleInitialized(any());
         verify(harvestScheduleService, never()).bumpScheduleAfterUserInterest(any());
+        verify(gameCatalogService).ensureCatalogMetricsScheduleReady(eq("random-steam-game"));
     }
 
     @Test
@@ -87,6 +88,27 @@ class CatalogActivationServiceTest {
         assertThat(response.jobQueued()).isTrue();
         verify(gameCatalogService).materializeCatalogGameOnDemand(eq("brand-new-steam-title"));
         verify(gameCatalogService).enrichCatalogProfileOnDemand(eq("brand-new-steam-title"));
+        verify(gameCatalogService).ensureCatalogMetricsScheduleReady(eq("brand-new-steam-title"));
+    }
+
+    @Test
+    void activationQueuesCatalogMetricsOnVisitWithoutMonitoredBump() {
+        Game game = Game.builder()
+                .slug("resident-evil-village")
+                .gameName("Resident Evil Village")
+                .lifecycleState(LifecycleState.CATALOG)
+                .steamAppId(1196590)
+                .initialTelemetryReady(false)
+                .build();
+
+        when(gameSlugMapper.resolveCanonicalSlug("resident-evil-village")).thenReturn("resident-evil-village");
+        when(gameRepository.findBySlug("resident-evil-village")).thenReturn(Optional.of(game));
+
+        var response = catalogActivationService.activateOnDemand("resident-evil-village");
+
+        assertThat(response.telemetryReady()).isFalse();
+        verify(harvestScheduleService, never()).bumpScheduleAfterUserInterest(any());
+        verify(gameCatalogService).ensureCatalogMetricsScheduleReady(eq("resident-evil-village"));
     }
 
     @Test
@@ -133,5 +155,6 @@ class CatalogActivationServiceTest {
         assertThat(response.telemetryReady()).isTrue();
         assertThat(game.getLifecycleState()).isEqualTo(LifecycleState.CATALOG);
         verify(harvestScheduleService, never()).bumpScheduleAfterUserInterest(any());
+        verify(gameCatalogService).ensureCatalogMetricsScheduleReady(eq("stale-steam-game"));
     }
 }

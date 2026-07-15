@@ -40,6 +40,7 @@ public class CatalogActivationService {
         }
 
         gameCatalogService.enrichCatalogProfileOnDemand(canonicalSlug);
+        gameCatalogService.ensureCatalogMetricsScheduleReady(canonicalSlug);
         gameCatalogService.refreshSteamStoreMetadataOnVisit(canonicalSlug);
         game = gameRepository.findBySlug(canonicalSlug).orElse(game);
 

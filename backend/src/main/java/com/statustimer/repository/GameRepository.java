@@ -68,6 +68,22 @@ public interface GameRepository extends JpaRepository<Game, Long> {
             Pageable pageable
     );
 
+    @Query("""
+            SELECT g FROM Game g
+            WHERE g.lifecycleState = :catalogState
+              AND g.nextMetricsAt <= :cutoff
+              AND (
+                    (g.steamAppId IS NOT NULL AND g.steamAppId > 0)
+                    OR (g.twitchGameId IS NOT NULL AND g.twitchGameId <> '')
+              )
+            ORDER BY g.scrapeTier ASC, g.twitchRank ASC
+            """)
+    List<Game> findCatalogMetricsDue(
+            @Param("catalogState") LifecycleState catalogState,
+            @Param("cutoff") LocalDateTime cutoff,
+            Pageable pageable
+    );
+
     List<Game> findByLifecycleStateInAndNextNewsAtLessThanEqualOrderByScrapeTierAsc(
             Collection<LifecycleState> lifecycleStates,
             LocalDateTime cutoff,

@@ -9,7 +9,7 @@ import { APP_ROUTES } from "@/config/routes";
 import { CATALOG_SEARCH_HINT } from "@/config/seo";
 import { resolveCatalogImageUrl } from "@/lib/gameAssets";
 import { resolveGenres } from "@/lib/genres";
-import { canTrackSteamPlayers } from "@/lib/gameType";
+import { canTrackSteamPlayers, shouldShowSearchLiveMetrics } from "@/lib/gameType";
 import { resolveCanonicalGameSlug } from "@/lib/gameSlugs";
 import { getUserFacingErrorMessage } from "@/services/api";
 import { activateGame, searchGames } from "@/services/catalogService";
@@ -309,7 +309,7 @@ export default function GameSearchBar({
                             {genreLabels.join(" · ")}
                           </span>
                         ) : null}
-                        {game.livePlayers != null || game.twitchViewers != null ? (
+                        {shouldShowSearchLiveMetrics(game) ? (
                           <GameLiveMetricsRow
                             livePlayers={game.livePlayers}
                             twitchViewers={game.twitchViewers}

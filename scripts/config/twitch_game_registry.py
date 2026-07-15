@@ -15,11 +15,13 @@ MONITORED_TWITCH_GAME_NAMES: dict[str, str] = {
     "gta-v": "Grand Theft Auto V",
     "overwatch-2": "Overwatch 2",
     "sea-of-thieves": "Sea of Thieves",
+    "resident-evil-village": "Resident Evil Village",
 }
 
 # IGDB edition SKUs share one Twitch directory category with the base franchise.
 _FRANCHISE_TWITCH_CATEGORY_PREFIXES: dict[str, str] = {
     "sea-of-thieves": "Sea of Thieves",
+    "resident-evil-village": "Resident Evil Village",
 }
 
 

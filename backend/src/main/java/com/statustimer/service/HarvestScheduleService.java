@@ -77,7 +77,7 @@ public class HarvestScheduleService {
             }
 
             gameRepository.findBySlug(result.slug()).ifPresent(game -> {
-                if (!isActiveMonitoring(game)) {
+                if (!canApplyWorkResult(game, result.workType())) {
                     return;
                 }
 
@@ -126,15 +126,15 @@ public class HarvestScheduleService {
     @Transactional
     public void bumpScheduleAfterUserInterest(String slug) {
         gameRepository.findBySlug(slug).ifPresent(game -> {
-            if (!isActiveMonitoring(game)) {
+            LocalDateTime now = LocalDateTime.now();
+            if (isActiveMonitoring(game)) {
+                game.setNextTelemetryAt(now);
+                game.setNextMetricsAt(now);
+                game.setNextNewsAt(now);
+                gameRepository.save(game);
                 return;
             }
 
-            LocalDateTime now = LocalDateTime.now();
-            game.setNextTelemetryAt(now);
-            game.setNextMetricsAt(now);
-            game.setNextNewsAt(now);
-            gameRepository.save(game);
         });
     }
 
@@ -190,15 +190,37 @@ public class HarvestScheduleService {
     }
 
     private List<HarvestWorkTargetResponse> findMetricsDue(LocalDateTime now) {
-        return gameRepository
+        int limit = harvestScheduleProperties.maxMetricsPerCycle();
+
+        List<Game> monitoredGames = gameRepository
                 .findByLifecycleStateInAndNextMetricsAtLessThanEqualOrderByScrapeTierAsc(
                         ACTIVE_MONITORING,
                         now,
-                        PageRequest.of(0, harvestScheduleProperties.maxMetricsPerCycle())
-                )
-                .stream()
-                .map(this::toTargetResponse)
-                .toList();
+                        PageRequest.of(0, limit)
+                );
+
+        List<HarvestWorkTargetResponse> targets = new ArrayList<>(monitoredGames.size());
+        for (Game game : monitoredGames) {
+            targets.add(toTargetResponse(game));
+        }
+
+        int catalogLimit = Math.min(
+                limit - monitoredGames.size(),
+                harvestScheduleProperties.maxCatalogMetricsPerCycle()
+        );
+        if (catalogLimit <= 0) {
+            return targets;
+        }
+
+        for (Game game : gameRepository.findCatalogMetricsDue(
+                LifecycleState.CATALOG,
+                now,
+                PageRequest.of(0, catalogLimit)
+        )) {
+            targets.add(toTargetResponse(game));
+        }
+
+        return targets;
     }
 
     private List<HarvestWorkTargetResponse> findNewsDue(LocalDateTime now) {
@@ -237,6 +259,17 @@ public class HarvestScheduleService {
         }
 
         if (workType == HarvestWorkType.METRICS) {
+            if (isCatalogMetricsCandidate(game)) {
+                if (success) {
+                    game.setNextMetricsAt(
+                            now.plusMinutes(harvestScheduleProperties.catalogMetricsFreshnessMinutes())
+                    );
+                } else {
+                    game.setNextMetricsAt(null);
+                }
+                return;
+            }
+
             if (success) {
                 game.setNextMetricsAt(
                         now.plusMinutes(harvestScheduleProperties.metricsMinutesForTier(tier))
@@ -285,5 +318,27 @@ public class HarvestScheduleService {
     private boolean isActiveMonitoring(Game game) {
         return game.getLifecycleState() == LifecycleState.MONITORED
                 || game.getLifecycleState() == LifecycleState.INDEXABLE;
+    }
+
+    private boolean isCatalogMetricsCandidate(Game game) {
+        if (game == null || game.getLifecycleState() != LifecycleState.CATALOG) {
+            return false;
+        }
+
+        Integer steamAppId = game.getSteamAppId();
+        if (steamAppId != null && steamAppId > 0) {
+            return true;
+        }
+
+        String twitchGameId = game.getTwitchGameId();
+        return twitchGameId != null && !twitchGameId.isBlank();
+    }
+
+    private boolean canApplyWorkResult(Game game, HarvestWorkType workType) {
+        if (isActiveMonitoring(game)) {
+            return true;
+        }
+
+        return workType == HarvestWorkType.METRICS && isCatalogMetricsCandidate(game);
     }
 }

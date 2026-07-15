@@ -30,6 +30,14 @@ class TwitchGameRegistryTests(unittest.TestCase):
             ),
         )
 
+    def test_resolve_twitch_lookup_name_maps_resident_evil_village(self) -> None:
+        self.assertEqual(
+            "Resident Evil Village",
+            resolve_twitch_lookup_name(
+                _Target("resident-evil-village", "Resident Evil Village")
+            ),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -18,3 +18,17 @@ export function canTrackSteamPlayers(
 
   return telemetry?.appId != null && telemetry.appId > 0;
 }
+
+export function shouldShowSearchLiveMetrics(
+  game: {
+    steamAppId?: number | null;
+    livePlayers?: number | null;
+    twitchViewers?: number | null;
+  },
+): boolean {
+  return (
+    game.livePlayers != null ||
+    game.twitchViewers != null ||
+    canTrackSteamPlayers({ appId: game.steamAppId })
+  );
+}
