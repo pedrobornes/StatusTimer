@@ -144,6 +144,13 @@ public class SteamStoreAppDetailsClient {
             boolean mac = platforms.path("mac").asBoolean(false);
             boolean linux = platforms.path("linux").asBoolean(false);
             List<Integer> categoryIds = parseCategoryIds(data);
+            JsonNode recommendations = data.path("recommendations");
+            JsonNode reviews = data.path("reviews");
+            Integer reviewCount = parsePositiveInt(reviews.path("total_reviews"));
+            if (reviewCount == null) {
+                reviewCount = parsePositiveInt(recommendations.path("total"));
+            }
+            Integer reviewScorePercent = parseSteamReviewScorePercent(reviews.path("review_score"));
 
             return Optional.of(new SteamAppMetadata(
                     releaseDate,
@@ -157,7 +164,9 @@ public class SteamStoreAppDetailsClient {
                     mac,
                     linux,
                     freeToPlay,
-                    categoryIds
+                    categoryIds,
+                    reviewCount,
+                    reviewScorePercent
             ));
         } catch (Exception exception) {
             log.warn("Unable to parse Steam appdetails for app {}", appId, exception);
@@ -253,6 +262,28 @@ public class SteamStoreAppDetailsClient {
         return cents >= 0 ? cents : null;
     }
 
+    private Integer parsePositiveInt(JsonNode value) {
+        if (value.isMissingNode() || value.isNull() || !value.canConvertToInt()) {
+            return null;
+        }
+
+        int parsed = value.asInt(-1);
+        return parsed >= 0 ? parsed : null;
+    }
+
+    private Integer parseSteamReviewScorePercent(JsonNode reviewScoreNode) {
+        if (reviewScoreNode.isMissingNode() || reviewScoreNode.isNull() || !reviewScoreNode.canConvertToInt()) {
+            return null;
+        }
+
+        int reviewScore = reviewScoreNode.asInt(-1);
+        if (reviewScore < 1 || reviewScore > 10) {
+            return null;
+        }
+
+        return reviewScore * 10;
+    }
+
     public record SteamAppMetadata(
             LocalDate releaseDate,
             boolean adultContent,
@@ -265,7 +296,9 @@ public class SteamStoreAppDetailsClient {
             boolean mac,
             boolean linux,
             boolean freeToPlay,
-            List<Integer> categoryIds
+            List<Integer> categoryIds,
+            Integer reviewCount,
+            Integer reviewScorePercent
     ) {
     }
 }

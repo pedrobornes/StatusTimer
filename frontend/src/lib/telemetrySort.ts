@@ -16,6 +16,28 @@ function compareDefaultOrder(
   return rankA - rankB;
 }
 
+function compareTwitchViewers(
+  viewersA: number | null | undefined,
+  viewersB: number | null | undefined,
+): number {
+  const hasA = viewersA != null;
+  const hasB = viewersB != null;
+
+  if (hasA && hasB) {
+    return viewersB - viewersA;
+  }
+
+  if (hasA) {
+    return -1;
+  }
+
+  if (hasB) {
+    return 1;
+  }
+
+  return 0;
+}
+
 function compareTwitchRank(
   rankA: number | null | undefined,
   rankB: number | null | undefined,
@@ -61,9 +83,15 @@ function isRecentSteamRelease(entry: GameTelemetry): boolean {
   return releaseTimestamp >= cutoff;
 }
 
-function resolveRatingScore(entry: GameTelemetry | undefined): number {
+function resolveSteamPopularityScore(entry: GameTelemetry | undefined): number {
   if (!entry) {
     return -1;
+  }
+
+  const reviewCount = entry.steamReviewCount ?? 0;
+  const reviewScore = entry.steamReviewScorePercent ?? 0;
+  if (reviewCount > 0 && reviewScore > 0) {
+    return reviewScore * Math.log10(reviewCount + 1);
   }
 
   const user = entry.userRating ?? -1;
@@ -87,10 +115,16 @@ function compareTopRated(
     return -1;
   }
 
-  const scoreA = resolveRatingScore(entryA);
-  const scoreB = resolveRatingScore(entryB);
+  const scoreA = resolveSteamPopularityScore(entryA);
+  const scoreB = resolveSteamPopularityScore(entryB);
   if (scoreA !== scoreB) {
     return scoreB - scoreA;
+  }
+
+  const reviewCountCompare =
+    (entryB.steamReviewCount ?? 0) - (entryA.steamReviewCount ?? 0);
+  if (reviewCountCompare !== 0) {
+    return reviewCountCompare;
   }
 
   const rankCompare = compareTwitchRank(entryA.twitchRank, entryB.twitchRank);
@@ -125,10 +159,18 @@ export function sortTelemetrySlugs(
   }
 
   return ordered.sort((slugA, slugB) => {
-    const byTwitch = compareTwitchRank(
-      telemetryBySlug[slugA]?.twitchRank,
-      telemetryBySlug[slugB]?.twitchRank,
+    const entryA = telemetryBySlug[slugA];
+    const entryB = telemetryBySlug[slugB];
+    const byViewers = compareTwitchViewers(
+      entryA?.twitchViewers,
+      entryB?.twitchViewers,
     );
+
+    if (byViewers !== 0) {
+      return byViewers;
+    }
+
+    const byTwitch = compareTwitchRank(entryA?.twitchRank, entryB?.twitchRank);
 
     if (byTwitch !== 0) {
       return byTwitch;
@@ -158,6 +200,15 @@ export function sortTelemetryEntries(
   }
 
   return ordered.sort((entryA, entryB) => {
+    const byViewers = compareTwitchViewers(
+      entryA.twitchViewers,
+      entryB.twitchViewers,
+    );
+
+    if (byViewers !== 0) {
+      return byViewers;
+    }
+
     const byTwitch = compareTwitchRank(entryA.twitchRank, entryB.twitchRank);
 
     if (byTwitch !== 0) {
@@ -167,3 +218,5 @@ export function sortTelemetryEntries(
     return compareDefaultOrder(entryA.gameSlug, entryB.gameSlug, defaultOrder);
   });
 }
+
+export { isRecentSteamRelease };

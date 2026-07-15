@@ -100,7 +100,9 @@ class GameCatalogServiceStartupReconcileTest {
                         false,
                         false,
                         true,
-                        List.of(2)
+                        List.of(2),
+                        125_000,
+                        90
                 )
         ));
 

@@ -90,6 +90,9 @@ public interface GameRepository extends JpaRepository<Game, Long> {
             Pageable pageable
     );
 
+    @Query("SELECT g FROM Game g WHERE g.twitchRank IS NOT NULL")
+    List<Game> findAllWithTwitchRank();
+
     @EntityGraph(attributePaths = {"platforms"})
     @Query("""
             SELECT g FROM Game g
@@ -98,10 +101,39 @@ public interface GameRepository extends JpaRepository<Game, Long> {
                    OR LOWER(g.slug) LIKE LOWER(CONCAT('%', :q, '%')))
               AND (g.staleReason IS NULL OR g.staleReason NOT IN ('TWITCH_CATEGORY', 'MATURE_CONTENT'))
               AND (g.steamAdultContent IS NULL OR g.steamAdultContent = false)
+              AND (g.steamReleaseDate IS NULL OR g.steamReleaseDate <= :today)
+              AND (g.igdbFirstReleaseDate IS NULL OR g.igdbFirstReleaseDate <= :today)
+              AND NOT EXISTS (
+                    SELECT 1 FROM GamePlatformDetail platformDetail
+                    WHERE platformDetail.game = g
+                      AND platformDetail.releaseDate IS NOT NULL
+                      AND platformDetail.releaseDate > :today
+              )
+              AND NOT (
+                    g.hypeCount > 0
+                    AND g.steamReleaseDate IS NULL
+                    AND g.igdbFirstReleaseDate IS NULL
+                    AND NOT EXISTS (
+                          SELECT 1 FROM GamePlatformDetail platformDetail
+                          WHERE platformDetail.game = g
+                            AND platformDetail.releaseDate IS NOT NULL
+                            AND platformDetail.releaseDate <= :today
+                    )
+              )
+              AND (
+                    :includeFullCatalog = true
+                    OR g.twitchRank IS NOT NULL
+                    OR g.lifecycleState IN (
+                          com.statustimer.entity.LifecycleState.MONITORED,
+                          com.statustimer.entity.LifecycleState.INDEXABLE
+                    )
+              )
             """)
     Page<Game> findCatalogPage(
             @Param("genre") String genre,
             @Param("q") String q,
+            @Param("today") java.time.LocalDate today,
+            @Param("includeFullCatalog") boolean includeFullCatalog,
             Pageable pageable
     );
 }

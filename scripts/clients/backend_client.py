@@ -26,6 +26,9 @@ class BackendClient:
     INTERNAL_NEWS_PATH = "/api/v1/internal/news"
     INTERNAL_GAMES_SYNC_PATH = "/api/v1/internal/games/sync"
     INTERNAL_GAMES_CATALOG_SYNC_PATH = "/api/v1/internal/games/catalog/sync"
+    INTERNAL_GAMES_RECONCILE_TWITCH_RANKS_PATH = (
+        "/api/v1/internal/games/catalog/reconcile-twitch-ranks"
+    )
     INTERNAL_SCRAPE_JOBS_PENDING_PATH = "/api/v1/internal/scrape-jobs/pending"
     INTERNAL_HARVEST_WORKLOAD_PATH = "/api/v1/internal/harvest/workload"
     INTERNAL_HARVEST_COMPLETE_PATH = "/api/v1/internal/harvest/complete"
@@ -54,6 +57,14 @@ class BackendClient:
             self.INTERNAL_GAMES_CATALOG_SYNC_PATH,
             request.model_dump(mode="json", by_alias=True),
             "game catalog sync",
+        )
+
+    def reconcile_twitch_ranks(self, active_slugs: list[str]) -> PushResult:
+        """Clear stale Twitch ranks for games outside the current top list."""
+        return self._post(
+            self.INTERNAL_GAMES_RECONCILE_TWITCH_RANKS_PATH,
+            {"activeSlugs": active_slugs},
+            "twitch rank reconcile",
         )
 
     def claim_pending_scrape_jobs(self, limit: int = 10) -> list[dict[str, object]]:

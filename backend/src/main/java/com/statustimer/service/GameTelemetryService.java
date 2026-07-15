@@ -93,12 +93,16 @@ public class GameTelemetryService {
         int safeSize = Math.max(1, Math.min(size, 200));
         String normalizedGenre = normalizeCatalogGenre(genre);
         String normalizedQuery = normalizeCatalogQuery(query);
+        boolean includeFullCatalog = normalizedQuery != null && !normalizedQuery.isBlank();
+        LocalDate today = LocalDate.now();
 
         Pageable pageable = PageRequest.of(
                 safePage,
                 safeSize,
                 Sort.by(
+                        Sort.Order.desc("twitchViewers").nullsLast(),
                         Sort.Order.asc("twitchRank").nullsLast(),
+                        Sort.Order.desc("steamReviewCount").nullsLast(),
                         Sort.Order.asc("gameName")
                 )
         );
@@ -106,6 +110,8 @@ public class GameTelemetryService {
         Page<Game> gamesPage = gameRepository.findCatalogPage(
                 normalizedGenre,
                 normalizedQuery,
+                today,
+                includeFullCatalog,
                 pageable
         );
 

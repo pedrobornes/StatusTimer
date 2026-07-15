@@ -5,49 +5,60 @@ import { Search } from "lucide-react";
 import GenreFilterChips from "@/components/ui/GenreFilterChips";
 import GamingStatusSection from "@/components/dashboard/GamingStatusSection";
 import GameTelemetrySortSelect from "@/components/ui/GameTelemetrySortSelect";
+import PaginationControls from "@/components/ui/PaginationControls";
+import { CATALOG_GAMES_PAGE_SIZE } from "@/config/catalog";
 import { TRACKED_GAME_SLUGS } from "@/config/routes";
 import { CATALOG_SEARCH_HINT } from "@/config/seo";
 import { getUserFacingErrorMessage } from "@/services/api";
+import { getCatalogGames } from "@/services/catalogService";
 import { searchGameTelemetry } from "@/services/telemetryService";
-import {
-  collectTelemetryGenres,
-  filterTelemetryByGenre,
-} from "@/lib/telemetryFilters";
+import { collectTelemetryGenres } from "@/lib/telemetryFilters";
 import type { PlatformDetail } from "@/types/api";
-import type {
-  GameTelemetry,
-} from "@/types/telemetry";
+import type { GameTelemetry } from "@/types/telemetry";
 import {
   sortTelemetryEntries,
   type TelemetrySortMode,
 } from "@/lib/telemetrySort";
 
-const GAMES_PER_PAGE = 9;
-
 interface TelemetryGamesPanelProps {
-  gameTelemetry: GameTelemetry[];
+  initialGameTelemetry: GameTelemetry[];
+  initialPage: number;
+  initialTotalPages: number;
+  initialTotalElements: number;
+  catalogPageSize?: number;
   platformsBySlug: Record<string, PlatformDetail[]>;
-  catalogTotal?: number;
 }
 
 function TelemetryGamesPanel({
-  gameTelemetry,
+  initialGameTelemetry,
+  initialPage,
+  initialTotalPages,
+  initialTotalElements,
+  catalogPageSize = CATALOG_GAMES_PAGE_SIZE,
   platformsBySlug,
-  catalogTotal,
 }: TelemetryGamesPanelProps) {
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
+  const [catalogItems, setCatalogItems] = useState(initialGameTelemetry);
+  const [catalogPage, setCatalogPage] = useState(initialPage + 1);
+  const [catalogTotalPages, setCatalogTotalPages] = useState(initialTotalPages);
+  const [catalogTotalElements, setCatalogTotalElements] = useState(
+    initialTotalElements,
+  );
+  const [isCatalogLoading, setIsCatalogLoading] = useState(false);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<GameTelemetry[] | null>(
     null,
   );
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<TelemetrySortMode>("trending");
-  const [currentPage, setCurrentPage] = useState(1);
   const [genreFilter, setGenreFilter] = useState<string | "All">("All");
+  const [hasHydratedCatalog, setHasHydratedCatalog] = useState(false);
 
   const normalizedQuery = deferredQuery.trim();
   const isSearchPending = query.trim() !== normalizedQuery;
+  const isCatalogBrowse = normalizedQuery.length === 0;
 
   useEffect(() => {
     if (!normalizedQuery) {
@@ -86,25 +97,75 @@ function TelemetryGamesPanel({
   }, [normalizedQuery]);
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [normalizedQuery, sortMode, genreFilter]);
+    if (!isCatalogBrowse) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadCatalogPage() {
+      if (
+        !hasHydratedCatalog
+        && catalogPage === initialPage + 1
+        && genreFilter === "All"
+      ) {
+        setHasHydratedCatalog(true);
+        return;
+      }
+
+      setHasHydratedCatalog(true);
+      setIsCatalogLoading(true);
+      setCatalogError(null);
+
+      try {
+        const response = await getCatalogGames({
+          page: catalogPage - 1,
+          size: catalogPageSize,
+          genre: genreFilter === "All" ? undefined : genreFilter,
+        });
+
+        if (cancelled) {
+          return;
+        }
+
+        setCatalogItems(response.items);
+        setCatalogTotalPages(Math.max(1, response.totalPages));
+        setCatalogTotalElements(response.totalElements);
+      } catch (error) {
+        if (!cancelled) {
+          setCatalogError(getUserFacingErrorMessage(error));
+        }
+      } finally {
+        if (!cancelled) {
+          setIsCatalogLoading(false);
+        }
+      }
+    }
+
+    void loadCatalogPage();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [catalogPage, catalogPageSize, genreFilter, hasHydratedCatalog, initialPage, isCatalogBrowse]);
+
+  useEffect(() => {
+    setCatalogPage(1);
+  }, [genreFilter, normalizedQuery]);
 
   const availableGenres = useMemo(
-    () => collectTelemetryGenres(gameTelemetry),
-    [gameTelemetry],
+    () => collectTelemetryGenres(catalogItems),
+    [catalogItems],
   );
 
-  const displayedTelemetry = normalizedQuery
-    ? (searchResults ?? [])
-    : gameTelemetry;
-
-  const filteredTelemetry = useMemo(() => {
-    return filterTelemetryByGenre(displayedTelemetry, genreFilter);
-  }, [displayedTelemetry, genreFilter]);
+  const displayedTelemetry = isCatalogBrowse ? catalogItems : (searchResults ?? []);
 
   const sortedTelemetry = useMemo(
-    () => sortTelemetryEntries(filteredTelemetry, sortMode, TRACKED_GAME_SLUGS),
-    [filteredTelemetry, sortMode],
+    () =>
+      isCatalogBrowse && sortMode === "trending"
+        ? displayedTelemetry
+        : sortTelemetryEntries(displayedTelemetry, sortMode, TRACKED_GAME_SLUGS),
+    [displayedTelemetry, isCatalogBrowse, sortMode],
   );
 
   const gamingEmptyMessage = normalizedQuery
@@ -113,7 +174,11 @@ function TelemetryGamesPanel({
       : searchError
         ? searchError
         : `No games found matching "${normalizedQuery}". Try a different spelling or the full game title.`
-    : undefined;
+    : isCatalogLoading
+      ? "Loading catalog games..."
+      : catalogError
+        ? catalogError
+        : undefined;
 
   return (
     <>
@@ -145,7 +210,7 @@ function TelemetryGamesPanel({
           />
         </div>
 
-        {!normalizedQuery && availableGenres.length > 0 ? (
+        {isCatalogBrowse && availableGenres.length > 0 ? (
           <div className="mt-4">
             <GenreFilterChips
               options={availableGenres}
@@ -155,16 +220,17 @@ function TelemetryGamesPanel({
           </div>
         ) : null}
 
-        {!normalizedQuery && catalogTotal != null ? (
+        {isCatalogBrowse ? (
           <div className="mt-3 space-y-1">
             <p className="text-xs text-slate-400">
-              Showing {gameTelemetry.length} of {catalogTotal} catalog games
+              Page {catalogPage} of {catalogTotalPages} · {catalogTotalElements}{" "}
+              live catalog games
             </p>
             <p className="text-xs text-slate-500">{CATALOG_SEARCH_HINT}</p>
           </div>
         ) : null}
 
-        {normalizedQuery ? (
+        {!isCatalogBrowse ? (
           <p className="mt-3 text-xs text-slate-400">
             {isSearching || isSearchPending
               ? "Searching games..."
@@ -177,10 +243,18 @@ function TelemetryGamesPanel({
         games={sortedTelemetry}
         platformsBySlug={platformsBySlug}
         emptyMessage={gamingEmptyMessage}
-        currentPage={currentPage}
-        pageSize={GAMES_PER_PAGE}
-        onPageChange={setCurrentPage}
       />
+
+      {isCatalogBrowse && catalogTotalPages > 1 ? (
+        <PaginationControls
+          currentPage={catalogPage}
+          totalPages={catalogTotalPages}
+          totalItems={catalogTotalElements}
+          pageSize={catalogPageSize}
+          onPageChange={setCatalogPage}
+          itemLabel="games"
+        />
+      ) : null}
     </>
   );
 }

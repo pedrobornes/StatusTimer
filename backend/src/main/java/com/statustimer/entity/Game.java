@@ -186,6 +186,12 @@ public class Game {
     @Column(name = "critic_rating")
     private Integer criticRating;
 
+    @Column(name = "steam_review_count")
+    private Integer steamReviewCount;
+
+    @Column(name = "steam_review_score_percent")
+    private Integer steamReviewScorePercent;
+
     @Convert(converter = StringListJsonConverter.class)
     @Column(name = "screenshot_urls_json", columnDefinition = "TEXT")
     @Builder.Default

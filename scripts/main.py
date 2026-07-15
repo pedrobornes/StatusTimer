@@ -571,11 +571,10 @@ def fetch_dynamic_catalog_entries() -> DynamicCatalogBundle:
         "Twitch top games fetch",
         fetch_twitch_top_games_catalog,
     )
-    igdb_entries = _fetch_igdb_popular_catalog_safe()
     return DynamicCatalogBundle(
-        entries=_merge_dynamic_catalog_entries(twitch_entries, igdb_entries),
+        entries=twitch_entries,
         twitch_count=len(twitch_entries),
-        igdb_count=len(igdb_entries),
+        igdb_count=0,
     )
 
 
@@ -888,13 +887,22 @@ def _sync_prefetched_dynamic_catalog(
         total_items=len(entries),
         successful_items=successful_items,
     )
-    return len(entries), _aggregate_results(
+    sync_result = _aggregate_results(
         results=results,
         successful_items=successful_items,
         total_items=len(entries),
         empty_status=204,
         empty_error="No dynamic catalog pushes attempted",
     )
+    if sync_result.success:
+        active_slugs = [
+            entry.slug
+            for entry in bundle.entries
+            if entry.twitch_rank is not None
+        ]
+        if active_slugs:
+            client.reconcile_twitch_ranks(active_slugs)
+    return len(entries), sync_result
 
 
 def _sync_prefetched_social(

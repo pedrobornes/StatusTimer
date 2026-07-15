@@ -14,9 +14,11 @@ import com.statustimer.config.SteamAppIdPolicy;
 import com.statustimer.config.SteamMetadataRefreshPolicy;
 import com.statustimer.config.TrackedGameCatalog;
 import com.statustimer.dto.request.GameCatalogEntryPayload;
+import com.statustimer.dto.request.ReconcileTwitchRanksRequest;
 import com.statustimer.dto.request.SyncGameCatalogRequest;
 import com.statustimer.dto.response.GameCatalogSearchResponse;
 import com.statustimer.dto.response.GameIndexableSlugResponse;
+import com.statustimer.dto.response.ReconcileTwitchRanksResponse;
 import com.statustimer.dto.response.SyncGameCatalogResponse;
 import com.statustimer.config.GameTypeResolver;
 import com.statustimer.entity.Game;
@@ -214,6 +216,13 @@ public class GameCatalogService {
             game.setSteamAdultContent(true);
         } else {
             game.setSteamAdultContent(false);
+        }
+
+        if (metadata.reviewCount() != null && metadata.reviewCount() > 0) {
+            game.setSteamReviewCount(metadata.reviewCount());
+        }
+        if (metadata.reviewScorePercent() != null && metadata.reviewScorePercent() > 0) {
+            game.setSteamReviewScorePercent(metadata.reviewScorePercent());
         }
 
         GameType resolvedType = GameTypeResolver.resolveFromSteamCategoryIds(metadata.categoryIds());
@@ -1321,6 +1330,34 @@ public class GameCatalogService {
         }
 
         return List.of();
+    }
+
+    @Transactional
+    public ReconcileTwitchRanksResponse reconcileTwitchRanks(ReconcileTwitchRanksRequest request) {
+        if (request.activeSlugs() == null || request.activeSlugs().isEmpty()) {
+            return new ReconcileTwitchRanksResponse(0);
+        }
+
+        java.util.Set<String> activeSlugs = request.activeSlugs().stream()
+                .filter(slug -> slug != null && !slug.isBlank())
+                .map(gameSlugMapper::getSteamSlug)
+                .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new));
+
+        int cleared = 0;
+        for (Game game : gameRepository.findAllWithTwitchRank()) {
+            String canonicalSlug = gameSlugMapper.getSteamSlug(game.getSlug());
+            if (!activeSlugs.contains(canonicalSlug)) {
+                game.setTwitchRank(null);
+                gameRepository.save(game);
+                cleared++;
+            }
+        }
+
+        if (cleared > 0) {
+            log.info("Cleared stale Twitch rank from {} catalog game(s)", cleared);
+        }
+
+        return new ReconcileTwitchRanksResponse(cleared);
     }
 
     @Transactional(noRollbackFor = DataIntegrityViolationException.class)

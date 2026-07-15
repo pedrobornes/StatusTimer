@@ -29,6 +29,8 @@ export interface GameTelemetry {
   lifecycleState?: "CATALOG" | "MONITORED" | "INDEXABLE";
   userRating?: number | null;
   criticRating?: number | null;
+  steamReviewCount?: number | null;
+  steamReviewScorePercent?: number | null;
   genreName?: string | null;
   genreNames?: string[];
   type?: GameType;

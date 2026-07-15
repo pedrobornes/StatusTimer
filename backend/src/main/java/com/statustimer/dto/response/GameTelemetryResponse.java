@@ -33,6 +33,8 @@ public record GameTelemetryResponse(
         String lifecycleState,
         Integer userRating,
         Integer criticRating,
+        Integer steamReviewCount,
+        Integer steamReviewScorePercent,
         String genreName,
         List<String> genreNames,
         List<String> screenshotUrls,
@@ -126,6 +128,8 @@ public record GameTelemetryResponse(
                 lifecycleState,
                 userRating,
                 criticRating,
+                trackedGame.map(Game::getSteamReviewCount).orElse(null),
+                trackedGame.map(Game::getSteamReviewScorePercent).orElse(null),
                 genreName,
                 genreNames,
                 screenshotUrls,
@@ -176,6 +180,8 @@ public record GameTelemetryResponse(
                 game.getLifecycleState().name(),
                 game.getUserRating(),
                 game.getCriticRating(),
+                game.getSteamReviewCount(),
+                game.getSteamReviewScorePercent(),
                 game.getGenreName(),
                 game.getGenreNames() != null && !game.getGenreNames().isEmpty()
                         ? List.copyOf(game.getGenreNames())

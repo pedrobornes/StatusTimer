@@ -1,7 +1,9 @@
 package com.statustimer.controller;
 
+import com.statustimer.dto.request.ReconcileTwitchRanksRequest;
 import com.statustimer.dto.request.SyncGameCatalogRequest;
 import com.statustimer.dto.request.SyncGamesRequest;
+import com.statustimer.dto.response.ReconcileTwitchRanksResponse;
 import com.statustimer.dto.response.SyncGameCatalogResponse;
 import com.statustimer.dto.response.SyncGamesResponse;
 import com.statustimer.service.GameCatalogService;
@@ -28,5 +30,12 @@ public class InternalGameController {
     @PostMapping("/catalog/sync")
     public SyncGameCatalogResponse syncCatalog(@RequestBody SyncGameCatalogRequest request) {
         return gameCatalogService.syncCatalog(request);
+    }
+
+    @PostMapping("/catalog/reconcile-twitch-ranks")
+    public ReconcileTwitchRanksResponse reconcileTwitchRanks(
+            @RequestBody ReconcileTwitchRanksRequest request
+    ) {
+        return gameCatalogService.reconcileTwitchRanks(request);
     }
 }

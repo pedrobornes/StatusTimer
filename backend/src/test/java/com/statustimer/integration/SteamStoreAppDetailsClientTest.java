@@ -79,6 +79,35 @@ class SteamStoreAppDetailsClientTest {
     }
 
     @Test
+    void parseMetadataExtractsSteamReviewSignals() throws Exception {
+        String body = """
+                {
+                  "730": {
+                    "success": true,
+                    "data": {
+                      "recommendations": {
+                        "total": 5000000
+                      },
+                      "reviews": {
+                        "review_score": 9,
+                        "total_reviews": 4800000
+                      },
+                      "platforms": {
+                        "windows": true
+                      }
+                    }
+                  }
+                }
+                """;
+
+        var metadata = invokeParse(body, 730);
+
+        assertTrue(metadata.isPresent());
+        assertEquals(4_800_000, metadata.get().reviewCount());
+        assertEquals(90, metadata.get().reviewScorePercent());
+    }
+
+    @Test
     void parseMetadataDetectsAdultOnlySteamListing() throws Exception {
         String body = """
                 {
