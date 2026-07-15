@@ -34,10 +34,10 @@ harvest:
     max-news-per-cycle: 20
     telemetry-minutes-tier-1: 10
     telemetry-minutes-tier-2: 90
-    telemetry-minutes-tier-3: 300
+    telemetry-minutes-tier-3: 360
     metrics-minutes-tier-1: 22
     metrics-minutes-tier-2: 90
-    metrics-minutes-tier-3: 720
+    metrics-minutes-tier-3: 900
     news-minutes-tier-1: 480
     news-minutes-tier-2: 2160
     news-minutes-tier-3: 10080
@@ -53,6 +53,7 @@ indexability:
 
 lifecycle:
   monitor:
+    # Hard cap on MONITORED + INDEXABLE games (harvest workload). Remaining catalog stays CATALOG.
     max-monitored-games: 500
     demote-inactivity-days: 30
     promote-max-per-cycle: 25

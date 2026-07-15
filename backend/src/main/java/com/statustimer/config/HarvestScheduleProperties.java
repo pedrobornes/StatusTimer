@@ -35,7 +35,7 @@ public record HarvestScheduleProperties(
             telemetryMinutesTier2 = 90;
         }
         if (telemetryMinutesTier3 <= 0) {
-            telemetryMinutesTier3 = 300;
+            telemetryMinutesTier3 = 360;
         }
         if (metricsMinutesTier1 <= 0) {
             metricsMinutesTier1 = 22;
@@ -44,7 +44,7 @@ public record HarvestScheduleProperties(
             metricsMinutesTier2 = 90;
         }
         if (metricsMinutesTier3 <= 0) {
-            metricsMinutesTier3 = 720;
+            metricsMinutesTier3 = 900;
         }
         if (newsMinutesTier1 <= 0) {
             newsMinutesTier1 = 480;
