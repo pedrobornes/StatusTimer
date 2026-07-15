@@ -240,8 +240,25 @@ public class GameCatalogService {
 
         steamStoreAppDetailsClient.fetchMetadata(appId).ifPresentOrElse(
                 metadata -> applySteamMetadata(game, metadata),
-                () -> CatalogMatureContentPolicy.applyQuarantineIfMature(game)
+                () -> retrySteamStoreMetadataWithKnownAppId(game, appId)
         );
+    }
+
+    private void retrySteamStoreMetadataWithKnownAppId(Game game, int failedAppId) {
+        Optional<Integer> knownAppId = knownSteamAppRegistry.resolveAppId(game.getSlug());
+        if (knownAppId.isPresent()
+                && knownAppId.get() > 0
+                && !knownAppId.get().equals(failedAppId)
+                && SteamAppIdPolicy.mayAssignSteamAppId(game.getSlug(), knownAppId.get())) {
+            game.setSteamAppId(knownAppId.get());
+            steamStoreAppDetailsClient.fetchMetadata(knownAppId.get()).ifPresentOrElse(
+                    metadata -> applySteamMetadata(game, metadata),
+                    () -> CatalogMatureContentPolicy.applyQuarantineIfMature(game)
+            );
+            return;
+        }
+
+        CatalogMatureContentPolicy.applyQuarantineIfMature(game);
     }
 
     private SteamStoreListingResponse toSteamStoreListing(Game game) {
@@ -1591,6 +1608,13 @@ public class GameCatalogService {
         for (Game game : gameRepository.findAll()) {
             Integer before = game.getSteamAppId();
             Long playersBefore = game.getLivePlayers();
+
+            knownSteamAppRegistry.resolveAppId(game.getSlug()).ifPresent(knownAppId -> {
+                if (SteamAppIdPolicy.mayAssignSteamAppId(game.getSlug(), knownAppId)) {
+                    game.setSteamAppId(knownAppId);
+                }
+            });
+
             SteamAppIdPolicy.sanitize(game);
             if (!java.util.Objects.equals(before, game.getSteamAppId())
                     || !java.util.Objects.equals(playersBefore, game.getLivePlayers())) {

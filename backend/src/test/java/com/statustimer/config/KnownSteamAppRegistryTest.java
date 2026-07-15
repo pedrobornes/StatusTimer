@@ -21,6 +21,11 @@ class KnownSteamAppRegistryTest {
     }
 
     @Test
+    void resolvesArmaReforger() {
+        assertEquals(1874880, registry.resolveAppId("arma-reforger").orElseThrow());
+    }
+
+    @Test
     void returnsEmptyForUnknownSlug() {
         assertTrue(registry.resolveAppId("minecraft").isEmpty());
     }
