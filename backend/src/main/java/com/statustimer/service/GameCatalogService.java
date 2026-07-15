@@ -1072,13 +1072,18 @@ public class GameCatalogService {
             logoUrl = GameAssetPolicy.LOGO_NONE;
         }
 
+        Integer steamAppId = resolveAppId(responseSlug);
+        if (steamAppId == null || steamAppId <= 0) {
+            steamAppId = game.getSteamAppId();
+        }
+
         return new GameCatalogSearchResponse(
                 game.getId(),
                 responseSlug,
                 game.getGameName(),
                 logoUrl.trim(),
                 game.getCoverUrl(),
-                game.getSteamAppId(),
+                steamAppId,
                 game.getUserRating(),
                 game.getCriticRating(),
                 game.getGenreName(),

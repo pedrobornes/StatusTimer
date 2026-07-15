@@ -37,6 +37,10 @@ class GameSlugRegistryTests(unittest.TestCase):
         self.assertIsNone(resolve_harvest_steam_app_id("minecraft", 1928870))
         self.assertIsNone(resolve_harvest_steam_app_id("minecraft", None))
 
+    def test_resolve_harvest_steam_app_id_uses_known_registry_for_sea_of_thieves(self) -> None:
+        self.assertEqual(1172620, resolve_harvest_steam_app_id("sea-of-thieves", None))
+        self.assertEqual(1172620, resolve_harvest_steam_app_id("sea-of-thieves", 999999))
+
 
 if __name__ == "__main__":
     unittest.main()

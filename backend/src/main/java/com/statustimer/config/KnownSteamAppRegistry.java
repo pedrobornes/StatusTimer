@@ -14,7 +14,8 @@ public class KnownSteamAppRegistry {
             Map.entry("meccha-chameleon", 4704690),
             Map.entry("infinity-nikki", 3164330),
             Map.entry("assassin-s-creed-black-flag-resynced", 3751950),
-            Map.entry("arma-reforger", 1874880)
+            Map.entry("arma-reforger", 1874880),
+            Map.entry("sea-of-thieves", 1172620)
     );
 
     public Optional<Integer> resolveAppId(String slug) {

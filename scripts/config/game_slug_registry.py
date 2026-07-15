@@ -46,6 +46,12 @@ BLOCKED_STEAM_APP_IDS_BY_SLUG: dict[str, frozenset[int]] = {
     "minecraft": frozenset({1928870}),
 }
 
+# Canonical slug -> known Steam app id (mirrors backend KnownSteamAppRegistry).
+KNOWN_STEAM_APP_IDS: dict[str, int] = {
+    "arma-reforger": 1874880,
+    "sea-of-thieves": 1172620,
+}
+
 
 class PinnedGame(TypedDict):
     igdb_slug: str
@@ -165,6 +171,10 @@ def resolve_harvest_steam_app_id(slug: str, db_app_id: int | None = None) -> int
     monitored = find_monitored_target(canonical_slug)
     if monitored is not None and monitored.steam_app_id is not None:
         return monitored.steam_app_id
+
+    known_app_id = KNOWN_STEAM_APP_IDS.get(canonical_slug)
+    if known_app_id is not None and known_app_id > 0:
+        return known_app_id
 
     if isinstance(db_app_id, int) and db_app_id > 0:
         blocked = pinned["blocked_steam_app_ids"] if pinned is not None else frozenset()

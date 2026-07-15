@@ -26,6 +26,11 @@ class KnownSteamAppRegistryTest {
     }
 
     @Test
+    void resolvesSeaOfThieves() {
+        assertEquals(1172620, registry.resolveAppId("sea-of-thieves").orElseThrow());
+    }
+
+    @Test
     void returnsEmptyForUnknownSlug() {
         assertTrue(registry.resolveAppId("minecraft").isEmpty());
     }
