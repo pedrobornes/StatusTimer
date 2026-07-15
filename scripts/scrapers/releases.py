@@ -70,5 +70,7 @@ def _clean_genre_names(raw_genre_tags: list[str]) -> list[str]:
 
 
 def fetch_upcoming_releases() -> list[GameReleasePayload]:
-    """Harvest upcoming releases from IGDB (requires Twitch/IGDB API credentials)."""
-    return fetch_igdb_upcoming_releases()
+    """Harvest upcoming releases from IGDB on the daily incremental schedule."""
+    from pipeline.release_harvest import fetch_scheduled_upcoming_releases
+
+    return fetch_scheduled_upcoming_releases()

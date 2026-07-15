@@ -1,0 +1,67 @@
+"""Twitch directory categories that are not monitorable live-service games."""
+
+from __future__ import annotations
+
+NON_GAME_CATEGORY_NAMES = frozenset(
+    {
+        "just chatting",
+        "irl",
+        "art",
+        "music",
+        "asmr",
+        "slots",
+        "talk shows & podcasts",
+        "pools, hot tubs, and beaches",
+        "sports",
+        "special events",
+        "software and game development",
+        "games + demos",
+        "games done quick",
+        "animals, aquariums,and zoos",
+        "animals, aquariums, and zoos",
+        "tabletop rpgs",
+        "virtual casino",
+        "poker",
+        "qsmp",
+        "food & drink",
+        "im only sleeping",
+        "i'm only sleeping",
+        "bombanana!",
+        "wallpaper engine",
+        "co-working & studying",
+        "co-working and studying",
+        "crypto",
+        "мир танков",
+    }
+)
+
+QUARANTINED_CATEGORY_SLUGS = frozenset(
+    {
+        "games-demos",
+        "games-done-quick",
+        "animals-aquariums-and-zoos",
+        "just-chatting",
+        "irl",
+        "art",
+        "music",
+        "asmr",
+        "slots",
+        "talk-shows-and-podcasts",
+        "pools-hot-tubs-and-beaches",
+        "sports",
+        "special-events",
+        "software-and-game-development",
+        "american-idol",
+        "tabletop-rpgs",
+        "virtual-casino",
+        "poker",
+        "qsmp",
+        "food-and-drink",
+        "im-only-sleeping",
+        "bombanana",
+        "wallpaper-engine",
+        "co-working-and-studying",
+        "crypto",
+        "mir-tankov",
+    }
+)

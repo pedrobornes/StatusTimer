@@ -256,7 +256,9 @@ function TelemetryGamesPanel({
           <div className="mt-3 space-y-1">
             <p className="text-xs text-slate-400">
               Page {catalogPage} of {catalogTotalPages} · {catalogTotalElements}{" "}
-              live catalog games
+              {genreFilter === "All"
+                ? "live catalog games"
+                : `${genreFilter} games across the catalog`}
             </p>
             <p className="text-xs text-slate-500">{CATALOG_SEARCH_HINT}</p>
           </div>

@@ -28,6 +28,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Formula;
 
 @Entity
 @Table(
@@ -62,6 +63,9 @@ public class Game {
     @Column(name = "genre_names_json", columnDefinition = "TEXT")
     @Builder.Default
     private List<String> genreNames = new ArrayList<>();
+
+    @Formula("genre_names_json")
+    private String genreNamesJsonBlob;
 
     @Column(nullable = false)
     @Builder.Default

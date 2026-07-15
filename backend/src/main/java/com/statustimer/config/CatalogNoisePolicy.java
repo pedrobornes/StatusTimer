@@ -3,52 +3,12 @@ package com.statustimer.config;
 import com.statustimer.entity.Game;
 import com.statustimer.entity.LifecycleState;
 import java.util.Locale;
-import java.util.Set;
 
 /**
  * Identifies Twitch directory categories and other non-game catalog noise that should
  * not appear in the public catalog or trigger IGDB enrichment.
  */
 public final class CatalogNoisePolicy {
-
-    private static final Set<String> TWITCH_NON_GAME_NAMES = Set.of(
-            "just chatting",
-            "irl",
-            "art",
-            "music",
-            "asmr",
-            "slots",
-            "talk shows & podcasts",
-            "pools, hot tubs, and beaches",
-            "sports",
-            "special events",
-            "software and game development",
-            "games + demos",
-            "games done quick",
-            "animals, aquariums,and zoos",
-            "animals, aquariums, and zoos",
-            "american idol",
-            "tabletop rpgs"
-    );
-
-    private static final Set<String> QUARANTINED_SLUGS = Set.of(
-            "games-demos",
-            "games-done-quick",
-            "animals-aquariums-and-zoos",
-            "just-chatting",
-            "irl",
-            "art",
-            "music",
-            "asmr",
-            "slots",
-            "talk-shows-and-podcasts",
-            "pools-hot-tubs-and-beaches",
-            "sports",
-            "special-events",
-            "software-and-game-development",
-            "american-idol",
-            "tabletop-rpgs"
-    );
 
     private CatalogNoisePolicy() {
     }
@@ -62,7 +22,9 @@ public final class CatalogNoisePolicy {
     }
 
     public static boolean isTwitchCategoryNoise(String slug, String gameName) {
-        if (slug != null && QUARANTINED_SLUGS.contains(slug.trim().toLowerCase(Locale.ROOT))) {
+        if (slug != null
+                && CatalogTwitchNoiseRegistry.QUARANTINED_SLUGS.contains(
+                        slug.trim().toLowerCase(Locale.ROOT))) {
             return true;
         }
 
@@ -70,7 +32,7 @@ public final class CatalogNoisePolicy {
             return false;
         }
 
-        return TWITCH_NON_GAME_NAMES.contains(normalizeName(gameName));
+        return CatalogTwitchNoiseRegistry.NON_GAME_NAMES.contains(normalizeName(gameName));
     }
 
     public static boolean isQuarantined(Game game) {

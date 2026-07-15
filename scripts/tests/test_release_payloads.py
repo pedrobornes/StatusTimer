@@ -110,7 +110,7 @@ class ReleasePayloadTests(unittest.TestCase):
 
         self.assertEqual(payload.game_name, "Fable")
 
-    @patch("scrapers.releases.fetch_igdb_upcoming_releases")
+    @patch("pipeline.release_harvest.fetch_igdb_upcoming_releases_batch")
     def test_fetch_upcoming_releases_serializes_image_url_for_sync(self, mock_fetch) -> None:
         metadata = parse_igdb_game_metadata(
             {
@@ -123,11 +123,14 @@ class ReleasePayloadTests(unittest.TestCase):
                 "cover": {"image_id": "coabc123"},
             }
         )
-        mock_fetch.return_value = [
-            map_igdb_metadata_to_release(metadata, {"platforms": [167, 169]})
-        ]
+        mock_fetch.return_value = (
+            [map_igdb_metadata_to_release(metadata, {"platforms": [167, 169]})],
+            1,
+            True,
+        )
 
-        request = SyncGamesRequest(releases=fetch_upcoming_releases())
+        with patch("pipeline.release_harvest.should_run_release_harvest", return_value=True):
+            request = SyncGamesRequest(releases=fetch_upcoming_releases())
         serialized = json.loads(request.model_dump_json(by_alias=True))
 
         self.assertEqual(len(serialized["releases"]), 1)
@@ -137,10 +140,11 @@ class ReleasePayloadTests(unittest.TestCase):
         self.assertEqual(release["slug"], "grand-theft-auto-vi")
         self.assertLessEqual(len(release["imageUrl"]), 2048)
 
-    @patch("scrapers.releases.fetch_igdb_upcoming_releases")
+    @patch("pipeline.release_harvest.fetch_igdb_upcoming_releases_batch")
     def test_fetch_upcoming_releases_returns_empty_without_igdb_rows(self, mock_fetch) -> None:
-        mock_fetch.return_value = []
-        self.assertEqual(fetch_upcoming_releases(), [])
+        mock_fetch.return_value = ([], 0, True)
+        with patch("pipeline.release_harvest.should_run_release_harvest", return_value=True):
+            self.assertEqual(fetch_upcoming_releases(), [])
 
 
 if __name__ == "__main__":

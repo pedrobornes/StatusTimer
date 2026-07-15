@@ -1,6 +1,9 @@
 package com.statustimer.config;
 
 import com.statustimer.util.SlugUtils;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Component;
 
@@ -53,5 +56,12 @@ public class GameSlugMapper {
 
         String canonicalSlug = resolveCanonicalSlug(twitchSlug);
         return TWITCH_TO_STEAM_SLUGS.getOrDefault(canonicalSlug, canonicalSlug);
+    }
+
+    public List<String> blockedCatalogListingSlugs() {
+        List<String> blocked = new ArrayList<>();
+        blocked.addAll(SLUG_ALIASES.keySet());
+        blocked.addAll(TWITCH_TO_STEAM_SLUGS.keySet());
+        return Collections.unmodifiableList(blocked);
     }
 }

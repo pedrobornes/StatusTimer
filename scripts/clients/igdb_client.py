@@ -40,23 +40,41 @@ class IgdbClient:
         *,
         limit: int | None = None,
         min_hype: int | None = None,
+        start_offset: int = 0,
     ) -> list[dict[str, Any]]:
         if not is_igdb_configured():
             return []
 
         resolved_limit = limit or settings.igdb_releases_limit
         resolved_min_hype = min_hype if min_hype is not None else settings.igdb_min_hype
+        if resolved_limit <= 0:
+            return []
+
         now_unix = int(time.time())
+        collected: list[dict[str, Any]] = []
+        offset = max(start_offset, 0)
 
-        query = (
-            f"fields {IGDB_GAME_FIELDS}; "
-            f"where game_type = {CATALOG_GAME_TYPE_FILTER} & hypes >= {resolved_min_hype} "
-            f"& (first_release_date > {now_unix} | first_release_date = null); "
-            "sort hypes desc; "
-            f"limit {resolved_limit};"
-        )
+        while len(collected) < resolved_limit:
+            page_limit = min(IGDB_MAX_PAGE_SIZE, resolved_limit - len(collected))
+            query = (
+                f"fields {IGDB_GAME_FIELDS}; "
+                f"where game_type = {CATALOG_GAME_TYPE_FILTER} & hypes >= {resolved_min_hype} "
+                f"& (first_release_date > {now_unix} | first_release_date = null); "
+                "sort hypes desc; "
+                f"limit {page_limit}; "
+                f"offset {offset};"
+            )
+            page = self._fetch_games(query)
+            if not page:
+                break
 
-        return self._fetch_games(query)
+            collected.extend(page)
+            if len(page) < page_limit:
+                break
+
+            offset += page_limit
+
+        return collected[:resolved_limit]
 
     def fetch_popular_right_now_games(
         self,

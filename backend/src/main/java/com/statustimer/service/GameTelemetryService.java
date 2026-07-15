@@ -9,7 +9,6 @@ import com.statustimer.dto.request.SyncTelemetryRequest;
 import com.statustimer.dto.response.GameCatalogPageResponse;
 import com.statustimer.dto.response.GameCatalogSearchResponse;
 import com.statustimer.dto.response.GameTelemetryResponse;
-import com.statustimer.dto.response.GameTelemetryResponse;
 import com.statustimer.dto.response.SyncTelemetryResponse;
 import com.statustimer.dto.response.TelemetryHistorySnapshotResponse;
 import com.statustimer.dto.response.TelemetryIncidentResponse;
@@ -30,7 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -112,6 +111,7 @@ public class GameTelemetryService {
                 normalizedQuery,
                 today,
                 includeFullCatalog,
+                gameSlugMapper.blockedCatalogListingSlugs(),
                 pageable
         );
 
@@ -153,7 +153,33 @@ public class GameTelemetryService {
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE, key = "'catalogGenres'")
     public List<String> findCatalogGenres() {
-        return gameRepository.findDistinctCatalogGenreNames(LocalDate.now(), false);
+        TreeSet<String> genres = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+
+        for (Object[] row : gameRepository.findCatalogGenreFields(
+                LocalDate.now(),
+                false,
+                gameSlugMapper.blockedCatalogListingSlugs()
+        )) {
+            if (row.length == 0) {
+                continue;
+            }
+
+            if (row[0] instanceof String primaryGenre && !primaryGenre.isBlank()) {
+                genres.add(primaryGenre.trim());
+            }
+
+            if (row.length > 1 && row[1] instanceof List<?> genreNames) {
+                for (Object genreName : genreNames) {
+                    if (genreName instanceof String value && !value.isBlank()) {
+                        genres.add(value.trim());
+                    }
+                }
+            }
+        }
+
+        return genres.stream()
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .toList();
     }
 
     @Transactional(readOnly = true)

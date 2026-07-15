@@ -79,8 +79,10 @@ class Settings(BaseSettings):
 
     igdb_client_id: str = ""
     igdb_client_secret: str = ""
-    igdb_releases_limit: int = 25
-    igdb_min_hype: int = 10
+    igdb_releases_limit: int = 30
+    igdb_min_hype: int = 3
+    release_harvest_interval_hours: int = 24
+    release_harvest_state_file: str = ".harvest_state/release_harvest_state.json"
     igdb_catalog_enrich_limit: int = 25
     steam_store_enrich_limit: int = 40
     igdb_search_limit: int = 8

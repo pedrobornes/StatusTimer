@@ -96,7 +96,12 @@ public interface GameRepository extends JpaRepository<Game, Long> {
     @EntityGraph(attributePaths = {"platforms"})
     @Query("""
             SELECT g FROM Game g
-            WHERE (:genre IS NULL OR LOWER(g.genreName) = LOWER(:genre))
+            WHERE (:genre IS NULL
+                   OR LOWER(g.genreName) = LOWER(:genre)
+                   OR (g.genreNamesJsonBlob IS NOT NULL
+                       AND LOWER(g.genreNamesJsonBlob) LIKE LOWER(CONCAT('%"', :genre, '"%'))))
+              AND g.slug NOT IN :blockedSlugs
+              AND LOWER(g.slug) NOT LIKE '%-tm'
               AND (:q IS NULL OR LOWER(g.gameName) LIKE LOWER(CONCAT('%', :q, '%'))
                    OR LOWER(g.slug) LIKE LOWER(CONCAT('%', :q, '%')))
               AND (g.staleReason IS NULL OR g.staleReason NOT IN ('TWITCH_CATEGORY', 'MATURE_CONTENT'))
@@ -120,6 +125,17 @@ public interface GameRepository extends JpaRepository<Game, Long> {
                             AND platformDetail.releaseDate <= :today
                     )
               )
+              AND NOT (
+                    EXISTS (SELECT 1 FROM GamePlatformDetail platformDetail WHERE platformDetail.game = g)
+                    AND g.steamReleaseDate IS NULL
+                    AND g.igdbFirstReleaseDate IS NULL
+                    AND NOT EXISTS (
+                          SELECT 1 FROM GamePlatformDetail platformDetail
+                          WHERE platformDetail.game = g
+                            AND platformDetail.releaseDate IS NOT NULL
+                            AND platformDetail.releaseDate <= :today
+                    )
+              )
               AND (
                     :includeFullCatalog = true
                     OR g.twitchRank IS NOT NULL
@@ -134,14 +150,15 @@ public interface GameRepository extends JpaRepository<Game, Long> {
             @Param("q") String q,
             @Param("today") java.time.LocalDate today,
             @Param("includeFullCatalog") boolean includeFullCatalog,
+            @Param("blockedSlugs") List<String> blockedSlugs,
             Pageable pageable
     );
 
     @Query("""
-            SELECT DISTINCT g.genreName FROM Game g
-            WHERE g.genreName IS NOT NULL
-              AND TRIM(g.genreName) <> ''
-              AND (g.staleReason IS NULL OR g.staleReason NOT IN ('TWITCH_CATEGORY', 'MATURE_CONTENT'))
+            SELECT g.genreName, g.genreNames FROM Game g
+            WHERE (g.staleReason IS NULL OR g.staleReason NOT IN ('TWITCH_CATEGORY', 'MATURE_CONTENT'))
+              AND g.slug NOT IN :blockedSlugs
+              AND LOWER(g.slug) NOT LIKE '%-tm'
               AND (g.steamAdultContent IS NULL OR g.steamAdultContent = false)
               AND (g.steamReleaseDate IS NULL OR g.steamReleaseDate <= :today)
               AND (g.igdbFirstReleaseDate IS NULL OR g.igdbFirstReleaseDate <= :today)
@@ -162,6 +179,17 @@ public interface GameRepository extends JpaRepository<Game, Long> {
                             AND platformDetail.releaseDate <= :today
                     )
               )
+              AND NOT (
+                    EXISTS (SELECT 1 FROM GamePlatformDetail platformDetail WHERE platformDetail.game = g)
+                    AND g.steamReleaseDate IS NULL
+                    AND g.igdbFirstReleaseDate IS NULL
+                    AND NOT EXISTS (
+                          SELECT 1 FROM GamePlatformDetail platformDetail
+                          WHERE platformDetail.game = g
+                            AND platformDetail.releaseDate IS NOT NULL
+                            AND platformDetail.releaseDate <= :today
+                    )
+              )
               AND (
                     :includeFullCatalog = true
                     OR g.twitchRank IS NOT NULL
@@ -170,10 +198,10 @@ public interface GameRepository extends JpaRepository<Game, Long> {
                           com.statustimer.entity.LifecycleState.INDEXABLE
                     )
               )
-            ORDER BY g.genreName ASC
             """)
-    List<String> findDistinctCatalogGenreNames(
+    List<Object[]> findCatalogGenreFields(
             @Param("today") java.time.LocalDate today,
-            @Param("includeFullCatalog") boolean includeFullCatalog
+            @Param("includeFullCatalog") boolean includeFullCatalog,
+            @Param("blockedSlugs") List<String> blockedSlugs
     );
 }

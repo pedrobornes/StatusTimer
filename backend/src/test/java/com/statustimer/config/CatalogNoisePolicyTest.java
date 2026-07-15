@@ -37,6 +37,25 @@ class CatalogNoisePolicyTest {
     }
 
     @Test
+    void detectsVirtualCasinoAsTwitchNoise() {
+        assertThat(CatalogNoisePolicy.isTwitchCategoryNoise("virtual-casino", "Virtual Casino"))
+                .isTrue();
+    }
+
+    @Test
+    void detectsExpandedTwitchNoiseCategories() {
+        assertThat(CatalogNoisePolicy.isTwitchCategoryNoise("poker", "Poker")).isTrue();
+        assertThat(CatalogNoisePolicy.isTwitchCategoryNoise("qsmp", "QSMP")).isTrue();
+        assertThat(CatalogNoisePolicy.isTwitchCategoryNoise("food-and-drink", "Food & Drink")).isTrue();
+        assertThat(CatalogNoisePolicy.isTwitchCategoryNoise("wallpaper-engine", "Wallpaper Engine")).isTrue();
+        assertThat(CatalogNoisePolicy.isTwitchCategoryNoise("co-working-and-studying", "Co-working & Studying"))
+                .isTrue();
+        assertThat(CatalogNoisePolicy.isTwitchCategoryNoise("crypto", "Crypto")).isTrue();
+        assertThat(CatalogNoisePolicy.isTwitchCategoryNoise("bombanana", "Bombanana!")).isTrue();
+        assertThat(CatalogNoisePolicy.isTwitchCategoryNoise("im-only-sleeping", "I'm Only Sleeping")).isTrue();
+    }
+
+    @Test
     void ignoresRealGames() {
         assertThat(CatalogNoisePolicy.isTwitchCategoryNoise("valorant", "VALORANT"))
                 .isFalse();

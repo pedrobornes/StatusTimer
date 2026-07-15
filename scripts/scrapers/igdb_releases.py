@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 from clients.igdb_client import IgdbClient, is_igdb_configured
+from config.settings import settings
 from models.enums import Platform
 from config.game_slug_registry import normalize_catalog_slug
 from models.normalization import to_slug
@@ -31,17 +32,45 @@ IGDB_PLATFORM_IDS: dict[int, Platform] = {
 
 
 def fetch_igdb_upcoming_releases() -> list[GameReleasePayload]:
+    releases, _, _ = fetch_igdb_upcoming_releases_batch(offset=0)
+    return releases
+
+
+def fetch_igdb_upcoming_releases_batch(
+    *,
+    offset: int = 0,
+    limit: int | None = None,
+) -> tuple[list[GameReleasePayload], int, bool]:
+    """
+    Fetch one IGDB page of upcoming releases.
+
+    Returns (payloads, raw_row_count, catalog_exhausted).
+    """
     if not is_igdb_configured():
         logger.info("IGDB credentials missing; upcoming release harvest skipped.")
-        return []
+        return [], 0, True
+
+    resolved_limit = limit or settings.igdb_releases_limit
 
     client = IgdbClient()
     try:
-        raw_games = client.fetch_upcoming_games()
+        raw_games = client.fetch_upcoming_games(limit=resolved_limit, start_offset=offset)
     except Exception:
         logger.exception("IGDB upcoming release harvest failed.")
-        return []
+        return [], 0, False
 
+    releases = _map_raw_games_to_releases(raw_games)
+    catalog_exhausted = len(raw_games) < resolved_limit
+    logger.info(
+        "IGDB harvested %s upcoming release payload(s) from %s raw row(s) at offset %s",
+        len(releases),
+        len(raw_games),
+        offset,
+    )
+    return releases, len(raw_games), catalog_exhausted
+
+
+def _map_raw_games_to_releases(raw_games: list[dict[str, Any]]) -> list[GameReleasePayload]:
     releases: list[GameReleasePayload] = []
     for raw_game in raw_games:
         if not is_main_game(raw_game):
@@ -75,7 +104,6 @@ def fetch_igdb_upcoming_releases() -> list[GameReleasePayload]:
             len(release.platforms),
         )
 
-    logger.info("IGDB harvested %s upcoming release payload(s)", len(releases))
     return releases
 
 

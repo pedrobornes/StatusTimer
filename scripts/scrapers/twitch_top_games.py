@@ -21,31 +21,12 @@ from scrapers.twitch_helix import (
     twitch_guard,
 )
 
+from config.catalog_twitch_noise import NON_GAME_CATEGORY_NAMES, QUARANTINED_CATEGORY_SLUGS
+
 logger = logging.getLogger(__name__)
 
 TWITCH_HELIX_GAMES_TOP_URL = "https://api.twitch.tv/helix/games/top"
 TWITCH_PAGE_SIZE_MAX = 100
-
-NON_GAME_CATEGORIES = frozenset(
-    {
-        "just chatting",
-        "irl",
-        "art",
-        "music",
-        "asmr",
-        "slots",
-        "talk shows & podcasts",
-        "pools, hot tubs, and beaches",
-        "sports",
-        "special events",
-        "software and game development",
-        "games + demos",
-        "games done quick",
-        "animals, aquariums,and zoos",
-        "animals, aquariums, and zoos",
-        "tabletop rpgs",
-    }
-)
 
 
 @dataclass(frozen=True)
@@ -58,7 +39,11 @@ class TwitchTopGameEntry:
 
 
 def is_non_game_category(game_name: str) -> bool:
-    return game_name.strip().casefold() in NON_GAME_CATEGORIES
+    return game_name.strip().casefold() in NON_GAME_CATEGORY_NAMES
+
+
+def is_quarantined_category_slug(slug: str) -> bool:
+    return slug in QUARANTINED_CATEGORY_SLUGS
 
 
 def parse_twitch_top_game(game: dict, rank: int) -> TwitchTopGameEntry | None:
@@ -75,7 +60,7 @@ def parse_twitch_top_game(game: dict, rank: int) -> TwitchTopGameEntry | None:
         return None
 
     slug = normalize_catalog_slug(to_slug(normalized_name))
-    if not slug:
+    if not slug or is_quarantined_category_slug(slug):
         return None
 
     return TwitchTopGameEntry(

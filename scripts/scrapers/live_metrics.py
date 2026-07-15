@@ -140,6 +140,7 @@ def _fetch_monitored_twitch_entry(
     *,
     access_token: str,
     game_ids_by_name: dict[str, str],
+    known_twitch_game_id: str | None = None,
 ) -> "GameCatalogEntryPayload | None":
     from config.twitch_game_registry import resolve_twitch_lookup_name
     from models.catalog_schemas import GameCatalogEntryPayload
@@ -147,13 +148,15 @@ def _fetch_monitored_twitch_entry(
     if target.skip_live_probe:
         return None
 
-    lookup_name = resolve_twitch_lookup_name(target)
-    twitch_game_id = game_ids_by_name.get(_normalize_twitch_game_name(lookup_name))
+    twitch_game_id = known_twitch_game_id
+    if twitch_game_id is None:
+        lookup_name = resolve_twitch_lookup_name(target)
+        twitch_game_id = game_ids_by_name.get(_normalize_twitch_game_name(lookup_name))
     if twitch_game_id is None:
         logger.warning(
             "No Twitch game id resolved for monitored slug=%s (lookup=%s)",
             target.slug,
-            lookup_name,
+            resolve_twitch_lookup_name(target),
         )
         return None
 
@@ -445,47 +448,65 @@ def fetch_scheduled_twitch_metrics(targets: list[dict[str, object]]) -> list:
 
     prioritized_targets = prioritize_workload_targets(targets)
     monitored_by_slug = {target.slug: target for target in MONITORED_GAME_TARGETS}
-    resolved_targets: list[MonitoredGameTarget] = []
+    resolved_targets: list[tuple[MonitoredGameTarget, str | None]] = []
 
     for entry in prioritized_targets:
         slug = str(entry.get("slug") or "")
         if not slug:
             continue
 
+        raw_twitch_game_id = entry.get("twitchGameId")
+        known_twitch_game_id = (
+            raw_twitch_game_id.strip()
+            if isinstance(raw_twitch_game_id, str) and raw_twitch_game_id.strip()
+            else None
+        )
+
         known = monitored_by_slug.get(slug)
         if known is not None and not known.skip_live_probe:
-            resolved_targets.append(known)
+            resolved_targets.append((known, known_twitch_game_id))
             continue
 
         game_name = str(entry.get("gameName") or slug)
         resolved_targets.append(
-            MonitoredGameTarget(
-                slug=slug,
-                display_name=game_name,
-                strategy=ProbeStrategy.STEAM,
-                scrape_tier=resolve_effective_scrape_tier(
-                    slug,
-                    db_tier=parse_scrape_tier(entry.get("scrapeTier")),
+            (
+                MonitoredGameTarget(
+                    slug=slug,
+                    display_name=game_name,
+                    strategy=ProbeStrategy.STEAM,
+                    scrape_tier=resolve_effective_scrape_tier(
+                        slug,
+                        db_tier=parse_scrape_tier(entry.get("scrapeTier")),
+                    ),
                 ),
+                known_twitch_game_id,
             )
         )
 
     if not resolved_targets:
         return []
 
+    targets_needing_lookup = [
+        target
+        for target, known_twitch_game_id in resolved_targets
+        if known_twitch_game_id is None
+    ]
+
     access_token = get_twitch_access_token()
     session = _build_twitch_session(access_token)
     try:
-        lookup_names = [resolve_twitch_lookup_name(target) for target in resolved_targets]
+        lookup_names = [resolve_twitch_lookup_name(target) for target in targets_needing_lookup]
         game_ids_by_name = fetch_twitch_game_ids_by_names(lookup_names, session)
     finally:
         session.close()
 
-    def fetch_entry(target: MonitoredGameTarget):
+    def fetch_entry(item: tuple[MonitoredGameTarget, str | None]):
+        target, known_twitch_game_id = item
         return _fetch_monitored_twitch_entry(
             target,
             access_token=access_token,
             game_ids_by_name=game_ids_by_name,
+            known_twitch_game_id=known_twitch_game_id,
         )
 
     raw_entries = run_twitch_batched(resolved_targets, fetch_entry)

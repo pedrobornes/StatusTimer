@@ -99,6 +99,19 @@ class TwitchHelixTests(unittest.TestCase):
         self.assertTrue(should_enrich_twitch_viewers_for_rank(15))
         self.assertFalse(should_enrich_twitch_viewers_for_rank(30))
 
+    @patch("scrapers.twitch_helix.settings")
+    @patch("scrapers.twitch_helix.twitch_guard")
+    def test_should_skip_viewer_enrichment_beyond_tier_two(
+        self,
+        guard_mock: MagicMock,
+        settings_mock: MagicMock,
+    ) -> None:
+        settings_mock.twitch_viewer_enrich_tier1_max_rank = 10
+        settings_mock.twitch_viewer_enrich_tier2_max_rank = 20
+        guard_mock.check_available.return_value = True
+
+        self.assertFalse(should_enrich_twitch_viewers_for_rank(30))
+
     @patch("scrapers.twitch_helix.twitch_guard")
     def test_helix_get_records_rate_limit(self, guard_mock: MagicMock) -> None:
         guard_mock.check_available.return_value = True

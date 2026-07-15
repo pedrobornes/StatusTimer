@@ -18,6 +18,14 @@ export interface SearchableGame {
 const IGDB_IMAGE_HOST = "images.igdb.com";
 const BLOCKED_HERO_IMAGE_IDS = new Set(["ar667x"]);
 
+const TRADEMARK_NOISE_PATTERN =
+  /\s*(?:™|®|\(\s*tm\s*\)|\bTM\b|\bR\b)\s*/gi;
+
+export function normalizeGameDisplayName(name: string): string {
+  const normalized = name.replace(TRADEMARK_NOISE_PATTERN, " ").replace(/\s{2,}/g, " ").trim();
+  return normalized.length > 0 ? normalized : name.trim();
+}
+
 function extractIgdbImageId(url: string): string | null {
   const match = url.match(/\/t_[^/]+\/([^/.]+)\.jpg/i);
   return match?.[1] ?? null;
@@ -296,7 +304,7 @@ export function resolveGameDisplayName(
 
   if (telemetry?.gameName) {
 
-    return telemetry.gameName;
+    return normalizeGameDisplayName(telemetry.gameName);
 
   }
 

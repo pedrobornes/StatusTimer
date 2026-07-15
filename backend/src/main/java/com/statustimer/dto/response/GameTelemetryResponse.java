@@ -3,6 +3,7 @@ package com.statustimer.dto.response;
 import com.statustimer.entity.Game;
 import com.statustimer.entity.GameTelemetry;
 import com.statustimer.entity.GameType;
+import com.statustimer.util.GameDisplayNameUtils;
 import com.statustimer.entity.TelemetryStatus;
 import com.statustimer.service.GameCatalogService;
 import java.time.LocalDate;
@@ -50,8 +51,10 @@ public record GameTelemetryResponse(
     ) {
         String slug = entity.getGame().getSlug();
 
-        String gameName = game.map(Game::getGameName)
-                .orElseGet(() -> catalogService.resolveGameName(slug));
+        String gameName = GameDisplayNameUtils.normalizeDisplayName(
+                game.map(Game::getGameName)
+                        .orElseGet(() -> catalogService.resolveGameName(slug))
+        );
 
         Integer appId = catalogService.resolveAppId(slug);
         String logoUrl = catalogService.resolveLogoUrl(
@@ -160,7 +163,7 @@ public record GameTelemetryResponse(
         return new GameTelemetryResponse(
                 game.getId(),
                 slug,
-                game.getGameName(),
+                GameDisplayNameUtils.normalizeDisplayName(game.getGameName()),
                 isUpcoming ? TelemetryStatus.UPCOMING.name() : TelemetryStatus.ONLINE.name(),
                 0,
                 com.statustimer.entity.TelemetrySource.NETWORK_PROBE.name(),

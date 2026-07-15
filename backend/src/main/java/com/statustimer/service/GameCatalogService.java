@@ -34,6 +34,7 @@ import com.statustimer.repository.GameTelemetryHistoryRepository;
 import com.statustimer.repository.GameTelemetryRepository;
 import com.statustimer.repository.GamingNewsRepository;
 import com.statustimer.repository.TelemetryDailyRollupRepository;
+import com.statustimer.util.GameDisplayNameUtils;
 import com.statustimer.util.IgdbMetadataSupport;
 import com.statustimer.util.SearchQuerySupport;
 import com.statustimer.util.SlugUtils;
@@ -853,7 +854,7 @@ public class GameCatalogService {
         final String resolvedSlug = slug;
         Game game = existing.orElseGet(() -> Game.builder()
                 .slug(resolvedSlug)
-                .gameName(match.name())
+                .gameName(GameDisplayNameUtils.normalizeDisplayName(match.name()))
                 .featured(false)
                 .manualLock(false)
                 .build());
@@ -1755,7 +1756,9 @@ public class GameCatalogService {
             TrackedGameCatalog.findBySlug(game.getSlug())
                     .ifPresentOrElse(
                             tracked -> game.setGameName(tracked.gameName()),
-                            () -> game.setGameName(match.name())
+                            () -> game.setGameName(
+                                    GameDisplayNameUtils.normalizeDisplayName(match.name())
+                            )
                     );
         }
 
@@ -2131,9 +2134,11 @@ public class GameCatalogService {
         }
 
         String targetSlug = gameSlugMapper.getSteamSlug(payload.slug().trim());
-        return TrackedGameCatalog.findBySlug(targetSlug)
-                .map(TrackedGameCatalog.GameAssetMetadata::gameName)
-                .orElseGet(() -> payload.gameName().trim());
+        return GameDisplayNameUtils.normalizeDisplayName(
+                TrackedGameCatalog.findBySlug(targetSlug)
+                        .map(TrackedGameCatalog.GameAssetMetadata::gameName)
+                        .orElseGet(() -> payload.gameName().trim())
+        );
     }
 
     private String formatSlugLabel(String slug) {

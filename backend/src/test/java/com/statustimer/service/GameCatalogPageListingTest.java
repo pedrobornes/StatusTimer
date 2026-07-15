@@ -2,15 +2,19 @@ package com.statustimer.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.statustimer.config.CacheConfig;
 import com.statustimer.dto.response.GameCatalogPageResponse;
 import com.statustimer.entity.Game;
+import com.statustimer.entity.GamePlatformDetail;
+import com.statustimer.entity.GamePlatform;
 import com.statustimer.entity.LifecycleState;
 import com.statustimer.repository.GameRepository;
 import java.time.LocalDate;
-import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cache.CacheManager;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +28,17 @@ class GameCatalogPageListingTest {
 
     @Autowired
     private GameRepository gameRepository;
+
+    @Autowired
+    private CacheManager cacheManager;
+
+    @BeforeEach
+    void clearCatalogGenreCache() {
+        var cache = cacheManager.getCache(CacheConfig.PUBLIC_READ_MEDIUM_CACHE);
+        if (cache != null) {
+            cache.evict("catalogGenres");
+        }
+    }
 
     @Test
     void findCatalogPageExcludesUpcomingAndPrefersHigherTwitchViewers() {
@@ -63,6 +78,32 @@ class GameCatalogPageListingTest {
 
         assertThat(page.items().getFirst().gameSlug()).isEqualTo("popular-live-game");
         assertThat(page.items().getFirst().twitchViewers()).isEqualTo(120_000L);
+    }
+
+    @Test
+    void findCatalogPageExcludesUpcomingTitlesWithPlatformTargetsOnly() {
+        Game upcoming = gameRepository.save(Game.builder()
+                .slug("deadlock-style-upcoming")
+                .gameName("Deadlock Style Upcoming")
+                .lifecycleState(LifecycleState.CATALOG)
+                .twitchRank(4)
+                .twitchViewers(40_000L)
+                .build());
+
+        upcoming.replacePlatforms(java.util.List.of(
+                GamePlatformDetail.builder()
+                        .game(upcoming)
+                        .platform(GamePlatform.PC)
+                        .releaseDate(null)
+                        .build()
+        ));
+        gameRepository.save(upcoming);
+
+        GameCatalogPageResponse page = gameTelemetryService.findCatalogPage(0, 100, null, null);
+
+        assertThat(page.items())
+                .extracting(entry -> entry.gameSlug())
+                .doesNotContain("deadlock-style-upcoming");
     }
 
     @Test
