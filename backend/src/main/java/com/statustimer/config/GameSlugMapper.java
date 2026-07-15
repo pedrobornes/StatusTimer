@@ -21,7 +21,8 @@ public class GameSlugMapper {
             "grand-theft-auto-v-legacy", "grand-theft-auto-v",
             "grand-theft-auto-v-enhanced", "grand-theft-auto-v",
             // Overwatch 2 is represented as IGDB slug "overwatch--1" but we expose "overwatch" in the app.
-            "overwatch-2", "overwatch"
+            "overwatch-2", "overwatch",
+            "overwatch--1", "overwatch"
     );
 
     public String resolveCanonicalSlug(String slug) {

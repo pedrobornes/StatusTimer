@@ -9,6 +9,46 @@ import org.junit.jupiter.api.Test;
 class CatalogEditionCollapsePolicyTest {
 
     @Test
+    void resolveFranchiseKeyStripsLegendaryEditionFromTitle() {
+        assertThat(CatalogEditionCollapsePolicy.resolveFranchiseKey(
+                "Overwatch: Legendary Edition",
+                "overwatch-legendary-edition"
+        )).isEqualTo("overwatch");
+    }
+
+    @Test
+    void collapseSearchResultsMergesOverwatchLegendaryEditionIntoBaseRow() {
+        List<GameCatalogSearchResponse> results = List.of(
+                searchRow(1L, "overwatch--1", "Overwatch"),
+                searchRow(2L, "overwatch-legendary-edition", "Overwatch: Legendary Edition")
+        );
+
+        List<GameCatalogSearchResponse> collapsed = CatalogEditionCollapsePolicy.collapseSearchResults(
+                results,
+                "overwatch"
+        );
+
+        assertThat(collapsed).hasSize(1);
+        assertThat(collapsed.getFirst().slug()).isEqualTo("overwatch");
+        assertThat(collapsed.getFirst().gameName()).isEqualTo("Overwatch");
+    }
+
+    @Test
+    void collapseSearchResultsPreservesLegendaryEditionWhenQueryAsksForIt() {
+        List<GameCatalogSearchResponse> results = List.of(
+                searchRow(1L, "overwatch--1", "Overwatch"),
+                searchRow(2L, "overwatch-legendary-edition", "Overwatch: Legendary Edition")
+        );
+
+        List<GameCatalogSearchResponse> collapsed = CatalogEditionCollapsePolicy.collapseSearchResults(
+                results,
+                "overwatch legendary"
+        );
+
+        assertThat(collapsed).hasSize(2);
+    }
+
+    @Test
     void resolveFranchiseKeyStripsDeluxeAndYearEditionFromTitle() {
         assertThat(CatalogEditionCollapsePolicy.resolveFranchiseKey(
                 "Sea of Thieves 2025 Deluxe Edition",

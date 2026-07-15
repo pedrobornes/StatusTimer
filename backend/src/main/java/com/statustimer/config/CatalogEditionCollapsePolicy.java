@@ -28,12 +28,22 @@ public final class CatalogEditionCollapsePolicy {
             Pattern.CASE_INSENSITIVE
     );
 
+    private static final Pattern IGDB_DUPLICATE_SLUG_SUFFIX = Pattern.compile(
+            "--\\d+$",
+            Pattern.CASE_INSENSITIVE
+    );
+
+    private static final Pattern TRAILING_TITLE_SEPARATOR = Pattern.compile(
+            "[:\\-–—]\\s*$"
+    );
+
     private static final String[] TITLE_EDITION_SUFFIXES = {
             " game of the year edition",
             " digital deluxe edition",
             " collectors edition",
             " collector's edition",
             " deluxe edition",
+            " legendary edition",
             " anniversary edition",
             " champions edition",
             " ultimate edition",
@@ -51,6 +61,7 @@ public final class CatalogEditionCollapsePolicy {
             "-collectors-edition",
             "-collector-s-edition",
             "-deluxe-edition",
+            "-legendary-edition",
             "-anniversary-edition",
             "-champions-edition",
             "-ultimate-edition",
@@ -64,6 +75,7 @@ public final class CatalogEditionCollapsePolicy {
 
     private static final String[] EDITION_QUERY_MARKERS = {
             "deluxe",
+            "legendary",
             "anniversary",
             "champions",
             "ultimate",
@@ -196,7 +208,7 @@ public final class CatalogEditionCollapsePolicy {
             }
         }
 
-        return normalized;
+        return TRAILING_TITLE_SEPARATOR.matcher(normalized).replaceFirst("").trim();
     }
 
     static String stripEditionSuffixesFromSlug(String slug) {
@@ -205,6 +217,7 @@ public final class CatalogEditionCollapsePolicy {
         }
 
         String normalized = SlugUtils.normalizeCatalogSlug(slug);
+        normalized = IGDB_DUPLICATE_SLUG_SUFFIX.matcher(normalized).replaceFirst("");
         boolean changed = true;
 
         while (changed && !normalized.isBlank()) {

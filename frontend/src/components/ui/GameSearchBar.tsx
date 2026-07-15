@@ -243,11 +243,8 @@ export default function GameSearchBar({
           }}
           onKeyDown={handleInputKeyDown}
           placeholder="Search games..."
-          className="w-full rounded-2xl border border-violet-400/20 bg-white/[0.04] py-3 pl-11 pr-4 text-sm text-white placeholder:text-slate-500 outline-none transition focus:border-violet-400/45 focus:bg-white/[0.06] focus:ring-2 focus:ring-violet-500/20 sm:pr-28"
+          className="w-full rounded-2xl border border-violet-400/20 bg-white/[0.04] py-3 pl-11 pr-4 text-sm text-white placeholder:text-slate-500 outline-none transition focus:border-violet-400/45 focus:bg-white/[0.06] focus:ring-2 focus:ring-violet-500/20"
         />
-        <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 items-center gap-1 rounded-md border border-white/10 bg-black/30 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-slate-400 sm:inline-flex">
-          Press <span className="text-violet-200">/</span> to search
-        </kbd>
       </div>
 
       {!showDropdown && !normalizedQuery ? (
