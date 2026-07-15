@@ -31,6 +31,12 @@ class CatalogNoisePolicyTest {
     }
 
     @Test
+    void detectsGamesDoneQuickAsTwitchNoise() {
+        assertThat(CatalogNoisePolicy.isTwitchCategoryNoise("games-done-quick", "Games Done Quick"))
+                .isTrue();
+    }
+
+    @Test
     void ignoresRealGames() {
         assertThat(CatalogNoisePolicy.isTwitchCategoryNoise("valorant", "VALORANT"))
                 .isFalse();

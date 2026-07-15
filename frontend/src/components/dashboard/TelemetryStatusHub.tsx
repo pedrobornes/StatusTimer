@@ -11,11 +11,13 @@ interface TelemetryStatusHubProps {
     totalPages: number;
     totalElements: number;
   };
+  initialGenreOptions?: string[];
   platformsBySlug: Record<string, PlatformDetail[]>;
 }
 
 export default function TelemetryStatusHub({
   initialCatalogPage,
+  initialGenreOptions = [],
   platformsBySlug,
 }: TelemetryStatusHubProps) {
   return (
@@ -24,6 +26,7 @@ export default function TelemetryStatusHub({
       initialPage={initialCatalogPage.page}
       initialTotalPages={initialCatalogPage.totalPages}
       initialTotalElements={initialCatalogPage.totalElements}
+      initialGenreOptions={initialGenreOptions}
       platformsBySlug={platformsBySlug}
     />
   );

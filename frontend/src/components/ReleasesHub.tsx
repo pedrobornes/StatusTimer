@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import GenreFilterBar from "@/components/GenreFilterBar";
 import ReleasesGrid from "@/components/ReleasesGrid";
-import Pagination from "@/components/ui/Pagination";
+import PaginationControls from "@/components/ui/PaginationControls";
 import ReleaseSortSelect from "@/components/ui/ReleaseSortSelect";
 import { RELEASES_SEARCH_HINT } from "@/config/seo";
 import {
@@ -133,7 +133,6 @@ export default function ReleasesHub({ releases }: ReleasesHubProps) {
 
   const handlePageChange = (nextPage: number) => {
     setPage(nextPage);
-    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const emptyMessage = isSearching
@@ -193,11 +192,14 @@ export default function ReleasesHub({ releases }: ReleasesHubProps) {
 
       <ReleasesGrid releases={pagedReleases} emptyMessage={emptyMessage} />
 
-      <Pagination
+      <PaginationControls
         currentPage={safePage}
         totalPages={totalPages}
+        totalItems={filteredReleases.length}
+        pageSize={PAGE_SIZE}
         onPageChange={handlePageChange}
-        className="mt-8"
+        scrollAnchorRef={topRef}
+        itemLabel="releases"
       />
     </>
   );

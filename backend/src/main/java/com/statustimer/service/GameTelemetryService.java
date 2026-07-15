@@ -151,6 +151,12 @@ public class GameTelemetryService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE, key = "'catalogGenres'")
+    public List<String> findCatalogGenres() {
+        return gameRepository.findDistinctCatalogGenreNames(LocalDate.now(), false);
+    }
+
+    @Transactional(readOnly = true)
     @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE, key = "'dashboardTelemetry:' + #limit")
     public List<GameTelemetryResponse> findDashboardTopGames(int limit) {
         int safeLimit = Math.max(1, Math.min(limit, 6));

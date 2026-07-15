@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { memo, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import GenreFilterChips from "@/components/ui/GenreFilterChips";
 import GamingStatusSection from "@/components/dashboard/GamingStatusSection";
@@ -10,9 +10,8 @@ import { CATALOG_GAMES_PAGE_SIZE } from "@/config/catalog";
 import { TRACKED_GAME_SLUGS } from "@/config/routes";
 import { CATALOG_SEARCH_HINT } from "@/config/seo";
 import { getUserFacingErrorMessage } from "@/services/api";
-import { getCatalogGames } from "@/services/catalogService";
+import { getCatalogGames, getCatalogGenres } from "@/services/catalogService";
 import { searchGameTelemetry } from "@/services/telemetryService";
-import { collectTelemetryGenres } from "@/lib/telemetryFilters";
 import type { PlatformDetail } from "@/types/api";
 import type { GameTelemetry } from "@/types/telemetry";
 import {
@@ -27,6 +26,7 @@ interface TelemetryGamesPanelProps {
   initialTotalElements: number;
   catalogPageSize?: number;
   platformsBySlug: Record<string, PlatformDetail[]>;
+  initialGenreOptions?: string[];
 }
 
 function TelemetryGamesPanel({
@@ -36,6 +36,7 @@ function TelemetryGamesPanel({
   initialTotalElements,
   catalogPageSize = CATALOG_GAMES_PAGE_SIZE,
   platformsBySlug,
+  initialGenreOptions = [],
 }: TelemetryGamesPanelProps) {
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
@@ -54,7 +55,9 @@ function TelemetryGamesPanel({
   const [searchError, setSearchError] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<TelemetrySortMode>("trending");
   const [genreFilter, setGenreFilter] = useState<string | "All">("All");
+  const [genreOptions, setGenreOptions] = useState<string[]>(initialGenreOptions);
   const [hasHydratedCatalog, setHasHydratedCatalog] = useState(false);
+  const topRef = useRef<HTMLDivElement>(null);
 
   const normalizedQuery = deferredQuery.trim();
   const isSearchPending = query.trim() !== normalizedQuery;
@@ -153,10 +156,37 @@ function TelemetryGamesPanel({
     setCatalogPage(1);
   }, [genreFilter, normalizedQuery]);
 
-  const availableGenres = useMemo(
-    () => collectTelemetryGenres(catalogItems),
-    [catalogItems],
-  );
+  useEffect(() => {
+    if (initialGenreOptions.length > 0) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void getCatalogGenres()
+      .then((genres) => {
+        if (!cancelled) {
+          setGenreOptions(genres);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setGenreOptions([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialGenreOptions.length]);
+
+  const availableGenres = useMemo(() => {
+    const genres = new Set(genreOptions);
+    if (genreFilter !== "All") {
+      genres.add(genreFilter);
+    }
+    return [...genres].sort((left, right) => left.localeCompare(right));
+  }, [genreFilter, genreOptions]);
 
   const displayedTelemetry = isCatalogBrowse ? catalogItems : (searchResults ?? []);
 
@@ -182,6 +212,8 @@ function TelemetryGamesPanel({
 
   return (
     <>
+      <div ref={topRef} className="scroll-mt-24" />
+
       <div className="glass-panel rounded-3xl p-5 sm:p-6 md:p-7">
         <label htmlFor="telemetry-game-search" className="sr-only">
           Search tracked games
@@ -252,6 +284,7 @@ function TelemetryGamesPanel({
           totalItems={catalogTotalElements}
           pageSize={catalogPageSize}
           onPageChange={setCatalogPage}
+          scrollAnchorRef={topRef}
           itemLabel="games"
         />
       ) : null}

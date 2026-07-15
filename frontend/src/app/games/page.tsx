@@ -6,7 +6,7 @@ import { resolveUserFacingError } from "@/lib/userFacingErrors";
 import { GAMES_PAGE_SUBTITLE } from "@/config/seo";
 import { CATALOG_GAMES_PAGE_SIZE } from "@/config/catalog";
 import { buildPlatformsBySlug } from "@/lib/releases";
-import { getCatalogGames } from "@/services/catalogService";
+import { getCatalogGames, getCatalogGenres } from "@/services/catalogService";
 import { getUpcomingReleases } from "@/services/releasesService";
 
 export const metadata: Metadata = {
@@ -19,7 +19,7 @@ export const revalidate = 600;
 
 export default async function GamesPage() {
   try {
-    const [catalogPage, releases] = await Promise.all([
+    const [catalogPage, catalogGenres] = await Promise.all([
       getCatalogGames({ page: 0, size: CATALOG_GAMES_PAGE_SIZE }).catch(() => ({
         items: [],
         page: 0,
@@ -27,9 +27,10 @@ export default async function GamesPage() {
         totalElements: 0,
         totalPages: 0,
       })),
-      getUpcomingReleases().catch(() => []),
+      getCatalogGenres().catch(() => []),
     ]);
 
+    const releases = await getUpcomingReleases().catch(() => []);
     const platformsBySlug = buildPlatformsBySlug(releases);
 
     return (
@@ -45,6 +46,7 @@ export default async function GamesPage() {
             totalPages: catalogPage.totalPages,
             totalElements: catalogPage.totalElements,
           }}
+          initialGenreOptions={catalogGenres}
           platformsBySlug={platformsBySlug}
         />
       </PageShell>

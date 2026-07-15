@@ -40,6 +40,7 @@ NON_GAME_CATEGORIES = frozenset(
         "special events",
         "software and game development",
         "games + demos",
+        "games done quick",
         "animals, aquariums,and zoos",
         "animals, aquariums, and zoos",
         "tabletop rpgs",

@@ -41,6 +41,12 @@ export function getCatalogGames(
   );
 }
 
+export function getCatalogGenres(
+  fetchOptions: ApiRequestOptions = {},
+): Promise<string[]> {
+  return fetchJson<string[]>("/api/v1/catalog/games/genres", fetchOptions);
+}
+
 export interface GameCatalogSearchResult {
   id: number;
   slug: string;

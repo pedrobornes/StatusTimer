@@ -76,6 +76,11 @@ public class PublicApiController {
         return gameTelemetryService.findCatalogPage(page, size, genre, query);
     }
 
+    @GetMapping("/catalog/games/genres")
+    public List<String> getCatalogGenres() {
+        return gameTelemetryService.findCatalogGenres();
+    }
+
     @GetMapping("/telemetry/dashboard")
     public List<GameTelemetryResponse> getDashboardTelemetry(
             @RequestParam(name = "limit", defaultValue = "6") int limit

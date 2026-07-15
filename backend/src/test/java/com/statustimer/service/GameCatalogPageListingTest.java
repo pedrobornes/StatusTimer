@@ -64,4 +64,28 @@ class GameCatalogPageListingTest {
         assertThat(page.items().getFirst().gameSlug()).isEqualTo("popular-live-game");
         assertThat(page.items().getFirst().twitchViewers()).isEqualTo(120_000L);
     }
+
+    @Test
+    void findCatalogGenresReturnsDistinctGenresFromEligibleCatalogRows() {
+        gameRepository.save(Game.builder()
+                .slug("shooter-live-game")
+                .gameName("Shooter Live Game")
+                .lifecycleState(LifecycleState.CATALOG)
+                .steamReleaseDate(LocalDate.now().minusYears(1))
+                .twitchRank(3)
+                .genreName("Shooter")
+                .build());
+
+        gameRepository.save(Game.builder()
+                .slug("arcade-live-game")
+                .gameName("Arcade Live Game")
+                .lifecycleState(LifecycleState.CATALOG)
+                .steamReleaseDate(LocalDate.now().minusYears(1))
+                .twitchRank(4)
+                .genreName("Arcade")
+                .build());
+
+        assertThat(gameTelemetryService.findCatalogGenres())
+                .contains("Shooter", "Arcade");
+    }
 }

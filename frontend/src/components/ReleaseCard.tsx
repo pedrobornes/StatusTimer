@@ -46,7 +46,7 @@ export default function ReleaseCard({
       ) : null}
 
       <div className="flex flex-1 flex-col p-5 pb-7">
-        <div className="mb-4 flex items-start gap-3">
+        <div className="flex items-start gap-3">
           <Link
             href={releaseHref}
             className="shrink-0 transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300"
@@ -69,11 +69,13 @@ export default function ReleaseCard({
               </Link>
             </h3>
 
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {genreBadges.map((genre) => (
-                <GenreBadge key={genre} label={genre} />
-              ))}
-            </div>
+            {genreBadges.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {genreBadges.map((genre) => (
+                  <GenreBadge key={genre} label={genre} />
+                ))}
+              </div>
+            ) : null}
 
             {(userRating || criticRating) && (
               <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-300">
@@ -92,18 +94,17 @@ export default function ReleaseCard({
           </div>
         </div>
 
-        <div className="mb-6 flex-1">
+        <div className="mt-auto flex flex-col gap-4 pt-5">
           <PlatformReleaseSchedule
             platforms={release.platforms}
             fallbackReleaseDate={release.releaseDate}
           />
-        </div>
 
-        <HypeCounterButton
-          releaseId={release.id}
-          initialHypeCount={release.hypeCount}
-          className="mt-auto"
-        />
+          <HypeCounterButton
+            releaseId={release.id}
+            initialHypeCount={release.hypeCount}
+          />
+        </div>
       </div>
     </article>
   );

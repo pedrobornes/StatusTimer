@@ -24,6 +24,7 @@ public final class CatalogNoisePolicy {
             "special events",
             "software and game development",
             "games + demos",
+            "games done quick",
             "animals, aquariums,and zoos",
             "animals, aquariums, and zoos",
             "american idol",
@@ -32,6 +33,7 @@ public final class CatalogNoisePolicy {
 
     private static final Set<String> QUARANTINED_SLUGS = Set.of(
             "games-demos",
+            "games-done-quick",
             "animals-aquariums-and-zoos",
             "just-chatting",
             "irl",
