@@ -421,6 +421,67 @@ class GameCatalogServiceSearchTest {
     }
 
     @Test
+    void searchCollapsesSeaOfThievesEditionVariantsToBaseTitle() {
+        gameRepository.save(Game.builder()
+                .slug("sea-of-thieves")
+                .gameName("Sea of Thieves")
+                .userRating(88)
+                .lifecycleState(LifecycleState.CATALOG)
+                .build());
+        gameRepository.save(Game.builder()
+                .slug("sea-of-thieves-2025-deluxe-edition")
+                .gameName("Sea of Thieves 2025 Deluxe Edition")
+                .lifecycleState(LifecycleState.CATALOG)
+                .build());
+        gameRepository.save(Game.builder()
+                .slug("sea-of-thieves-anniversary-edition")
+                .gameName("Sea of Thieves Anniversary Edition")
+                .lifecycleState(LifecycleState.CATALOG)
+                .build());
+        gameRepository.save(Game.builder()
+                .slug("sea-of-thieves-x-edition")
+                .gameName("Sea of Thieves X Edition")
+                .lifecycleState(LifecycleState.CATALOG)
+                .build());
+
+        when(igdbSearchClient.search(anyString(), anyInt())).thenReturn(List.of());
+
+        List<GameCatalogSearchResponse> results = gameCatalogService.search("sea of thieves");
+
+        assertEquals(1, results.size());
+        assertEquals("sea-of-thieves", results.getFirst().slug());
+        assertEquals("Sea of Thieves", results.getFirst().gameName());
+    }
+
+    @Test
+    void searchCollapsesWorldOfWarcraftClassicIntoRetailRow() {
+        Game retail = gameRepository.findBySlug("world-of-warcraft")
+                .orElseGet(() -> gameRepository.save(Game.builder()
+                        .slug("world-of-warcraft")
+                        .gameName("World of Warcraft")
+                        .lifecycleState(LifecycleState.CATALOG)
+                        .build()));
+        retail.setTwitchViewers(18_000L);
+        gameRepository.save(retail);
+
+        gameRepository.save(Game.builder()
+                .slug("world-of-warcraft-classic")
+                .gameName("World of Warcraft Classic")
+                .twitchViewers(18_000L)
+                .lifecycleState(LifecycleState.CATALOG)
+                .build());
+
+        when(igdbSearchClient.search(anyString(), anyInt())).thenReturn(List.of());
+
+        List<GameCatalogSearchResponse> results = gameCatalogService.search("world of warcraft");
+
+        assertEquals(1, results.size());
+        assertEquals("world-of-warcraft", results.getFirst().slug());
+        assertEquals("World of Warcraft", results.getFirst().gameName());
+        assertEquals(18_000L, results.getFirst().twitchViewers());
+    }
+
+    @Test
     void searchHidesTwitchCategoryNoise() {
         gameRepository.save(Game.builder()
                 .slug("tabletop-rpgs")

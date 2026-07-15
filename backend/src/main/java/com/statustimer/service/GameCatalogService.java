@@ -1,6 +1,7 @@
 package com.statustimer.service;
 
 import com.statustimer.config.CatalogDiscoveryPolicy;
+import com.statustimer.config.CatalogEditionCollapsePolicy;
 import com.statustimer.config.CatalogMatureContentPolicy;
 import com.statustimer.config.CatalogNoisePolicy;
 import com.statustimer.config.GameAssetPolicy;
@@ -425,7 +426,7 @@ public class GameCatalogService {
             }
         }
 
-        return results;
+        return CatalogEditionCollapsePolicy.collapseSearchResults(results, trimmed);
     }
 
     private void appendIgdbDiscoveryMatches(
