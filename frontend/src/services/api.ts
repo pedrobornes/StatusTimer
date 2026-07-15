@@ -10,6 +10,7 @@ export const API_BASE_URL =
 export interface ApiRequestOptions {
   revalidate?: number | false;
   cache?: RequestCache;
+  signal?: AbortSignal;
 }
 
 export class ApiError extends Error {
@@ -28,10 +29,11 @@ export async function fetchJson<T>(
   path: string,
   options: ApiRequestOptions = {},
 ): Promise<T> {
-  const { revalidate = 600, cache } = options;
+  const { revalidate = 600, cache, signal } = options;
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     cache,
+    signal,
     next: cache ? undefined : { revalidate },
   });
 

@@ -212,7 +212,66 @@ class GameCatalogServiceSearchTest {
                         .filter(result -> "apex-legends-champions-edition".equals(result.slug()))
                         .count()
         );
-        assertEquals(1, gameRepository.findBySlug("apex-legends-champions-edition").stream().count());
+        assertTrue(gameRepository.findBySlug("apex-legends-champions-edition").isEmpty());
+    }
+
+    @Test
+    void searchSurfacesNewIgdbGameWithoutPersistingCatalogRow() {
+        IgdbGameMatch brandNewMatch = new IgdbGameMatch(
+                9001L,
+                "Brand New Steam Title",
+                "brand-new-steam-title",
+                null,
+                null,
+                424242,
+                80,
+                null,
+                List.of("Action"),
+                List.of(),
+                0,
+                null,
+                List.of(),
+                List.of(),
+                null,
+                Map.of()
+        );
+
+        when(igdbSearchClient.search(anyString(), anyInt())).thenReturn(List.of(brandNewMatch));
+
+        List<GameCatalogSearchResponse> results = gameCatalogService.search("brand new steam");
+
+        assertTrue(results.stream().anyMatch(result -> "brand-new-steam-title".equals(result.slug())));
+        assertTrue(gameRepository.findBySlug("brand-new-steam-title").isEmpty());
+    }
+
+    @Test
+    void materializeCatalogGameOnDemandPersistsIgdbDiscoveryAfterSearch() {
+        IgdbGameMatch brandNewMatch = new IgdbGameMatch(
+                9002L,
+                "Click To Create Game",
+                "click-to-create-game",
+                null,
+                null,
+                424243,
+                null,
+                null,
+                List.of("Adventure"),
+                List.of(),
+                0,
+                null,
+                List.of(),
+                List.of(),
+                null,
+                Map.of()
+        );
+
+        when(igdbSearchClient.lookupBySlug("click-to-create-game")).thenReturn(Optional.of(brandNewMatch));
+
+        Optional<Game> materialized = gameCatalogService.materializeCatalogGameOnDemand("click-to-create-game");
+
+        assertTrue(materialized.isPresent());
+        assertEquals("click-to-create-game", materialized.get().getSlug());
+        assertTrue(gameRepository.findBySlug("click-to-create-game").isPresent());
     }
 
     @Test
@@ -414,10 +473,7 @@ class GameCatalogServiceSearchTest {
         List<GameCatalogSearchResponse> results = gameCatalogService.search("mecha chameleon");
 
         assertTrue(results.stream().anyMatch(result -> "meccha-chameleon".equals(result.slug())));
-        assertEquals(
-                "meccha-chameleon",
-                gameRepository.findBySlug("meccha-chameleon").orElseThrow().getSlug()
-        );
+        assertTrue(gameRepository.findBySlug("meccha-chameleon").isEmpty());
     }
 
     @Test

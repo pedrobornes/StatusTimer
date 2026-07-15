@@ -64,6 +64,32 @@ class CatalogActivationServiceTest {
     }
 
     @Test
+    void activationMaterializesCatalogGameWhenMissingFromDatabase() {
+        Game materialized = Game.builder()
+                .slug("brand-new-steam-title")
+                .gameName("Brand New Steam Title")
+                .lifecycleState(LifecycleState.CATALOG)
+                .steamAppId(424242)
+                .initialTelemetryReady(false)
+                .build();
+
+        when(gameSlugMapper.resolveCanonicalSlug("brand-new-steam-title")).thenReturn("brand-new-steam-title");
+        when(gameRepository.findBySlug("brand-new-steam-title"))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(materialized));
+        when(gameCatalogService.materializeCatalogGameOnDemand("brand-new-steam-title"))
+                .thenReturn(Optional.of(materialized));
+        when(scrapeJobService.enqueueFullJob("brand-new-steam-title")).thenReturn(true);
+
+        var response = catalogActivationService.activateOnDemand("brand-new-steam-title");
+
+        assertThat(response.promoted()).isFalse();
+        assertThat(response.jobQueued()).isTrue();
+        verify(gameCatalogService).materializeCatalogGameOnDemand(eq("brand-new-steam-title"));
+        verify(gameCatalogService).enrichCatalogProfileOnDemand(eq("brand-new-steam-title"));
+    }
+
+    @Test
     void activationBumpsScheduleForAlreadyMonitoredGame() {
         Game game = Game.builder()
                 .slug("apex-legends")

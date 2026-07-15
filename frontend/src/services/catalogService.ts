@@ -71,16 +71,71 @@ export interface GameActivationResult {
   jobQueued: boolean;
 }
 
+const SEARCH_CACHE_MAX_ENTRIES = 32;
+const searchResultCache = new Map<string, GameCatalogSearchResult[]>();
+let activeSearchRequest: AbortController | null = null;
+
+function normalizeSearchCacheKey(query: string): string {
+  return query.trim().toLowerCase();
+}
+
+function rememberSearchResults(
+  cacheKey: string,
+  results: GameCatalogSearchResult[],
+): GameCatalogSearchResult[] {
+  if (searchResultCache.size >= SEARCH_CACHE_MAX_ENTRIES) {
+    const oldestKey = searchResultCache.keys().next().value;
+    if (oldestKey) {
+      searchResultCache.delete(oldestKey);
+    }
+  }
+
+  searchResultCache.set(cacheKey, results);
+  return results;
+}
+
 export async function searchGames(
   query: string,
 ): Promise<GameCatalogSearchResult[]> {
-  const params = new URLSearchParams({ q: query });
-  const results = await fetchJson<GameCatalogSearchResult[]>(
-    `/api/v1/games/search?${params.toString()}`,
-    { cache: "no-store", revalidate: 0 },
-  );
+  const cacheKey = normalizeSearchCacheKey(query);
+  if (!cacheKey) {
+    return [];
+  }
 
-  return dedupeCatalogSearchResults(results);
+  const cached = searchResultCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  activeSearchRequest?.abort();
+  const controller = new AbortController();
+  activeSearchRequest = controller;
+
+  const params = new URLSearchParams({ q: query });
+
+  try {
+    const results = await fetchJson<GameCatalogSearchResult[]>(
+      `/api/v1/games/search?${params.toString()}`,
+      { cache: "no-store", revalidate: 0, signal: controller.signal },
+    );
+
+    const deduped = dedupeCatalogSearchResults(results);
+    if (activeSearchRequest === controller) {
+      activeSearchRequest = null;
+    }
+
+    return rememberSearchResults(cacheKey, deduped);
+  } catch (error) {
+    if (activeSearchRequest === controller) {
+      activeSearchRequest = null;
+    }
+
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw error;
+    }
+
+    throw error;
+  }
 }
 
 export function fetchIndexableSlugs(): Promise<GameIndexableSlug[]> {

@@ -123,6 +123,10 @@ export default function GameSearchBar({
         }
       } catch (error) {
         if (!cancelled) {
+          if (error instanceof DOMException && error.name === "AbortError") {
+            return;
+          }
+
           setMatches([]);
           setSearchError(getUserFacingErrorMessage(error));
         }

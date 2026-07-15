@@ -402,7 +402,11 @@ public class GameCatalogService {
         return GameAssetPolicy.sanitizeImageUrl(fallbackCoverUrl);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
+    @Cacheable(
+            cacheNames = CacheConfig.CATALOG_SEARCH_CACHE,
+            key = "T(com.statustimer.util.SearchQuerySupport).normalizeForMatch(#query)"
+    )
     public List<GameCatalogSearchResponse> search(String query) {
         String trimmed = query == null ? "" : query.trim();
         if (trimmed.isEmpty()) {
@@ -435,7 +439,7 @@ public class GameCatalogService {
             Set<String> seenSlugs,
             int limit
     ) {
-        int added = appendUpsertedIgdbMatches(igdbSearchClient.search(query, limit), query, results, seenSlugs);
+        int added = appendReadOnlyIgdbMatches(igdbSearchClient.search(query, limit), results, seenSlugs);
         if (added >= limit) {
             return;
         }
@@ -473,12 +477,11 @@ public class GameCatalogService {
             }
         }
 
-        appendUpsertedIgdbMatches(directMatches.stream().limit(limit).toList(), query, results, seenSlugs);
+        appendReadOnlyIgdbMatches(directMatches.stream().limit(limit).toList(), results, seenSlugs);
     }
 
-    private int appendUpsertedIgdbMatches(
+    private int appendReadOnlyIgdbMatches(
             List<IgdbGameMatch> matches,
-            String query,
             List<GameCatalogSearchResponse> results,
             Set<String> seenSlugs
     ) {
@@ -490,44 +493,65 @@ public class GameCatalogService {
                 continue;
             }
 
-            try {
-                Game discovered = upsertFromIgdbDiscoveryIsolated(match);
-                if (discovered == null
-                        || CatalogNoisePolicy.shouldSkipCatalogSurfacing(discovered)) {
-                    continue;
-                }
-
-                if (addSearchResult(discovered, results, seenSlugs)) {
-                    added++;
-                }
-            } catch (RuntimeException exception) {
-                log.warn(
-                        "Skipping IGDB discovery match '{}' during search for '{}'",
-                        match.name(),
-                        query,
-                        exception
-                );
+            if (addReadOnlyIgdbDiscoveryResult(match, results, seenSlugs)) {
+                added++;
             }
         }
 
         return added;
     }
 
-    private Game upsertFromIgdbDiscoveryIsolated(IgdbGameMatch match) {
-        TransactionTemplate template = new TransactionTemplate(transactionManager);
-        template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-
-        try {
-            return template.execute(status -> upsertFromIgdbDiscovery(match));
-        } catch (DataIntegrityViolationException exception) {
-            log.debug(
-                    "IGDB discovery slug collision for '{}'; reloading existing catalog row",
-                    match.name()
-            );
-            return resolveExistingGameForIgdbMatch(match)
-                    .map(this::reloadGameWithPlatforms)
-                    .orElse(null);
+    private boolean addReadOnlyIgdbDiscoveryResult(
+            IgdbGameMatch match,
+            List<GameCatalogSearchResponse> results,
+            Set<String> seenSlugs
+    ) {
+        if (CatalogDiscoveryPolicy.isExcludedIgdbMatch(match)) {
+            return false;
         }
+
+        String slug = resolveDiscoverySlug(match);
+        if (slug.isBlank()) {
+            return false;
+        }
+
+        if (ManualProtectedCatalogPolicy.isProtectedTitleSpinoff(slug)) {
+            return false;
+        }
+
+        if (CatalogNoisePolicy.isTwitchCategoryNoise(slug, match.name())) {
+            return false;
+        }
+
+        if (PinnedGamePolicy.isPinned(slug) && !PinnedGamePolicy.matchesIgdbGame(slug, match)) {
+            return gameRepository.findBySlug(slug)
+                    .map(game -> addSearchResult(game, results, seenSlugs))
+                    .orElse(false);
+        }
+
+        if (ManualProtectedCatalogPolicy.SLUGS.contains(slug)) {
+            return gameRepository.findBySlug(slug)
+                    .map(game -> addSearchResult(game, results, seenSlugs))
+                    .orElse(false);
+        }
+
+        Optional<Game> existing = resolveExistingGameForIgdbMatch(match, slug);
+        if (existing.isPresent()) {
+            Game game = existing.get();
+            if (Boolean.TRUE.equals(game.getManualLock())) {
+                return false;
+            }
+
+            return addSearchResult(game, results, seenSlugs);
+        }
+
+        String canonicalSlug = canonicalSearchSlug(slug);
+        if (!seenSlugs.add(canonicalSlug)) {
+            return false;
+        }
+
+        results.add(toSearchResponse(match, canonicalSlug));
+        return true;
     }
 
     private Optional<Integer> parseSteamAppIdQuery(String query) {
@@ -577,11 +601,6 @@ public class GameCatalogService {
                 continue;
             }
 
-            CatalogMatureContentPolicy.applyQuarantineIfMature(game);
-            CatalogDiscoveryPolicy.applyQuarantineIfExcluded(game);
-            CatalogNoisePolicy.applyQuarantineIfProtectedTitleSpinoff(game);
-            CatalogNoisePolicy.applyQuarantineIfNoise(game);
-            gameRepository.save(game);
             if (CatalogNoisePolicy.shouldSkipCatalogSurfacing(game)) {
                 continue;
             }
@@ -625,13 +644,92 @@ public class GameCatalogService {
             }
 
             try {
-                Game game = gameRepository.findBySlug(slug)
-                        .orElseGet(() -> gameRepository.save(buildTrackedCatalogGame(slug, metadata)));
-                results.add(toSearchResponse(game));
+                gameRepository.findBySlug(slug)
+                        .ifPresentOrElse(
+                                game -> results.add(toSearchResponse(game)),
+                                () -> results.add(toSearchResponseFromTracked(slug, metadata))
+                        );
             } catch (RuntimeException exception) {
                 log.warn("Failed to resolve tracked catalog match '{}' during search", slug, exception);
             }
         }
+    }
+
+    @Transactional
+    public Optional<Game> materializeCatalogGameOnDemand(String slug) {
+        String canonicalSlug = gameSlugMapper.resolveCanonicalSlug(slug);
+        if (canonicalSlug == null || canonicalSlug.isBlank()) {
+            return Optional.empty();
+        }
+
+        Optional<Game> existing = gameRepository.findBySlug(canonicalSlug);
+        if (existing.isPresent()) {
+            return existing;
+        }
+
+        if (CatalogMatureContentPolicy.containsBannedWord(canonicalSlug)) {
+            return Optional.empty();
+        }
+
+        Optional<IgdbGameMatch> match = resolveIgdbMatchForMaterialization(canonicalSlug);
+        if (match.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Game materialized = upsertFromIgdbDiscovery(match.get());
+        return Optional.ofNullable(materialized);
+    }
+
+    private Optional<IgdbGameMatch> resolveIgdbMatchForMaterialization(String canonicalSlug) {
+        Optional<IgdbGameMatch> bySlug = igdbSearchClient.lookupBySlug(canonicalSlug);
+        if (bySlug.isPresent() && isMaterializableIgdbMatch(bySlug.get(), canonicalSlug)) {
+            return bySlug;
+        }
+
+        Optional<IgdbGameMatch> possessiveMatch = SlugUtils.toIgdbPossessiveSlugVariant(canonicalSlug)
+                .flatMap(igdbSearchClient::lookupBySlug)
+                .filter(match -> isMaterializableIgdbMatch(match, canonicalSlug));
+        if (possessiveMatch.isPresent()) {
+            return possessiveMatch;
+        }
+
+        String searchName = TrackedGameCatalog.resolveGameName(canonicalSlug);
+        for (IgdbGameMatch match : igdbSearchClient.search(searchName, IGDB_DISCOVERY_LIMIT)) {
+            String discoverySlug = resolveDiscoverySlug(match);
+            if (!canonicalSlug.equals(canonicalSearchSlug(discoverySlug))) {
+                continue;
+            }
+
+            if (isMaterializableIgdbMatch(match, discoverySlug)) {
+                return Optional.of(match);
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    private boolean isMaterializableIgdbMatch(IgdbGameMatch match, String slug) {
+        if (CatalogDiscoveryPolicy.isExcludedIgdbMatch(match)) {
+            return false;
+        }
+
+        if (slug.isBlank()) {
+            return false;
+        }
+
+        if (ManualProtectedCatalogPolicy.isProtectedTitleSpinoff(slug)) {
+            return false;
+        }
+
+        if (CatalogNoisePolicy.isTwitchCategoryNoise(slug, match.name())) {
+            return false;
+        }
+
+        if (PinnedGamePolicy.isPinned(slug)) {
+            return PinnedGamePolicy.matchesIgdbGame(slug, match);
+        }
+
+        return true;
     }
 
     @Transactional
@@ -1064,6 +1162,75 @@ public class GameCatalogService {
 
     private GameCatalogSearchResponse toSearchResponse(Game game) {
         return toSearchResponse(game, canonicalSearchSlug(game.getSlug()));
+    }
+
+    private GameCatalogSearchResponse toSearchResponseFromTracked(
+            String slug,
+            TrackedGameCatalog.GameAssetMetadata metadata
+    ) {
+        String canonicalSlug = canonicalSearchSlug(slug);
+        Integer steamAppId = resolveAppId(canonicalSlug);
+
+        return new GameCatalogSearchResponse(
+                null,
+                canonicalSlug,
+                metadata.gameName(),
+                GameAssetPolicy.LOGO_NONE,
+                null,
+                steamAppId,
+                null,
+                null,
+                null,
+                List.of(),
+                null,
+                null,
+                false,
+                null
+        );
+    }
+
+    private GameCatalogSearchResponse toSearchResponse(IgdbGameMatch match, String responseSlug) {
+        String logoUrl = GameAssetPolicy.sanitizeImageUrl(match.logoUrl());
+        if (!GameAssetPolicy.isRenderableLogo(logoUrl)) {
+            logoUrl = GameAssetPolicy.LOGO_NONE;
+        }
+
+        Integer steamAppId = PinnedGamePolicy.findBySlug(responseSlug)
+                .map(PinnedGamePolicy.Pin::steamAppId)
+                .orElse(match.steamAppId());
+        if (steamAppId == null || steamAppId <= 0) {
+            steamAppId = knownSteamAppRegistry.resolveAppId(responseSlug).orElse(null);
+        }
+        if (steamAppId != null
+                && !SteamAppIdPolicy.mayAssignSteamAppId(responseSlug, steamAppId)) {
+            steamAppId = null;
+        }
+
+        String genreName = null;
+        List<String> genreNames = match.genreNames() == null ? List.of() : List.copyOf(match.genreNames());
+        if (!genreNames.isEmpty()) {
+            genreName = genreNames.getFirst();
+        }
+
+        boolean upcomingRelease = match.firstReleaseDate() != null
+                && match.firstReleaseDate().isAfter(LocalDate.now());
+
+        return new GameCatalogSearchResponse(
+                null,
+                responseSlug,
+                match.name(),
+                logoUrl == null ? GameAssetPolicy.LOGO_NONE : logoUrl.trim(),
+                GameAssetPolicy.sanitizeImageUrl(match.coverUrl()),
+                steamAppId,
+                match.userRating(),
+                match.criticRating(),
+                genreName,
+                genreNames,
+                null,
+                null,
+                upcomingRelease,
+                match.firstReleaseDate() == null ? null : match.firstReleaseDate().atStartOfDay()
+        );
     }
 
     private GameCatalogSearchResponse toSearchResponse(Game game, String responseSlug) {

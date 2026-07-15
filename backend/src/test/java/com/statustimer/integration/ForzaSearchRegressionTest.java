@@ -105,7 +105,7 @@ class ForzaSearchRegressionTest {
     }
 
     @Test
-    void catalogSearchRecoversPreviouslyQuarantinedGame() {
+    void catalogSearchHidesPreviouslyQuarantinedGameUntilReconciled() {
         gameRepository.save(Game.builder()
                 .slug("forza-horizon-5")
                 .gameName("Forza Horizon 5")
@@ -118,7 +118,7 @@ class ForzaSearchRegressionTest {
         List<GameCatalogSearchResponse> results = gameCatalogService.search("forza horizon 5");
 
         assertThat(results)
-                .as("Search should clear a stale mature quarantine for clean games")
-                .anyMatch(result -> "forza-horizon-5".equals(result.slug()));
+                .as("Read-only search must not surface quarantined catalog rows")
+                .noneMatch(result -> "forza-horizon-5".equals(result.slug()));
     }
 }

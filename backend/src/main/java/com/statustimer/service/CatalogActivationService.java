@@ -32,7 +32,8 @@ public class CatalogActivationService {
         }
 
         Game game = gameRepository.findBySlug(canonicalSlug)
-                .orElseGet(this::createPersistedGameIfKnown);
+                .or(() -> gameCatalogService.materializeCatalogGameOnDemand(canonicalSlug))
+                .orElse(null);
 
         if (game == null) {
             return new GameActivationResponse(canonicalSlug, false, false, false, false);
@@ -122,7 +123,4 @@ public class CatalogActivationService {
         );
     }
 
-    private Game createPersistedGameIfKnown() {
-        return null;
-    }
 }

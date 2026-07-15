@@ -18,6 +18,7 @@ public class CacheConfig {
     public static final String INDEXABLE_SLUGS_CACHE = "indexableSlugs";
     public static final String PUBLIC_READ_SHORT_CACHE = "publicReadShort";
     public static final String PUBLIC_READ_MEDIUM_CACHE = "publicReadMedium";
+    public static final String CATALOG_SEARCH_CACHE = "catalogSearch";
 
     @Bean
     public CacheManager cacheManager() {
@@ -25,7 +26,8 @@ public class CacheConfig {
         manager.setCaches(List.of(
                 buildCache(INDEXABLE_SLUGS_CACHE, Duration.ofHours(1), 1),
                 buildCache(PUBLIC_READ_SHORT_CACHE, Duration.ofSeconds(300), 64),
-                buildCache(PUBLIC_READ_MEDIUM_CACHE, Duration.ofSeconds(600), 32)
+                buildCache(PUBLIC_READ_MEDIUM_CACHE, Duration.ofSeconds(600), 32),
+                buildCache(CATALOG_SEARCH_CACHE, Duration.ofSeconds(60), 128)
         ));
         return manager;
     }
