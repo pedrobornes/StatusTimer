@@ -142,7 +142,7 @@ export default memo(function GameTelemetryCard({
   );
 
   const maintenanceMetricsBlock = (
-    <div className="mt-2">
+    <div className="mt-3.5">
       <GameLiveMetricsRow
         livePlayers={telemetry.livePlayers}
         twitchViewers={telemetry.twitchViewers}
@@ -154,45 +154,63 @@ export default memo(function GameTelemetryCard({
     </div>
   );
 
-  const headerContent = (
+  const titleHeading = (
+    <h3 className="line-clamp-2 break-words whitespace-normal text-xl font-bold tracking-tight text-white transition-colors duration-200 group-hover:text-emerald-400 sm:text-2xl">
+      {title}
+    </h3>
+  );
+
+  const genreAndRatingBadges =
+    userRating || criticRating || genreBadges.length > 0 ? (
+      <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-300">
+        {genreBadges.map((genre) => (
+          <span
+            key={genre}
+            className="rounded-full border border-white/10 px-2 py-0.5 uppercase tracking-[0.12em]"
+          >
+            {genre}
+          </span>
+        ))}
+        {userRating ? (
+          <span className="rounded-full border border-cyan-400/20 px-2 py-0.5 text-cyan-100">
+            Players {userRating}
+          </span>
+        ) : null}
+        {criticRating ? (
+          <span className="rounded-full border border-violet-400/20 px-2 py-0.5 text-violet-100">
+            Critics {criticRating}
+          </span>
+        ) : null}
+      </div>
+    ) : null;
+
+  const headerContent = relocateMetricsForMaintenance ? (
+    <>
+      <div className="flex w-full min-w-0 items-start gap-2 sm:gap-3">
+        <GameBoxArtImage title={title} src={logoUrl} size="card" />
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:gap-2">
+          <div className="hidden justify-end sm:flex">{statusBadge}</div>
+          {titleHeading}
+        </div>
+      </div>
+
+      <div className="mt-3 w-full min-w-0">
+        {genreAndRatingBadges}
+        {maintenanceMetricsBlock}
+        {mobileStatusBadge}
+      </div>
+    </>
+  ) : (
     <>
       <div className="flex w-full min-w-0 items-stretch gap-2 sm:gap-3">
         <GameBoxArtImage title={title} src={logoUrl} size="card" />
-        {relocateMetricsForMaintenance ? (
-          <div className="min-w-0 flex-1" aria-hidden />
-        ) : (
-          metricsBlock
-        )}
+        {metricsBlock}
         <div className="hidden shrink-0 self-start sm:block">{statusBadge}</div>
       </div>
 
       <div className="mt-4 w-full min-w-0">
-        <h3 className="line-clamp-2 break-words whitespace-normal text-xl font-bold tracking-tight text-white transition-colors duration-200 group-hover:text-emerald-400 sm:text-2xl">
-          {title}
-        </h3>
-        {(userRating || criticRating || genreBadges.length > 0) && (
-          <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-300">
-            {genreBadges.map((genre) => (
-              <span
-                key={genre}
-                className="rounded-full border border-white/10 px-2 py-0.5 uppercase tracking-[0.12em]"
-              >
-                {genre}
-              </span>
-            ))}
-            {userRating ? (
-              <span className="rounded-full border border-cyan-400/20 px-2 py-0.5 text-cyan-100">
-                Players {userRating}
-              </span>
-            ) : null}
-            {criticRating ? (
-              <span className="rounded-full border border-violet-400/20 px-2 py-0.5 text-violet-100">
-                Critics {criticRating}
-              </span>
-            ) : null}
-          </div>
-        )}
-        {relocateMetricsForMaintenance ? maintenanceMetricsBlock : null}
+        {titleHeading}
+        {genreAndRatingBadges}
         {mobileStatusBadge}
       </div>
     </>
