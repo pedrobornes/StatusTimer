@@ -36,6 +36,35 @@ class RiotStatusScraperTests(unittest.TestCase):
         self.assertIn("Investigating elevated login failures.", events[0].plain_text)
         self.assertEqual(events[0].game_tag, "valorant")
 
+    def test_parse_platform_payload_skips_scheduled_maintenance(self) -> None:
+        payload = {
+            "incidents": [],
+            "maintenances": [
+                {
+                    "id": 55,
+                    "name": "Patch Maintenance",
+                    "maintenance_status": "scheduled",
+                    "created_at": 1_752_000_000_000,
+                    "updates": [
+                        {
+                            "content": "<p>Patch maintenance is scheduled.</p>",
+                            "created_at": 1_752_000_100_000,
+                        }
+                    ],
+                }
+            ],
+        }
+        target = RiotStatusTarget(
+            "https://na1.api.riotgames.com/lol/status/v4/platform-data",
+            "league-of-legends",
+            "League of Legends",
+        )
+
+        scraper = RiotStatusScraper()
+        events = scraper._parse_platform_payload(payload, target)
+
+        self.assertEqual(events, [])
+
 
 if __name__ == "__main__":
     unittest.main()

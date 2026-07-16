@@ -31,6 +31,28 @@ class IncidentDispatchTests(unittest.TestCase):
         client.sync_game_telemetry.assert_called_once()
         client.push_patch_note.assert_called_once()
 
+    def test_scheduled_maintenance_title_does_not_force_maintenance_status(self) -> None:
+        client = Mock()
+        client.sync_game_telemetry.return_value = PushResult(success=True, status_code=200)
+        client.push_patch_note.return_value = PushResult(success=True, status_code=201)
+
+        event = ScrapedFeedEvent(
+            source=FeedSource.RIOT,
+            kind=FeedEventKind.INCIDENT,
+            external_id="riot-3",
+            game_tag="league-of-legends",
+            title="Scheduled Maintenance",
+            plain_text="Patch maintenance is scheduled for tonight.",
+            published_at=datetime(2026, 7, 5, tzinfo=timezone.utc),
+        )
+
+        dispatch_incident_event(client, event)
+        telemetry_request = client.sync_game_telemetry.call_args.args[0]
+        self.assertEqual(
+            telemetry_request.entries[0].status.value,
+            "DOWN",
+        )
+
     def test_maintenance_incident_maps_to_maintenance_status(self) -> None:
         client = Mock()
         client.sync_game_telemetry.return_value = PushResult(success=True, status_code=200)

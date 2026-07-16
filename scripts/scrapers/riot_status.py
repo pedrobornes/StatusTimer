@@ -12,6 +12,7 @@ import requests
 from config.settings import settings
 from models.feed_events import FeedEventKind, FeedSource, ScrapedFeedEvent
 from scrapers.http_client import build_http_session
+from scrapers.riot_telemetry import _is_active_riot_status_record
 from scrapers.text_utils import normalize_plain_text, plain_text_from_html
 
 logger = logging.getLogger(__name__)
@@ -136,6 +137,9 @@ class RiotStatusScraper:
         prefix: str,
     ) -> ScrapedFeedEvent | None:
         if not isinstance(record, dict):
+            return None
+
+        if not _is_active_riot_status_record(record):
             return None
 
         record_id = str(record.get("id", "")).strip()

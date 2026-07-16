@@ -10,6 +10,7 @@ from typing import Callable, TypeVar
 import requests
 
 from config.settings import settings
+from scrapers.twitch_auth import clear_twitch_token_cache
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,10 @@ class TwitchRateLimitError(Exception):
 
 class TwitchCircuitOpenError(Exception):
     """Raised when the Twitch circuit breaker is open."""
+
+
+class TwitchAuthError(Exception):
+    """Raised when Twitch Helix rejects the OAuth token (HTTP 401)."""
 
 
 class TwitchHelixGuard:
@@ -129,6 +134,15 @@ def helix_request(
             response.status_code,
         )
         return None
+
+    if response.status_code == 401:
+        clear_twitch_token_cache()
+        logger.warning(
+            "Twitch Helix client error for %s: HTTP 401 (OAuth token cache cleared). "
+            "Verify TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET belong to the same Twitch app.",
+            url,
+        )
+        raise TwitchAuthError(f"Twitch Helix unauthorized for {url}")
 
     if response.status_code >= 400:
         logger.warning(

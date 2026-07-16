@@ -77,7 +77,9 @@ def dispatch_incident_event(
 
 def _resolve_incident_status(event: ScrapedFeedEvent) -> TelemetryStatus:
     haystack = f"{event.title}\n{event.plain_text}".lower()
-    if "maintenance" in haystack or "scheduled" in haystack:
+    if "in progress" in haystack or "in_progress" in haystack:
+        return TelemetryStatus.MAINTENANCE
+    if "maintenance" in haystack and "scheduled" not in haystack:
         return TelemetryStatus.MAINTENANCE
     return TelemetryStatus.DOWN
 

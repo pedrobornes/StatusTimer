@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
+from datetime import datetime, timezone
 from typing import Any
 
 import requests
@@ -117,10 +118,23 @@ def _active_records(records: Any) -> list[dict[str, Any]]:
 def _is_active_riot_status_record(record: dict[str, Any]) -> bool:
     maintenance_status = str(record.get("maintenance_status", "")).strip().lower()
     if maintenance_status:
-        return maintenance_status not in {"complete", "completed"}
+        # Riot exposes scheduled future windows separately from live downtime.
+        return maintenance_status == "in_progress"
+
+    archive_at = _parse_epoch_millis(record.get("archive_at"))
+    if archive_at is not None and archive_at <= datetime.now(timezone.utc):
+        return False
 
     legacy_status = str(record.get("status", "")).strip().lower()
-    if legacy_status in {"closed", "resolved", "completed", "archive", "archived"}:
+    if legacy_status in {
+        "closed",
+        "resolved",
+        "completed",
+        "complete",
+        "archive",
+        "archived",
+        "postmortem",
+    }:
         return False
 
     return True
@@ -134,6 +148,18 @@ def _summarize_records(records: list[dict[str, Any]], *, prefix: str) -> str:
         chunks.append(normalize_plain_text(f"{name}. {update_text}".strip()))
 
     return " | ".join(chunk for chunk in chunks if chunk)
+
+
+def _parse_epoch_millis(raw_value: object) -> datetime | None:
+    if raw_value is None:
+        return None
+
+    try:
+        millis = int(raw_value)
+    except (TypeError, ValueError):
+        return None
+
+    return datetime.fromtimestamp(millis / 1000, tz=timezone.utc)
 
 
 def _extract_latest_update(record: dict[str, Any]) -> str:

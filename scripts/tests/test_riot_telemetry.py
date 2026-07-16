@@ -24,6 +24,33 @@ class RiotTelemetryTests(unittest.TestCase):
 
         self.assertTrue(_is_active_riot_status_record(record))
 
+    def test_scheduled_maintenance_is_not_active(self) -> None:
+        record = {
+            "id": 44,
+            "maintenance_status": "scheduled",
+            "updates": [{"content": "<p>Patch maintenance planned.</p>"}],
+        }
+
+        self.assertFalse(_is_active_riot_status_record(record))
+
+    def test_resolve_platform_status_returns_online_when_only_scheduled_maintenance(self) -> None:
+        payload = {
+            "incidents": [],
+            "maintenances": [
+                {
+                    "id": 100,
+                    "maintenance_status": "scheduled",
+                    "updates": [{"content": "<p>Patch 26.14 maintenance scheduled.</p>"}],
+                }
+            ],
+        }
+
+        status, context, ambiguous = _resolve_platform_status(payload)
+
+        self.assertEqual(status.value, "ONLINE")
+        self.assertIsNone(context)
+        self.assertFalse(ambiguous)
+
     def test_resolve_platform_status_returns_online_when_only_completed_maintenance(self) -> None:
         payload = {
             "incidents": [],

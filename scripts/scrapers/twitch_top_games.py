@@ -13,8 +13,9 @@ from models.catalog_schemas import GameCatalogEntryPayload
 from scrapers.igdb_catalog_enrichment import enrich_catalog_entries_with_igdb
 from models.normalization import to_slug
 from scrapers.live_metrics import fetch_twitch_viewers
-from scrapers.twitch_auth import get_twitch_access_token
+from scrapers.twitch_auth import clear_twitch_token_cache, get_twitch_access_token
 from scrapers.twitch_helix import (
+    TwitchAuthError,
     helix_get,
     run_twitch_batched,
     should_enrich_twitch_viewers_for_rank,
@@ -165,11 +166,15 @@ def _fetch_top_games_page(
     if after:
         params["after"] = after
 
-    response = helix_get(
-        session,
-        TWITCH_HELIX_GAMES_TOP_URL,
-        params=params,
-    )
+    try:
+        response = helix_get(
+            session,
+            TWITCH_HELIX_GAMES_TOP_URL,
+            params=params,
+        )
+    except TwitchAuthError:
+        raise
+
     if response is None:
         raise RuntimeError("Twitch /games/top request blocked or rate-limited")
 
@@ -212,13 +217,31 @@ def fetch_twitch_top_games(limit: int | None = None) -> list[TwitchTopGameEntry]
     entries: list[TwitchTopGameEntry] = []
     seen_slugs: set[str] = set()
     cursor: str | None = None
+    auth_retried = False
 
     while len(entries) < max_entries:
-        games, cursor = _fetch_top_games_page(
-            session,
-            first=TWITCH_PAGE_SIZE_MAX,
-            after=cursor,
-        )
+        try:
+            games, cursor = _fetch_top_games_page(
+                session,
+                first=TWITCH_PAGE_SIZE_MAX,
+                after=cursor,
+            )
+        except TwitchAuthError:
+            if auth_retried:
+                raise RuntimeError(
+                    "Twitch /games/top returned HTTP 401 after token refresh. "
+                    "Verify TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET belong to the same Twitch app."
+                ) from None
+            auth_retried = True
+            logger.warning("Retrying Twitch /games/top once with a fresh OAuth token.")
+            clear_twitch_token_cache()
+            access_token = get_twitch_access_token()
+            session.headers["Authorization"] = f"Bearer {access_token}"
+            games, cursor = _fetch_top_games_page(
+                session,
+                first=TWITCH_PAGE_SIZE_MAX,
+                after=cursor,
+            )
 
         if not games:
             break
