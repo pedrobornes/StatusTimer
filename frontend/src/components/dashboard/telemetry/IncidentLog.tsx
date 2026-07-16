@@ -6,8 +6,10 @@ import SidebarPanelHeader, {
 import { APP_ROUTES } from "@/config/routes";
 import {
   formatIncidentMessage,
+  formatTimeAgo,
   getIncidentAccentClass,
   getTimelineBlockClass,
+  resolveIncidentDateIso,
 } from "@/lib/telemetry";
 import { resolveSocialServiceBrand } from "@/lib/socialServices";
 import type { ServerStatus } from "@/types/api";
@@ -140,8 +142,11 @@ export default function IncidentLog({
             );
           })}
 
-          {filteredIncidents.map((incident) => (
-              <li key={incident.gameSlug}>
+          {filteredIncidents.map((incident, index) => {
+            const publishedIso = resolveIncidentDateIso(incident);
+
+            return (
+              <li key={`${incident.gameSlug}-${publishedIso ?? index}`}>
                 <Link
                   href={APP_ROUTES.status(incident.gameSlug)}
                   className="block rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-4 transition hover:border-rose-400/20 hover:bg-white/[0.06] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-300/60"
@@ -155,18 +160,25 @@ export default function IncidentLog({
                       <p className="text-sm leading-6 text-slate-100">
                         {formatIncidentMessage(incident)}
                       </p>
-                      <div className="mt-2">
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
                         <span
                           className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] ${getIncidentAccentClass(incident.status)}`}
                         >
                           {incident.status}
                         </span>
+                        <time
+                          dateTime={publishedIso ?? undefined}
+                          className="text-[11px] text-slate-500"
+                        >
+                          Last detected {formatTimeAgo(incident)}
+                        </time>
                       </div>
                     </div>
                   </div>
                 </Link>
               </li>
-            ))}
+            );
+          })}
         </ul>
       )}
     </section>
