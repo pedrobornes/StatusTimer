@@ -37,6 +37,8 @@ public final class CatalogTwitchNoiseRegistry {
             "co-working and studying",
             "crypto",
             "streamer university",
+            "la velada",
+            "la velada del año",
             "мир танков"
     );
 
@@ -67,6 +69,8 @@ public final class CatalogTwitchNoiseRegistry {
             "co-working-and-studying",
             "crypto",
             "streamer-university",
+            "la-velada",
+            "la-velada-del-ano",
             "mir-tankov"
     );
 

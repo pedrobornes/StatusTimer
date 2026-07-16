@@ -32,6 +32,8 @@ NON_GAME_CATEGORY_NAMES = frozenset(
         "co-working and studying",
         "crypto",
         "streamer university",
+        "la velada",
+        "la velada del año",
         "мир танков",
     }
 )
@@ -64,6 +66,8 @@ QUARANTINED_CATEGORY_SLUGS = frozenset(
         "co-working-and-studying",
         "crypto",
         "streamer-university",
+        "la-velada",
+        "la-velada-del-ano",
         "mir-tankov",
     }
 )

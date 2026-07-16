@@ -55,6 +55,7 @@ class CatalogNoisePolicyTest {
         assertThat(CatalogNoisePolicy.isTwitchCategoryNoise("im-only-sleeping", "I'm Only Sleeping")).isTrue();
         assertThat(CatalogNoisePolicy.isTwitchCategoryNoise("streamer-university", "Streamer University"))
                 .isTrue();
+        assertThat(CatalogNoisePolicy.isTwitchCategoryNoise("la-velada", "La Velada")).isTrue();
     }
 
     @Test
