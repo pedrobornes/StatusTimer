@@ -195,7 +195,7 @@ export function formatIncidentMessage(incident: TelemetryIncident): string {
       ? "servers came back online"
       : INCIDENT_STATUS_LABELS[incident.status];
 
-  return `${game} ${statusLabel} · ${formatTimeAgo(incident)}`;
+  return `${game} ${statusLabel}`;
 }
 
 export function getIncidentAccentClass(status: TelemetryStatus): string {
