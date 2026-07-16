@@ -92,12 +92,14 @@ def _run_metrics_due(
     twitch_entries = fetch_scheduled_twitch_metrics(targets)
     entries = [*steam_entries, *twitch_entries]
 
-    successes = {entry.slug for entry in entries}
+    steam_successes = {entry.slug for entry in steam_entries}
+    twitch_successes = {entry.slug for entry in twitch_entries}
+
     completions = [
         _work_result(
             str(target.get("slug") or ""),
             "METRICS",
-            str(target.get("slug") or "") in successes,
+            _metrics_target_succeeded(target, steam_successes, twitch_successes),
         )
         for target in targets
         if target.get("slug")
@@ -109,6 +111,26 @@ def _run_metrics_due(
 
     client.complete_harvest_work(completions)
     return len(targets), sync_result
+
+
+def _metrics_target_succeeded(
+    target: dict[str, object],
+    steam_successes: set[str],
+    twitch_successes: set[str],
+) -> bool:
+    """Steam-backed titles need a Steam player sample; Twitch alone is not enough."""
+    slug = str(target.get("slug") or "")
+    if not slug:
+        return False
+
+    steam_app_id = resolve_harvest_steam_app_id(
+        slug,
+        target.get("steamAppId") if isinstance(target.get("steamAppId"), int) else None,
+    )
+    if steam_app_id is not None and steam_app_id > 0:
+        return slug in steam_successes
+
+    return slug in steam_successes or slug in twitch_successes
 
 
 def _run_news_due(

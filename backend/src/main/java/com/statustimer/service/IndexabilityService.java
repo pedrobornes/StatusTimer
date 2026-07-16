@@ -187,6 +187,13 @@ public class IndexabilityService {
             if (IndexabilityProperties.STALE_REASON_STALE_TELEMETRY.equals(game.getStaleReason())) {
                 game.setStaleReason(null);
             }
+            LocalDateTime now = LocalDateTime.now();
+            if (game.getNextMetricsAt() == null) {
+                game.setNextMetricsAt(now);
+            }
+            if (game.getNextTelemetryAt() == null) {
+                game.setNextTelemetryAt(now);
+            }
             return;
         }
 

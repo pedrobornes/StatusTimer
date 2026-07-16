@@ -675,10 +675,6 @@ public class GameCatalogService {
         }
 
         gameRepository.findBySlug(canonicalSlug).ifPresent(game -> {
-            if (game.getLifecycleState() != LifecycleState.CATALOG) {
-                return;
-            }
-
             knownSteamAppRegistry.resolveAppId(canonicalSlug).ifPresent(knownAppId -> {
                 if (SteamAppIdPolicy.mayAssignSteamAppId(canonicalSlug, knownAppId)) {
                     game.setSteamAppId(knownAppId);
@@ -690,7 +686,9 @@ public class GameCatalogService {
             LocalDateTime now = LocalDateTime.now();
             LocalDateTime nextMetricsAt = game.getNextMetricsAt();
             boolean metricsStillFresh = nextMetricsAt != null && nextMetricsAt.isAfter(now);
-            if ((hasSteamTracking || hasTwitchTracking) && !metricsStillFresh) {
+            boolean missingSteamPlayers = hasSteamTracking && game.getLivePlayers() == null;
+
+            if ((hasSteamTracking || hasTwitchTracking) && (!metricsStillFresh || missingSteamPlayers)) {
                 game.setNextMetricsAt(now);
             }
 
@@ -1782,6 +1780,9 @@ public class GameCatalogService {
         if (game.getSteamAppId() == null && match.steamAppId() != null
                 && SteamAppIdPolicy.mayAssignSteamAppId(game.getSlug(), match.steamAppId())) {
             game.setSteamAppId(match.steamAppId());
+            if (game.getLivePlayers() == null) {
+                game.setNextMetricsAt(LocalDateTime.now());
+            }
         }
 
         PinnedGamePolicy.findBySlug(game.getSlug())

@@ -62,9 +62,15 @@ public interface GameRepository extends JpaRepository<Game, Long> {
             Pageable pageable
     );
 
+    @Query("""
+            SELECT g FROM Game g
+            WHERE g.lifecycleState IN :lifecycleStates
+              AND (g.nextMetricsAt IS NULL OR g.nextMetricsAt <= :cutoff)
+            ORDER BY g.scrapeTier ASC
+            """)
     List<Game> findByLifecycleStateInAndNextMetricsAtLessThanEqualOrderByScrapeTierAsc(
-            Collection<LifecycleState> lifecycleStates,
-            LocalDateTime cutoff,
+            @Param("lifecycleStates") Collection<LifecycleState> lifecycleStates,
+            @Param("cutoff") LocalDateTime cutoff,
             Pageable pageable
     );
 
