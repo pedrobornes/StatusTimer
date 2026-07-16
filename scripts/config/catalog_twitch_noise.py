@@ -31,6 +31,7 @@ NON_GAME_CATEGORY_NAMES = frozenset(
         "co-working & studying",
         "co-working and studying",
         "crypto",
+        "streamer university",
         "мир танков",
     }
 )
@@ -62,6 +63,7 @@ QUARANTINED_CATEGORY_SLUGS = frozenset(
         "wallpaper-engine",
         "co-working-and-studying",
         "crypto",
+        "streamer-university",
         "mir-tankov",
     }
 )

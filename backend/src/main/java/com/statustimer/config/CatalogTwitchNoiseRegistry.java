@@ -36,6 +36,7 @@ public final class CatalogTwitchNoiseRegistry {
             "co-working & studying",
             "co-working and studying",
             "crypto",
+            "streamer university",
             "мир танков"
     );
 
@@ -65,6 +66,7 @@ public final class CatalogTwitchNoiseRegistry {
             "wallpaper-engine",
             "co-working-and-studying",
             "crypto",
+            "streamer-university",
             "mir-tankov"
     );
 

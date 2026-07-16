@@ -13,6 +13,7 @@ from scrapers.twitch_top_games import (
 class TwitchTopGamesTests(unittest.TestCase):
     def test_is_non_game_category_matches_known_sections(self) -> None:
         self.assertTrue(is_non_game_category("Just Chatting"))
+        self.assertTrue(is_non_game_category("Streamer University"))
         self.assertTrue(is_non_game_category("ASMR"))
         self.assertTrue(is_non_game_category("Games + Demos"))
         self.assertTrue(is_non_game_category("Animals, Aquariums,and Zoos"))
