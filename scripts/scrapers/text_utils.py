@@ -56,16 +56,22 @@ _DECORATIVE_IMAGE_HINTS = (
 )
 _YOUTUBE_VIDEO_ID_PATTERN = re.compile(r"[A-Za-z0-9_-]{11}")
 _PREVIEW_YOUTUBE_BB_PATTERN = re.compile(
-    r'\[previewyoutube="([^";\]]+)(?:;[^"]*)?"\](?:\s*\[/previewyoutube\])?',
+    # Steam uses both [previewyoutube="ID;full"] and [previewyoutube=ID;full]
+    r'\[previewyoutube="?([^";\]]+?)(?:;[^\]"]*)?"?\](?:\s*\[/previewyoutube\])?',
     re.IGNORECASE,
 )
-_STEAM_YOUTUBE_DIV_PATTERN = re.compile(
-    r"<div\b[^>]*(?:data-youtube\s*=|sharedFilePreviewYouTubeVideo|PreviewYouTubeVideo)[^>]*>",
-    re.IGNORECASE,
+_STEAM_YOUTUBE_BLOCK_PATTERN = re.compile(
+    r"<div\b[^>]*(?:data-youtube\s*=|sharedFilePreviewYouTubeVideo|PreviewYouTubeVideo)[^>]*>"
+    r".*?</div>",
+    re.IGNORECASE | re.DOTALL,
 )
 _YOUTUBE_IFRAME_PATTERN = re.compile(
     r"<iframe\b[^>]*(?:youtube(?:-nocookie)?\.com/embed/)[^>]*(?:/>|>.*?</iframe>)",
     re.IGNORECASE | re.DOTALL,
+)
+_YOUTUBE_PLACEHOLDER_IMG_PATTERN = re.compile(
+    r"<img\b[^>]*(?:youtube_16x9_placeholder)[^>]*/?>",
+    re.IGNORECASE,
 )
 _YOUTUBE_EMBED_ID_PATTERN = re.compile(
     r"(?:youtube(?:-nocookie)?\.com/embed/|youtu\.be/)(?:&(?:amp;)?quot;|&#34;|\"|&quot;)*"
@@ -575,13 +581,14 @@ def _rewrite_steam_youtube_markup(value: str) -> str:
         video_id = _clean_youtube_video_id(match.group(1))
         return _youtube_watch_markdown(video_id) if video_id else ""
 
-    def replace_div(match: re.Match[str]) -> str:
+    def replace_block(match: re.Match[str]) -> str:
         video_id = _extract_youtube_id_from_markup(match.group(0))
-        return _youtube_watch_markdown(video_id) if video_id else match.group(0)
+        return _youtube_watch_markdown(video_id) if video_id else ""
 
     rewritten = _PREVIEW_YOUTUBE_BB_PATTERN.sub(replace_bbcode, value)
-    rewritten = _STEAM_YOUTUBE_DIV_PATTERN.sub(replace_div, rewritten)
+    rewritten = _STEAM_YOUTUBE_BLOCK_PATTERN.sub(replace_block, rewritten)
     rewritten = _YOUTUBE_IFRAME_PATTERN.sub("", rewritten)
+    rewritten = _YOUTUBE_PLACEHOLDER_IMG_PATTERN.sub("", rewritten)
     return rewritten
 
 

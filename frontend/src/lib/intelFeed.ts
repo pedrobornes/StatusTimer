@@ -342,12 +342,37 @@ export function resolveNewsImageUrl(url: string): string {
   return decoded;
 }
 
+const PREVIEW_YOUTUBE_BB_PATTERN =
+  /\[previewyoutube="?([^";\]]+?)(?:;[^\]"]*)?"?\](?:\s*\[\/previewyoutube\])?/gi;
+
 function sanitizeNewsContent(content: string): string {
-  return content
+  const withYoutube = content
     .replace(/\\([\[\]])/g, "$1")
     .replace(/\\t/g, "\t")
+    .replace(PREVIEW_YOUTUBE_BB_PATTERN, (_match, rawId: string) => {
+      const videoId = String(rawId ?? "")
+        .trim()
+        .replace(/^["']+|["']+$/g, "");
+      return YOUTUBE_VIDEO_ID_PATTERN.test(videoId)
+        ? `\n\nhttps://www.youtube.com/watch?v=${videoId}\n\n`
+        : "";
+    });
+
+  return withYoutube
     .split(/\r?\n/)
-    .filter((line) => line.trim() !== "-" && line.trim() !== "*")
+    .filter((line) => {
+      const trimmed = line.trim();
+      if (trimmed === "-" || trimmed === "*") {
+        return false;
+      }
+
+      const imageMatch = trimmed.match(IMAGE_LINE_PATTERN);
+      if (imageMatch && isDecorativeNewsImage(imageMatch[2].trim())) {
+        return false;
+      }
+
+      return true;
+    })
     .join("\n");
 }
 
@@ -451,27 +476,37 @@ function parseLineKind(line: string): {
   const imageMatch = line.match(IMAGE_LINE_PATTERN);
   if (imageMatch) {
     const src = resolveNewsImageUrl(imageMatch[2].trim());
-    if (!isDecorativeNewsImage(src)) {
+    if (isDecorativeNewsImage(src)) {
       return {
-        kind: "image",
+        kind: "paragraph",
         text: "",
-        imageSrc: src,
-        imageAlt: imageMatch[1].trim() || "Patch notes image",
       };
     }
+
+    return {
+      kind: "image",
+      text: "",
+      imageSrc: src,
+      imageAlt: imageMatch[1].trim() || "Patch notes image",
+    };
   }
 
   const standaloneImageLink = line.match(STANDALONE_IMAGE_LINK_LINE_PATTERN);
   if (standaloneImageLink) {
     const src = resolveNewsImageUrl(standaloneImageLink[1].trim());
-    if (!isDecorativeNewsImage(src)) {
+    if (isDecorativeNewsImage(src)) {
       return {
-        kind: "image",
+        kind: "paragraph",
         text: "",
-        imageSrc: src,
-        imageAlt: "Patch notes image",
       };
     }
+
+    return {
+      kind: "image",
+      text: "",
+      imageSrc: src,
+      imageAlt: "Patch notes image",
+    };
   }
 
   const headingMatch = line.match(HEADING_LINE_PATTERN);
@@ -589,8 +624,13 @@ export function parseIntelContentBlocks(content: string): IntelContentBlock[] {
       continue;
     }
 
+    const paragraphText = parsed.text.trim();
+    if (!paragraphText) {
+      continue;
+    }
+
     flushLists();
-    blocks.push({ kind: "paragraph", text: parsed.text });
+    blocks.push({ kind: "paragraph", text: paragraphText });
   }
 
   flushLists();

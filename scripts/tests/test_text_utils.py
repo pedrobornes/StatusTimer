@@ -145,6 +145,32 @@ class TextUtilsTests(unittest.TestCase):
         self.assertIn("https://www.youtube.com/watch?v=ARFSbodxJZU", markdown)
         self.assertIn("Expansion trailer.", markdown)
 
+    def test_markdown_from_html_converts_unquoted_previewyoutube_bbcode(self) -> None:
+        raw = (
+            "Embrace the slow side of..things below:\n\n"
+            "[previewyoutube=ZkR2oLp2yVk;full][/previewyoutube]\n\n"
+            "Thanks for watching!"
+        )
+        markdown = markdown_from_html(raw)
+        self.assertIn("https://www.youtube.com/watch?v=ZkR2oLp2yVk", markdown)
+        self.assertNotIn("previewyoutube", markdown)
+        self.assertNotIn("youtube_16x9_placeholder", markdown)
+
+    def test_markdown_from_html_converts_steam_rss_youtube_preview_block(self) -> None:
+        raw = (
+            "Embrace the slow side of..things below:<br><br>"
+            '<div onclick="javascript:ReplaceWithYouTubeEmbed( this );" '
+            'data-youtube="ZkR2oLp2yVk" class="sharedFilePreviewYouTubeVideo sizeFull">'
+            '<img class="sharedFilePreviewYouTubeVideo sizeFull" '
+            'src="https://steamcommunity.com/public/shared/images/responsive/youtube_16x9_placeholder.gif"/>'
+            '<iframe src="https://www.youtube-nocookie.com/embed/ZkR2oLp2yVk?fs=1&modestbranding=1&rel=0" '
+            'allowFullScreen="1" frameBorder="0"></iframe></div><br><br>Thanks for watching!'
+        )
+        markdown = markdown_from_html(raw)
+        self.assertIn("https://www.youtube.com/watch?v=ZkR2oLp2yVk", markdown)
+        self.assertNotIn("youtube_16x9_placeholder", markdown)
+        self.assertNotIn("<img", markdown)
+
     def test_clean_news_title_removes_source_tag_and_duplicate_game_name(self) -> None:
         title = clean_news_title(
             "[STEAM NEWS] PUBG: Battlegrounds: PUBG: BATTLEGROUNDS Weekly Bans Notice",
