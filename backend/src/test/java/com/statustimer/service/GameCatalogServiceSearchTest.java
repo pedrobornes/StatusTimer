@@ -417,6 +417,37 @@ class GameCatalogServiceSearchTest {
     }
 
     @Test
+    void searchMarksIgdbTbaSteamAnnouncementAsUpcoming() {
+        IgdbGameMatch guildWars3 = new IgdbGameMatch(
+                4743930L,
+                "Guild Wars 3",
+                "guild-wars-3--1",
+                null,
+                null,
+                4743930,
+                null,
+                null,
+                List.of("MMORPG"),
+                List.of(),
+                120,
+                null,
+                List.of(),
+                List.of(),
+                null,
+                Map.of()
+        );
+
+        when(igdbSearchClient.search(anyString(), anyInt())).thenReturn(List.of(guildWars3));
+
+        List<GameCatalogSearchResponse> results = gameCatalogService.search("guild wars 3");
+
+        assertTrue(results.stream().anyMatch(result -> "guild-wars-3".equals(result.slug())));
+        assertTrue(results.stream()
+                .filter(result -> "guild-wars-3".equals(result.slug()))
+                .anyMatch(result -> Boolean.TRUE.equals(result.upcomingRelease())));
+    }
+
+    @Test
     void searchIncludesIgdbDiscoveredGameWithoutLazyInitializationFailure() {
         IgdbGameMatch alterMatch = new IgdbGameMatch(
                 4001L,

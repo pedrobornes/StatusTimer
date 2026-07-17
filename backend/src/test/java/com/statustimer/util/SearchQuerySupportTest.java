@@ -35,4 +35,25 @@ class SearchQuerySupportTest {
         assertTrue(SearchQuerySupport.searchVariants("Halloween: The Game")
                 .contains("halloween the game"));
     }
+
+    @Test
+    void searchVariantsExpandPathOfExileAliases() {
+        assertTrue(SearchQuerySupport.searchVariants("poe").contains("path of exile"));
+        assertTrue(SearchQuerySupport.searchVariants("poe2").contains("path of exile 2"));
+        assertTrue(SearchQuerySupport.searchVariants("PoE 2").contains("path of exile 2"));
+    }
+
+    @Test
+    void matchesCatalogQueryUsesPathOfExileAlias() {
+        assertTrue(SearchQuerySupport.matchesCatalogQuery(
+                "poe",
+                "Path of Exile",
+                "path-of-exile"
+        ));
+        assertTrue(SearchQuerySupport.matchesCatalogQuery(
+                "poe2",
+                "Path of Exile 2",
+                "path-of-exile-2"
+        ));
+    }
 }

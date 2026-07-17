@@ -147,7 +147,7 @@ public record GameTelemetryResponse(
         String logoUrl = catalogService.resolveLogoUrl(slug, game.getLogoUrl());
         String coverUrl = catalogService.resolveCoverUrl(slug, game.getImageUrl());
         LocalDate releaseDate = game.resolveEarliestKnownReleaseDate().orElse(null);
-        boolean isUpcoming = releaseDate != null && releaseDate.isAfter(LocalDate.now());
+        boolean isUpcoming = game.isUpcomingRelease(LocalDate.now());
         Integer appId = game.getSteamAppId() != null
                 ? game.getSteamAppId()
                 : catalogService.resolveAppId(slug);

@@ -78,6 +78,9 @@ public final class SlugUtils {
         return normalized;
     }
 
+    private static final Pattern COLLAPSED_DISAMBIGUATION_SUFFIX =
+            Pattern.compile("^(.+)-(\\d+)$");
+
     /**
      * IGDB slugs merge possessive "'s" into the preceding word (e.g. {@code assassins-creed})
      * while StatusTimer splits on the apostrophe ({@code assassin-s-creed}).
@@ -93,5 +96,22 @@ public final class SlugUtils {
         }
 
         return Optional.of(matcher.group(1) + "s-" + matcher.group(2));
+    }
+
+    /**
+     * IGDB disambiguation uses {@code title--N}; {@link #toSlug} collapses that to {@code title-N}.
+     * Restore the double hyphen when looking titles up by slug on IGDB.
+     */
+    public static Optional<String> toIgdbDisambiguatedSlugVariant(String slug) {
+        if (slug == null || slug.isBlank() || slug.contains("--")) {
+            return Optional.empty();
+        }
+
+        Matcher matcher = COLLAPSED_DISAMBIGUATION_SUFFIX.matcher(slug.trim().toLowerCase());
+        if (!matcher.matches()) {
+            return Optional.empty();
+        }
+
+        return Optional.of(matcher.group(1) + "--" + matcher.group(2));
     }
 }

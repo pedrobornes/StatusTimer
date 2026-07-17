@@ -56,15 +56,15 @@ export default function GameSearchBar({
       const isUpcoming =
         game.upcomingRelease === true || upcomingSlugs.has(normalizedSlug);
 
-      if (isUpcoming) {
-        router.push(APP_ROUTES.release(canonicalSlug));
-        return;
-      }
-
       try {
         await activateGame(canonicalSlug);
       } catch {
-        // Navigation still proceeds; the status page triggers activation again.
+        // Navigation still proceeds; destination pages re-trigger activation.
+      }
+
+      if (isUpcoming) {
+        router.push(APP_ROUTES.release(canonicalSlug));
+        return;
       }
 
       router.push(APP_ROUTES.status(canonicalSlug));

@@ -1,6 +1,7 @@
 package com.statustimer.service;
 
 import com.statustimer.config.GameAssetPolicy;
+import com.statustimer.config.GameSlugMapper;
 import com.statustimer.dto.request.GameReleasePayload;
 import com.statustimer.dto.request.PlatformReleasePayload;
 import com.statustimer.dto.request.SyncGamesRequest;
@@ -13,6 +14,7 @@ import com.statustimer.util.IgdbMetadataSupport;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,7 @@ public class GameSyncService {
     private static final int MAX_URL_LENGTH = 2048;
 
     private final GameRepository gameRepository;
+    private final GameSlugMapper gameSlugMapper;
 
     @Transactional
     public SyncGamesResponse syncGames(SyncGamesRequest request) {
@@ -54,11 +57,8 @@ public class GameSyncService {
     }
 
     private boolean upsertGame(GameReleasePayload payload) {
-        Game game = gameRepository.findBySlug(payload.slug())
-                .orElseGet(() -> Game.builder()
-                        .slug(payload.slug())
-                        .hypeCount(resolveInitialHypeCount(payload.hypeCount()))
-                        .build());
+        String canonicalSlug = gameSlugMapper.getSteamSlug(payload.slug());
+        Game game = resolveGameForUpsert(payload, canonicalSlug);
 
         boolean isNew = game.getId() == null;
 
@@ -93,6 +93,43 @@ public class GameSyncService {
         syncPlatforms(game, payload.platforms());
         gameRepository.save(game);
         return isNew;
+    }
+
+    private Game resolveGameForUpsert(GameReleasePayload payload, String canonicalSlug) {
+        if (payload.igdbGameId() != null && payload.igdbGameId() > 0) {
+            Optional<Game> byIgdbId = gameRepository.findByIgdbGameId(payload.igdbGameId());
+            if (byIgdbId.isPresent()) {
+                Game existing = byIgdbId.get();
+                if (canonicalSlug != null
+                        && !canonicalSlug.isBlank()
+                        && !canonicalSlug.equals(existing.getSlug())
+                        && gameRepository.findBySlug(canonicalSlug).isEmpty()) {
+                    existing.setSlug(canonicalSlug);
+                }
+                return existing;
+            }
+        }
+
+        Optional<Game> byCanonicalSlug = canonicalSlug == null || canonicalSlug.isBlank()
+                ? Optional.empty()
+                : gameRepository.findBySlug(canonicalSlug);
+        if (byCanonicalSlug.isPresent()) {
+            return byCanonicalSlug.get();
+        }
+
+        if (payload.slug() != null
+                && !payload.slug().isBlank()
+                && !payload.slug().equals(canonicalSlug)) {
+            Optional<Game> byPayloadSlug = gameRepository.findBySlug(payload.slug());
+            if (byPayloadSlug.isPresent()) {
+                return byPayloadSlug.get();
+            }
+        }
+
+        return Game.builder()
+                .slug(canonicalSlug != null && !canonicalSlug.isBlank() ? canonicalSlug : payload.slug())
+                .hypeCount(resolveInitialHypeCount(payload.hypeCount()))
+                .build();
     }
 
     private void syncPlatforms(Game game, List<PlatformReleasePayload> platforms) {

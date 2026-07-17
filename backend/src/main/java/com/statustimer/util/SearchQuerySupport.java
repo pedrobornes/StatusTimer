@@ -1,10 +1,10 @@
 package com.statustimer.util;
 
 import java.text.Normalizer;
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -13,6 +13,15 @@ import java.util.Set;
 public final class SearchQuerySupport {
 
     private static final int MIN_TOKEN_LENGTH = 2;
+
+    /**
+     * Short community abbreviations expanded before catalog / IGDB search.
+     */
+    private static final Map<String, String> SEARCH_QUERY_ALIASES = Map.of(
+            "poe", "path of exile",
+            "poe2", "path of exile 2",
+            "poe 2", "path of exile 2"
+    );
 
     private SearchQuerySupport() {
     }
@@ -56,7 +65,29 @@ public final class SearchQuerySupport {
             variants.add(relaxed);
         }
 
+        String alias = resolveSearchAlias(trimmed);
+        if (alias != null) {
+            variants.add(alias);
+            String relaxedAlias = relaxedSearchText(alias);
+            if (!relaxedAlias.isBlank()) {
+                variants.add(relaxedAlias);
+            }
+        }
+
         return List.copyOf(variants);
+    }
+
+    public static String resolveSearchAlias(String query) {
+        if (query == null || query.isBlank()) {
+            return null;
+        }
+
+        String normalized = normalizeForMatch(query);
+        if (normalized.isBlank()) {
+            return null;
+        }
+
+        return SEARCH_QUERY_ALIASES.get(normalized);
     }
 
     public static boolean matches(String query, String candidate) {
@@ -78,6 +109,16 @@ public final class SearchQuerySupport {
     }
 
     public static boolean matchesCatalogQuery(String query, String gameName, String slug) {
+        for (String variant : searchVariants(query)) {
+            if (matchesCatalogQueryExact(variant, gameName, slug)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static boolean matchesCatalogQueryExact(String query, String gameName, String slug) {
         if (matches(query, gameName)) {
             return true;
         }

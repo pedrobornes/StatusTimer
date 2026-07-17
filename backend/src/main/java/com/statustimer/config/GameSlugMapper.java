@@ -16,16 +16,23 @@ public class GameSlugMapper {
             Map.entry("counter-strike", "counter-strike-2")
     );
 
-    private static final Map<String, String> SLUG_ALIASES = Map.of(
-            "mecha-chameleon", "meccha-chameleon",
-            "counter-strike", "counter-strike-2",
+    private static final Map<String, String> SLUG_ALIASES = Map.ofEntries(
+            Map.entry("mecha-chameleon", "meccha-chameleon"),
+            Map.entry("counter-strike", "counter-strike-2"),
             // GTA V variants collapse into the IGDB slug.
-            "gta-v", "grand-theft-auto-v",
-            "grand-theft-auto-v-legacy", "grand-theft-auto-v",
-            "grand-theft-auto-v-enhanced", "grand-theft-auto-v",
+            Map.entry("gta-v", "grand-theft-auto-v"),
+            Map.entry("grand-theft-auto-v-legacy", "grand-theft-auto-v"),
+            Map.entry("grand-theft-auto-v-enhanced", "grand-theft-auto-v"),
             // Overwatch 2 is represented as IGDB slug "overwatch--1" but we expose "overwatch" in the app.
-            "overwatch-2", "overwatch",
-            "overwatch--1", "overwatch"
+            Map.entry("overwatch-2", "overwatch"),
+            Map.entry("overwatch--1", "overwatch"),
+            // IGDB disambiguation slug control-resonant--1 collapses to control-resonant-1;
+            // Twitch/catalog already owns the clean base slug.
+            Map.entry("control-resonant-1", "control-resonant"),
+            Map.entry("control-resonant--1", "control-resonant"),
+            // Same for Guild Wars 3 (IGDB guild-wars-3--1).
+            Map.entry("guild-wars-3-1", "guild-wars-3"),
+            Map.entry("guild-wars-3--1", "guild-wars-3")
     );
 
     public String resolveCanonicalSlug(String slug) {

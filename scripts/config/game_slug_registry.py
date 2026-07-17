@@ -30,6 +30,12 @@ CANONICAL_CATALOG_SLUGS: dict[str, str] = {
     "overwatch-2": "overwatch",
     # IGDB uses diablo-iv; Blizzard news feed uses diablo-4.
     "diablo-iv": "diablo-4",
+    # IGDB control-resonant--1 → control-resonant-1; Twitch/catalog uses the base slug.
+    "control-resonant-1": "control-resonant",
+    "control-resonant--1": "control-resonant",
+    # IGDB guild-wars-3--1 → guild-wars-3-1.
+    "guild-wars-3-1": "guild-wars-3",
+    "guild-wars-3--1": "guild-wars-3",
 }
 
 MANUAL_PROTECTED_SLUGS = frozenset({"valorant", "fortnite", "counter-strike-2"})

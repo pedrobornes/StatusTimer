@@ -8,6 +8,10 @@ const SLUG_ALIASES: Record<string, string> = {
   "diablo-iv": "diablo-4",
   "pubg-battlegrounds": "pubg",
   "apex-legends-1": "apex-legends",
+  "control-resonant-1": "control-resonant",
+  "control-resonant--1": "control-resonant",
+  "guild-wars-3-1": "guild-wars-3",
+  "guild-wars-3--1": "guild-wars-3",
 };
 
 const ROMAN_SUFFIXES: Record<string, string> = {

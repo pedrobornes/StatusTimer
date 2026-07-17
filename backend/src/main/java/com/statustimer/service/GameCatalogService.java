@@ -22,6 +22,8 @@ import com.statustimer.dto.response.ReconcileTwitchRanksResponse;
 import com.statustimer.dto.response.SyncGameCatalogResponse;
 import com.statustimer.config.GameTypeResolver;
 import com.statustimer.entity.Game;
+import com.statustimer.entity.GamePlatform;
+import com.statustimer.entity.GamePlatformDetail;
 import com.statustimer.entity.GameType;
 import com.statustimer.entity.LifecycleState;
 import com.statustimer.integration.IgdbSearchClient;
@@ -43,8 +45,10 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
@@ -473,23 +477,27 @@ public class GameCatalogService {
         if (directMatches.size() < limit) {
             String slugQuery = SlugUtils.toSlug(query);
             if (!slugQuery.isBlank()) {
-                igdbSearchClient.lookupBySlug(slugQuery).ifPresent(match -> {
-                    if (directMatches.stream().noneMatch(existing -> existing.igdbId() == match.igdbId())) {
-                        directMatches.add(match);
-                    }
-                });
+                appendDirectSlugLookup(slugQuery, directMatches);
+
+                SlugUtils.toIgdbDisambiguatedSlugVariant(slugQuery)
+                        .ifPresent(variant -> appendDirectSlugLookup(variant, directMatches));
+
+                appendDirectSlugLookup(slugQuery + "--1", directMatches);
 
                 SlugUtils.toIgdbPossessiveSlugVariant(slugQuery)
-                        .flatMap(igdbSearchClient::lookupBySlug)
-                        .ifPresent(match -> {
-                            if (directMatches.stream().noneMatch(existing -> existing.igdbId() == match.igdbId())) {
-                                directMatches.add(match);
-                            }
-                        });
+                        .ifPresent(variant -> appendDirectSlugLookup(variant, directMatches));
             }
         }
 
         appendReadOnlyIgdbMatches(directMatches.stream().limit(limit).toList(), results, seenSlugs);
+    }
+
+    private void appendDirectSlugLookup(String slug, List<IgdbGameMatch> directMatches) {
+        igdbSearchClient.lookupBySlug(slug).ifPresent(match -> {
+            if (directMatches.stream().noneMatch(existing -> existing.igdbId() == match.igdbId())) {
+                directMatches.add(match);
+            }
+        });
     }
 
     private int appendReadOnlyIgdbMatches(
@@ -725,6 +733,20 @@ public class GameCatalogService {
         Optional<IgdbGameMatch> bySlug = igdbSearchClient.lookupBySlug(canonicalSlug);
         if (bySlug.isPresent() && isMaterializableIgdbMatch(bySlug.get(), canonicalSlug)) {
             return bySlug;
+        }
+
+        Optional<IgdbGameMatch> disambiguatedMatch = SlugUtils.toIgdbDisambiguatedSlugVariant(canonicalSlug)
+                .flatMap(igdbSearchClient::lookupBySlug)
+                .filter(match -> isMaterializableIgdbMatch(match, canonicalSlug));
+        if (disambiguatedMatch.isPresent()) {
+            return disambiguatedMatch;
+        }
+
+        // IGDB often uses title--1 when the bare title slug is taken (e.g. guild-wars-3--1).
+        Optional<IgdbGameMatch> firstDisambiguation = igdbSearchClient.lookupBySlug(canonicalSlug + "--1")
+                .filter(match -> isMaterializableIgdbMatch(match, canonicalSlug));
+        if (firstDisambiguation.isPresent()) {
+            return firstDisambiguation;
         }
 
         Optional<IgdbGameMatch> possessiveMatch = SlugUtils.toIgdbPossessiveSlugVariant(canonicalSlug)
@@ -1100,10 +1122,127 @@ public class GameCatalogService {
             changed = true;
         }
 
+        if ((canonical.getIgdbGameId() == null || canonical.getIgdbGameId() <= 0)
+                && duplicate.getIgdbGameId() != null
+                && duplicate.getIgdbGameId() > 0) {
+            canonical.setIgdbGameId(duplicate.getIgdbGameId());
+            changed = true;
+        }
+
+        if (shouldPreferDuplicateName(duplicate.getGameName(), canonical.getGameName())) {
+            canonical.setGameName(duplicate.getGameName());
+            changed = true;
+        }
+
+        long duplicateHype = duplicate.getHypeCount() == null ? 0L : duplicate.getHypeCount();
+        long canonicalHype = canonical.getHypeCount() == null ? 0L : canonical.getHypeCount();
+        if (duplicateHype > canonicalHype) {
+            canonical.setHypeCount(duplicateHype);
+            changed = true;
+        }
+
+        if (isBlank(canonical.getImageUrl()) && !isBlank(duplicate.getImageUrl())) {
+            canonical.setImageUrl(duplicate.getImageUrl());
+            changed = true;
+        }
+
+        if (isBlank(canonical.getLogoUrl()) && !isBlank(duplicate.getLogoUrl())) {
+            canonical.setLogoUrl(duplicate.getLogoUrl());
+            changed = true;
+        }
+
+        if (isBlank(canonical.getCoverUrl()) && !isBlank(duplicate.getCoverUrl())) {
+            canonical.setCoverUrl(duplicate.getCoverUrl());
+            changed = true;
+        }
+
+        if ((canonical.getGenreNames() == null || canonical.getGenreNames().isEmpty())
+                && duplicate.getGenreNames() != null
+                && !duplicate.getGenreNames().isEmpty()) {
+            canonical.setGenreNames(List.copyOf(duplicate.getGenreNames()));
+            changed = true;
+        }
+
+        if (isBlank(canonical.getGenreName()) && !isBlank(duplicate.getGenreName())) {
+            canonical.setGenreName(duplicate.getGenreName());
+            changed = true;
+        }
+
+        if (canonical.getUserRating() == null && duplicate.getUserRating() != null) {
+            canonical.setUserRating(duplicate.getUserRating());
+            changed = true;
+        }
+
+        if (canonical.getCriticRating() == null && duplicate.getCriticRating() != null) {
+            canonical.setCriticRating(duplicate.getCriticRating());
+            changed = true;
+        }
+
+        if ((canonical.getScreenshotUrls() == null || canonical.getScreenshotUrls().isEmpty())
+                && duplicate.getScreenshotUrls() != null
+                && !duplicate.getScreenshotUrls().isEmpty()) {
+            canonical.setScreenshotUrls(List.copyOf(duplicate.getScreenshotUrls()));
+            changed = true;
+        }
+
+        if ((canonical.getTrailerVideoIds() == null || canonical.getTrailerVideoIds().isEmpty())
+                && duplicate.getTrailerVideoIds() != null
+                && !duplicate.getTrailerVideoIds().isEmpty()) {
+            canonical.setTrailerVideoIds(List.copyOf(duplicate.getTrailerVideoIds()));
+            changed = true;
+        }
+
+        if (mergeMissingPlatforms(canonical, duplicate)) {
+            changed = true;
+        }
+
         if (changed) {
             gameRepository.save(canonical);
             indexabilityService.recalculateForSlug(canonical.getSlug());
         }
+    }
+
+    private boolean mergeMissingPlatforms(Game canonical, Game duplicate) {
+        if (duplicate.getPlatforms() == null || duplicate.getPlatforms().isEmpty()) {
+            return false;
+        }
+
+        Map<GamePlatform, GamePlatformDetail> existingByPlatform = canonical.getPlatforms().stream()
+                .collect(Collectors.toMap(GamePlatformDetail::getPlatform, detail -> detail, (left, right) -> left));
+        boolean changed = false;
+
+        for (GamePlatformDetail duplicateDetail : List.copyOf(duplicate.getPlatforms())) {
+            GamePlatform platform = duplicateDetail.getPlatform();
+            if (platform == null || existingByPlatform.containsKey(platform)) {
+                continue;
+            }
+
+            canonical.getPlatforms().add(GamePlatformDetail.builder()
+                    .game(canonical)
+                    .platform(platform)
+                    .releaseDate(duplicateDetail.getReleaseDate())
+                    .build());
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    private static boolean shouldPreferDuplicateName(String duplicateName, String canonicalName) {
+        if (isBlank(duplicateName)) {
+            return false;
+        }
+        if (isBlank(canonicalName)) {
+            return true;
+        }
+
+        boolean duplicateHasYear = duplicateName.matches(".*\\(\\d{4}\\)\\s*$");
+        boolean canonicalHasYear = canonicalName.matches(".*\\(\\d{4}\\)\\s*$");
+        return duplicateHasYear && !canonicalHasYear;
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     private void reassignDuplicateForeignKeys(Game canonical, Game duplicate) {
@@ -1201,6 +1340,17 @@ public class GameCatalogService {
         return reloaded.orElse(game);
     }
 
+    private static boolean isIgdbMatchUpcoming(IgdbGameMatch match) {
+        LocalDate today = LocalDate.now();
+        if (match.firstReleaseDate() != null) {
+            return match.firstReleaseDate().isAfter(today);
+        }
+
+        // TBA titles: IGDB hype and/or a Steam store page (wishlist-era announcements).
+        return match.hypeCount() > 0
+                || (match.steamAppId() != null && match.steamAppId() > 0);
+    }
+
     private GameCatalogSearchResponse toSearchResponse(Game game) {
         return toSearchResponse(game, canonicalSearchSlug(game.getSlug()));
     }
@@ -1253,9 +1403,7 @@ public class GameCatalogService {
             genreName = genreNames.getFirst();
         }
 
-        boolean upcomingRelease = match.firstReleaseDate() != null
-                && match.firstReleaseDate().isAfter(LocalDate.now());
-
+        boolean upcomingRelease;
         Long id = null;
         Long livePlayers = null;
         Long twitchViewers = null;
@@ -1265,9 +1413,12 @@ public class GameCatalogService {
             id = game.getId();
             livePlayers = game.getLivePlayers();
             twitchViewers = game.getTwitchViewers();
+            upcomingRelease = game.isUpcomingRelease(LocalDate.now());
             if (steamAppId == null || steamAppId <= 0) {
                 steamAppId = resolveAppId(responseSlug);
             }
+        } else {
+            upcomingRelease = isIgdbMatchUpcoming(match);
         }
 
         return new GameCatalogSearchResponse(
@@ -1777,6 +1928,13 @@ public class GameCatalogService {
             game.setIgdbFirstReleaseDate(match.firstReleaseDate());
         }
 
+        if (match.hypeCount() > 0) {
+            long currentHype = game.getHypeCount() == null ? 0L : game.getHypeCount();
+            if (currentHype <= 0L) {
+                game.setHypeCount((long) match.hypeCount());
+            }
+        }
+
         if (game.getSteamAppId() == null && match.steamAppId() != null
                 && SteamAppIdPolicy.mayAssignSteamAppId(game.getSlug(), match.steamAppId())) {
             game.setSteamAppId(match.steamAppId());
@@ -1785,10 +1943,34 @@ public class GameCatalogService {
             }
         }
 
+        seedUpcomingPlatformTarget(game, match);
+
         PinnedGamePolicy.findBySlug(game.getSlug())
                 .ifPresent(pin -> game.setSteamAppId(pin.steamAppId()));
 
         SteamAppIdPolicy.sanitize(game);
+    }
+
+    private void seedUpcomingPlatformTarget(Game game, IgdbGameMatch match) {
+        if (match.firstReleaseDate() != null) {
+            return;
+        }
+
+        if (game.getPlatforms() != null && !game.getPlatforms().isEmpty()) {
+            return;
+        }
+
+        boolean hasSteamStore = match.steamAppId() != null && match.steamAppId() > 0
+                || (game.getSteamAppId() != null && game.getSteamAppId() > 0);
+        if (match.hypeCount() <= 0 && !hasSteamStore) {
+            return;
+        }
+
+        game.getPlatforms().add(GamePlatformDetail.builder()
+                .game(game)
+                .platform(GamePlatform.PC)
+                .releaseDate(null)
+                .build());
     }
 
     private boolean enforcePinnedGameAssets(Game game) {

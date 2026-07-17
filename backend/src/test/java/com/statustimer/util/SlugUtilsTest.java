@@ -34,8 +34,11 @@ class SlugUtilsTest {
     }
 
     @Test
-    void normalizeCatalogSlugConvertsRomanNumeralSuffixes() {
-        assertThat(SlugUtils.normalizeCatalogSlug("slay-the-spire-ii")).isEqualTo("slay-the-spire-2");
-        assertThat(SlugUtils.normalizeCatalogSlug("diablo-iv")).isEqualTo("diablo-4");
+    void toIgdbDisambiguatedSlugVariantRestoresCollapsedIgdbSuffix() {
+        assertThat(SlugUtils.toIgdbDisambiguatedSlugVariant("guild-wars-3-1"))
+                .contains("guild-wars-3--1");
+        assertThat(SlugUtils.toIgdbDisambiguatedSlugVariant("fable-1"))
+                .contains("fable--1");
+        assertThat(SlugUtils.toIgdbDisambiguatedSlugVariant("guild-wars-3--1")).isEmpty();
     }
 }

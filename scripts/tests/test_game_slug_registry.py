@@ -19,6 +19,14 @@ class GameSlugRegistryTests(unittest.TestCase):
     def test_normalize_catalog_slug_preserves_single_letter_roman_suffixes(self) -> None:
         self.assertEqual("grand-theft-auto-v", normalize_catalog_slug("grand-theft-auto-v"))
 
+    def test_normalize_catalog_slug_collapses_control_resonant_igdb_disambiguation(self) -> None:
+        self.assertEqual("control-resonant", normalize_catalog_slug("control-resonant-1"))
+        self.assertEqual("control-resonant", normalize_catalog_slug("control-resonant--1"))
+
+    def test_normalize_catalog_slug_collapses_guild_wars_3_igdb_disambiguation(self) -> None:
+        self.assertEqual("guild-wars-3", normalize_catalog_slug("guild-wars-3-1"))
+        self.assertEqual("guild-wars-3", normalize_catalog_slug("guild-wars-3--1"))
+
     def test_canonical_catalog_slug_applies_explicit_aliases(self) -> None:
         self.assertEqual("counter-strike-2", canonical_catalog_slug("counter-strike"))
         self.assertEqual("diablo-4", canonical_catalog_slug("diablo-iv"))
