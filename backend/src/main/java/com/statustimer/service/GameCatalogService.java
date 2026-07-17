@@ -899,19 +899,18 @@ public class GameCatalogService {
     }
 
     @Transactional
-    public int reconcileDuplicateIgdbGameIds() {
-        int reconciled = 0;
+    public int repairPinnedIgdbIdentities() {
+        int repaired = 0;
 
-        // First repair pinned rows that inherited another title's IGDB id (e.g. PoE ← PoE2).
         for (Game game : List.copyOf(gameRepository.findAllWithIgdbGameId())) {
             Optional<PinnedGamePolicy.Pin> pin = PinnedGamePolicy.findBySlug(game.getSlug());
-            if (pin.isEmpty() || game.getIgdbGameId() == null) {
+            if (pin.isEmpty()) {
                 continue;
             }
 
             PinnedGamePolicy.Pin resolved = pin.get();
             boolean changed = false;
-            if (game.getIgdbGameId() != resolved.igdbGameId()) {
+            if (game.getIgdbGameId() == null || game.getIgdbGameId() != resolved.igdbGameId()) {
                 game.setIgdbGameId(resolved.igdbGameId());
                 changed = true;
             }
@@ -923,9 +922,20 @@ public class GameCatalogService {
             }
             if (changed) {
                 gameRepository.save(game);
-                reconciled++;
+                repaired++;
             }
         }
+
+        if (repaired > 0) {
+            log.info("Repaired {} pinned catalog row(s) with polluted IGDB/Steam identity", repaired);
+        }
+
+        return repaired;
+    }
+
+    @Transactional
+    public int reconcileDuplicateIgdbGameIds() {
+        int reconciled = 0;
 
         Map<Long, List<Game>> byIgdbId = new java.util.LinkedHashMap<>();
         for (Game game : gameRepository.findAllWithIgdbGameId()) {
@@ -956,8 +966,10 @@ public class GameCatalogService {
                     continue;
                 }
 
-                mergeDuplicateIntoCanonical(keeper, duplicate);
-                deleteDuplicateCatalogGame(keeper, duplicate);
+                Game keeperFresh = gameRepository.findBySlugWithPlatforms(keeper.getSlug()).orElse(keeper);
+                Game duplicateFresh = gameRepository.findBySlugWithPlatforms(duplicate.getSlug()).orElse(duplicate);
+                mergeDuplicateIntoCanonical(keeperFresh, duplicateFresh);
+                deleteDuplicateCatalogGame(keeperFresh, duplicateFresh);
                 reconciled++;
             }
         }
@@ -974,7 +986,10 @@ public class GameCatalogService {
     }
 
     private Optional<Game> findPreferredGameByIgdbId(long igdbGameId, String preferredSlug) {
-        List<Game> matches = gameRepository.findAllByIgdbGameId(igdbGameId);
+        List<Game> matches = gameRepository.findAllByIgdbGameIdWithPlatforms(igdbGameId);
+        if (matches.isEmpty()) {
+            matches = gameRepository.findAllByIgdbGameId(igdbGameId);
+        }
         if (matches.isEmpty()) {
             return Optional.empty();
         }
@@ -1350,11 +1365,27 @@ public class GameCatalogService {
     }
 
     private boolean mergeMissingPlatforms(Game canonical, Game duplicate) {
-        if (duplicate.getPlatforms() == null || duplicate.getPlatforms().isEmpty()) {
+        try {
+            if (duplicate.getPlatforms() == null || duplicate.getPlatforms().isEmpty()) {
+                return false;
+            }
+        } catch (RuntimeException exception) {
+            log.debug("Skipping platform merge; duplicate platforms unavailable for {}", duplicate.getSlug());
             return false;
         }
 
-        Map<GamePlatform, GamePlatformDetail> existingByPlatform = canonical.getPlatforms().stream()
+        List<GamePlatformDetail> canonicalPlatforms;
+        try {
+            canonicalPlatforms = canonical.getPlatforms();
+            if (canonicalPlatforms == null) {
+                return false;
+            }
+        } catch (RuntimeException exception) {
+            log.debug("Skipping platform merge; canonical platforms unavailable for {}", canonical.getSlug());
+            return false;
+        }
+
+        Map<GamePlatform, GamePlatformDetail> existingByPlatform = canonicalPlatforms.stream()
                 .collect(Collectors.toMap(GamePlatformDetail::getPlatform, detail -> detail, (left, right) -> left));
         boolean changed = false;
 

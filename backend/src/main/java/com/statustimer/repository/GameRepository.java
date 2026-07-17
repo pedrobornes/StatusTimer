@@ -22,7 +22,10 @@ public interface GameRepository extends JpaRepository<Game, Long> {
 
     List<Game> findAllByIgdbGameId(Long igdbGameId);
 
-    @Query("SELECT g FROM Game g WHERE g.igdbGameId IS NOT NULL")
+    @Query("SELECT DISTINCT g FROM Game g LEFT JOIN FETCH g.platforms WHERE g.igdbGameId = :igdbGameId")
+    List<Game> findAllByIgdbGameIdWithPlatforms(@Param("igdbGameId") Long igdbGameId);
+
+    @Query("SELECT DISTINCT g FROM Game g LEFT JOIN FETCH g.platforms WHERE g.igdbGameId IS NOT NULL")
     List<Game> findAllWithIgdbGameId();
 
     @Override

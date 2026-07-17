@@ -48,6 +48,12 @@ public class CatalogLifecycleMigrationRunner implements CommandLineRunner {
         }
 
         try {
+            gameCatalogService.repairPinnedIgdbIdentities();
+        } catch (RuntimeException exception) {
+            log.warn("Failed to repair pinned IGDB/Steam identities during startup", exception);
+        }
+
+        try {
             gameCatalogService.reconcileDuplicateIgdbGameIds();
         } catch (RuntimeException exception) {
             log.warn("Failed to reconcile duplicate igdbGameId rows during startup", exception);
