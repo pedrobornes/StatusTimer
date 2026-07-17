@@ -70,4 +70,42 @@ class PinnedGamePolicyTest {
 
         assertTrue(PinnedGamePolicy.needsAssetRefresh(game));
     }
+
+    @Test
+    void separatesPathOfExileFromPathOfExile2() {
+        IgdbGameMatch poe2 = new IgdbGameMatch(
+                125_642L,
+                "Path of Exile 2",
+                "path-of-exile-2",
+                "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/ar37ie.jpg",
+                "https://images.igdb.com/igdb/image/upload/t_cover_big/co8ae0.jpg",
+                2_694_490,
+                88,
+                78,
+                List.of("Role-playing (RPG)"),
+                List.of(),
+                0,
+                null,
+                List.of(),
+                List.of(),
+                null,
+                Map.of()
+        );
+
+        assertFalse(PinnedGamePolicy.matchesIgdbGame("path-of-exile", poe2));
+        assertTrue(PinnedGamePolicy.isBlockedSteamAppId("path-of-exile", 2_694_490));
+        assertTrue(PinnedGamePolicy.matchesIgdbGame("path-of-exile-2", poe2));
+        assertTrue(PinnedGamePolicy.isBlockedSteamAppId("path-of-exile-2", 238960));
+    }
+
+    @Test
+    void detectsCorruptPathOfExileSteamBinding() {
+        Game game = Game.builder()
+                .slug("path-of-exile")
+                .gameName("Path of Exile")
+                .steamAppId(2_694_490)
+                .build();
+
+        assertTrue(PinnedGamePolicy.needsAssetRefresh(game));
+    }
 }

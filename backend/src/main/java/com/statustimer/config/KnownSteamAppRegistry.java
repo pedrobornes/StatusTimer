@@ -16,7 +16,9 @@ public class KnownSteamAppRegistry {
             Map.entry("assassin-s-creed-black-flag-resynced", 3751950),
             Map.entry("arma-reforger", 1874880),
             Map.entry("sea-of-thieves", 1172620),
-            Map.entry("resident-evil-village", 1196590)
+            Map.entry("resident-evil-village", 1196590),
+            Map.entry("path-of-exile", 238960),
+            Map.entry("path-of-exile-2", 2694490)
     );
 
     public Optional<Integer> resolveAppId(String slug) {

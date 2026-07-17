@@ -33,7 +33,9 @@ public final class TrackedGameCatalog {
             Map.entry("rocket-league", new GameAssetMetadata("Rocket League", 252950, false)),
             Map.entry("destiny-2", new GameAssetMetadata("Destiny 2", 1085660, false)),
             Map.entry("rust", new GameAssetMetadata("Rust", 252490, false)),
-            Map.entry("elden-ring", new GameAssetMetadata("Elden Ring", 1245620, false))
+            Map.entry("elden-ring", new GameAssetMetadata("Elden Ring", 1245620, false)),
+            Map.entry("path-of-exile", new GameAssetMetadata("Path of Exile", 238960, false)),
+            Map.entry("path-of-exile-2", new GameAssetMetadata("Path of Exile 2", 2694490, false))
     );
 
     private TrackedGameCatalog() {

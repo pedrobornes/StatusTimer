@@ -68,11 +68,35 @@ public final class PinnedGamePolicy {
             "https://images.igdb.com/igdb/image/upload/t_cover_big/co5zky.jpg"
     );
 
+    private static final Pin PATH_OF_EXILE = new Pin(
+            "path-of-exile",
+            "path-of-exile",
+            19_164L,
+            238960,
+            Set.of(2_694_490),
+            Set.of("path-of-exile-2"),
+            "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/ar12fj.jpg",
+            "https://images.igdb.com/igdb/image/upload/t_cover_big/co1r7h.jpg"
+    );
+
+    private static final Pin PATH_OF_EXILE_2 = new Pin(
+            "path-of-exile-2",
+            "path-of-exile-2",
+            125_642L,
+            2_694_490,
+            Set.of(238960),
+            Set.of("path-of-exile"),
+            "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/ar37ie.jpg",
+            "https://images.igdb.com/igdb/image/upload/t_cover_big/co8ae0.jpg"
+    );
+
     private static final Map<String, Pin> BY_SLUG = Map.of(
             COUNTER_STRIKE_2.slug(), COUNTER_STRIKE_2,
             GRAND_THEFT_AUTO_V.slug(), GRAND_THEFT_AUTO_V,
             OVERWATCH_2.slug(), OVERWATCH_2,
-            DEAD_BY_DAYLIGHT.slug(), DEAD_BY_DAYLIGHT
+            DEAD_BY_DAYLIGHT.slug(), DEAD_BY_DAYLIGHT,
+            PATH_OF_EXILE.slug(), PATH_OF_EXILE,
+            PATH_OF_EXILE_2.slug(), PATH_OF_EXILE_2
     );
 
     private PinnedGamePolicy() {

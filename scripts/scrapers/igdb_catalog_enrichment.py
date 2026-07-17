@@ -8,6 +8,7 @@ from clients.igdb_client import IgdbClient, is_igdb_configured
 from config.game_slug_registry import canonical_catalog_slug, get_pinned_game
 from config.settings import settings
 from models.catalog_schemas import GameCatalogEntryPayload
+from models.normalization import to_slug
 from scrapers.igdb_media import prefer_hero_url, resolve_catalog_image_urls
 from scrapers.platform_images import sanitize_igdb_image_url
 
@@ -26,6 +27,22 @@ def _is_blocked_igdb_metadata(slug: str, metadata) -> bool:
         return True
 
     return metadata.igdb_game_id != pin["igdb_game_id"]
+
+
+def _metadata_matches_catalog_slug(catalog_slug: str, metadata) -> bool:
+    """Reject sequels/editions that share a title prefix (PoE vs PoE 2)."""
+    igdb_slug = (getattr(metadata, "slug", None) or "").strip()
+    if not igdb_slug:
+        return False
+
+    collapsed = to_slug(igdb_slug)
+    if collapsed == catalog_slug or igdb_slug == catalog_slug:
+        return True
+
+    if collapsed.startswith(f"{catalog_slug}-") or igdb_slug.startswith(f"{catalog_slug}-"):
+        return False
+
+    return False
 
 
 def enrich_catalog_entries_with_igdb(
@@ -62,8 +79,22 @@ def enrich_catalog_entries_with_igdb(
             # "Fable" 2004 original vs the upcoming reboot).
             metadata = client.lookup_game_metadata_by_id(working_entry.igdb_game_id)
         else:
-            # First-time discovery only: fall back to a name search.
-            metadata = client.lookup_game_metadata(working_entry.game_name)
+            # Prefer exact slug before fuzzy name search (avoids PoE → PoE 2).
+            metadata = client.lookup_game_metadata_by_slug(canonical_slug)
+            if metadata is not None and not _metadata_matches_catalog_slug(canonical_slug, metadata):
+                metadata = None
+            if metadata is None:
+                metadata = client.lookup_game_metadata(working_entry.game_name)
+                if metadata is not None and not _metadata_matches_catalog_slug(
+                    canonical_slug,
+                    metadata,
+                ):
+                    logger.info(
+                        "Skipping IGDB name-search hit %s for catalog slug %s",
+                        getattr(metadata, "slug", None),
+                        canonical_slug,
+                    )
+                    metadata = None
 
         if metadata is None:
             if pin is not None:

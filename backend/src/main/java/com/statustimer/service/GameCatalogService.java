@@ -900,6 +900,33 @@ public class GameCatalogService {
 
     @Transactional
     public int reconcileDuplicateIgdbGameIds() {
+        int reconciled = 0;
+
+        // First repair pinned rows that inherited another title's IGDB id (e.g. PoE ← PoE2).
+        for (Game game : List.copyOf(gameRepository.findAllWithIgdbGameId())) {
+            Optional<PinnedGamePolicy.Pin> pin = PinnedGamePolicy.findBySlug(game.getSlug());
+            if (pin.isEmpty() || game.getIgdbGameId() == null) {
+                continue;
+            }
+
+            PinnedGamePolicy.Pin resolved = pin.get();
+            boolean changed = false;
+            if (game.getIgdbGameId() != resolved.igdbGameId()) {
+                game.setIgdbGameId(resolved.igdbGameId());
+                changed = true;
+            }
+            if (!Integer.valueOf(resolved.steamAppId()).equals(game.getSteamAppId())) {
+                game.setSteamAppId(resolved.steamAppId());
+                clearPollutedSteamDerivedFields(game);
+                clearSteamQuarantine(game);
+                changed = true;
+            }
+            if (changed) {
+                gameRepository.save(game);
+                reconciled++;
+            }
+        }
+
         Map<Long, List<Game>> byIgdbId = new java.util.LinkedHashMap<>();
         for (Game game : gameRepository.findAllWithIgdbGameId()) {
             Long igdbId = game.getIgdbGameId();
@@ -909,18 +936,26 @@ public class GameCatalogService {
             byIgdbId.computeIfAbsent(igdbId, ignored -> new ArrayList<>()).add(game);
         }
 
-        int reconciled = 0;
         for (Map.Entry<Long, List<Game>> entry : byIgdbId.entrySet()) {
             List<Game> duplicates = entry.getValue();
             if (duplicates.size() < 2) {
                 continue;
             }
 
-            Game keeper = pickPreferredIgdbDuplicate(duplicates);
+            Game keeper = pickPreferredIgdbDuplicate(duplicates, entry.getKey());
             for (Game duplicate : duplicates) {
                 if (duplicate.getId() == null || duplicate.getId().equals(keeper.getId())) {
                     continue;
                 }
+
+                // Never merge distinct sequels/editions that only share a polluted IGDB id.
+                if (areDistinctCatalogTitles(keeper.getSlug(), duplicate.getSlug())) {
+                    duplicate.setIgdbGameId(null);
+                    gameRepository.save(duplicate);
+                    reconciled++;
+                    continue;
+                }
+
                 mergeDuplicateIntoCanonical(keeper, duplicate);
                 deleteDuplicateCatalogGame(keeper, duplicate);
                 reconciled++;
@@ -928,13 +963,17 @@ public class GameCatalogService {
         }
 
         if (reconciled > 0) {
-            log.info("Reconciled {} duplicate igdbGameId catalog row(s)", reconciled);
+            log.info("Reconciled {} duplicate/polluted igdbGameId catalog row(s)", reconciled);
         }
 
         return reconciled;
     }
 
     private Optional<Game> findPreferredGameByIgdbId(long igdbGameId) {
+        return findPreferredGameByIgdbId(igdbGameId, null);
+    }
+
+    private Optional<Game> findPreferredGameByIgdbId(long igdbGameId, String preferredSlug) {
         List<Game> matches = gameRepository.findAllByIgdbGameId(igdbGameId);
         if (matches.isEmpty()) {
             return Optional.empty();
@@ -948,19 +987,57 @@ public class GameCatalogService {
                 igdbGameId,
                 matches.stream().map(Game::getSlug).toList()
         );
-        return Optional.of(pickPreferredIgdbDuplicate(matches));
+
+        if (preferredSlug != null && !preferredSlug.isBlank()) {
+            Optional<Game> exactSlug = matches.stream()
+                    .filter(game -> preferredSlug.equals(game.getSlug()))
+                    .findFirst();
+            if (exactSlug.isPresent()) {
+                return exactSlug;
+            }
+
+            List<Game> nonSequel = matches.stream()
+                    .filter(game -> !areDistinctCatalogTitles(preferredSlug, game.getSlug()))
+                    .toList();
+            if (!nonSequel.isEmpty()) {
+                return Optional.of(pickPreferredIgdbDuplicate(nonSequel, igdbGameId));
+            }
+        }
+
+        return Optional.of(pickPreferredIgdbDuplicate(matches, igdbGameId));
     }
 
-    private Game pickPreferredIgdbDuplicate(List<Game> candidates) {
+    private Game pickPreferredIgdbDuplicate(List<Game> candidates, long igdbGameId) {
         return candidates.stream()
                 .min(Comparator
-                        .comparingInt((Game game) -> gameSlugMapper.isCanonicalCatalogSlug(game.getSlug()) ? 0 : 1)
+                        .comparingInt((Game game) -> {
+                            Optional<PinnedGamePolicy.Pin> pin = PinnedGamePolicy.findBySlug(game.getSlug());
+                            if (pin.isPresent() && pin.get().igdbGameId() == igdbGameId) {
+                                return 0;
+                            }
+                            return 1;
+                        })
+                        .thenComparingInt((Game game) -> gameSlugMapper.isCanonicalCatalogSlug(game.getSlug()) ? 0 : 1)
                         .thenComparing((Game game) -> game.getHypeCount() == null ? 0L : game.getHypeCount(),
-                                Comparator.reverseOrder())
-                        .thenComparing((Game game) -> game.getPlatforms() == null ? 0 : game.getPlatforms().size(),
                                 Comparator.reverseOrder())
                         .thenComparing(game -> game.getId() == null ? Long.MAX_VALUE : game.getId()))
                 .orElse(candidates.getFirst());
+    }
+
+    private static boolean areDistinctCatalogTitles(String leftSlug, String rightSlug) {
+        if (leftSlug == null || rightSlug == null || leftSlug.equals(rightSlug)) {
+            return false;
+        }
+
+        if (isSequelOrEditionSlug(leftSlug, rightSlug) || isSequelOrEditionSlug(rightSlug, leftSlug)) {
+            return true;
+        }
+
+        Optional<PinnedGamePolicy.Pin> leftPin = PinnedGamePolicy.findBySlug(leftSlug);
+        Optional<PinnedGamePolicy.Pin> rightPin = PinnedGamePolicy.findBySlug(rightSlug);
+        return leftPin.isPresent()
+                && rightPin.isPresent()
+                && leftPin.get().igdbGameId() != rightPin.get().igdbGameId();
     }
 
     private Optional<Game> resolveExistingGameForIgdbMatch(IgdbGameMatch match) {
@@ -969,9 +1046,13 @@ public class GameCatalogService {
 
     private Optional<Game> resolveExistingGameForIgdbMatch(IgdbGameMatch match, String slug) {
         if (match.igdbId() > 0) {
-            Optional<Game> byIgdbId = findPreferredGameByIgdbId(match.igdbId());
+            Optional<Game> byIgdbId = findPreferredGameByIgdbId(match.igdbId(), slug);
             if (byIgdbId.isPresent()) {
-                return byIgdbId;
+                Game existing = byIgdbId.get();
+                // Do not reattach a sequel/edition hit onto a different catalog title.
+                if (slug == null || slug.isBlank() || !areDistinctCatalogTitles(slug, existing.getSlug())) {
+                    return byIgdbId;
+                }
             }
         }
 
@@ -2049,9 +2130,15 @@ public class GameCatalogService {
 
         if (!Integer.valueOf(pin.steamAppId()).equals(game.getSteamAppId())) {
             game.setSteamAppId(pin.steamAppId());
-            changed = clearSteamQuarantine(game) || changed;
+            clearPollutedSteamDerivedFields(game);
+            changed = clearSteamQuarantine(game) || true;
         } else if (Boolean.TRUE.equals(game.getSteamBlacklisted())) {
             changed = clearSteamQuarantine(game) || changed;
+        }
+
+        if (game.getIgdbGameId() == null || game.getIgdbGameId() != pin.igdbGameId()) {
+            game.setIgdbGameId(pin.igdbGameId());
+            changed = true;
         }
 
         String trackedName = TrackedGameCatalog.resolveGameName(pin.slug());
@@ -2069,12 +2156,28 @@ public class GameCatalogService {
                     .filter(candidate -> PinnedGamePolicy.matchesIgdbGame(game.getSlug(), candidate));
             if (match.isPresent()) {
                 applyIgdbMatch(game, match.get());
+                game.setSteamAppId(pin.steamAppId());
                 return true;
             }
         }
 
         PinnedGamePolicy.applyFallbackAssets(game);
         return true;
+    }
+
+    private void clearPollutedSteamDerivedFields(Game game) {
+        game.setLivePlayers(null);
+        game.setSteamReviewCount(null);
+        game.setSteamReviewScorePercent(null);
+        game.setSteamShortDescription(null);
+        game.setSteamPriceFinal(null);
+        game.setSteamCurrency(null);
+        game.setSteamReleaseDate(null);
+        game.setIgdbFirstReleaseDate(null);
+        game.setScreenshotUrls(List.of());
+        game.setTrailerVideoIds(List.of());
+        game.setExternalLinks(Map.of());
+        game.setNextMetricsAt(LocalDateTime.now());
     }
 
     @Transactional
@@ -2201,22 +2304,39 @@ public class GameCatalogService {
         }
 
         String candidateSlug = SlugUtils.toSlug(match.name());
+        if (isSequelOrEditionSlug(slug, candidateSlug)) {
+            return false;
+        }
         if (slug.equals(candidateSlug)) {
             return true;
         }
 
         String igdbSlug = match.igdbSlug();
         if (igdbSlug != null && !igdbSlug.isBlank()) {
-            if (slug.equals(igdbSlug.trim())) {
+            String trimmedIgdbSlug = igdbSlug.trim();
+            String collapsedIgdbSlug = SlugUtils.toSlug(trimmedIgdbSlug);
+            if (isSequelOrEditionSlug(slug, collapsedIgdbSlug) || isSequelOrEditionSlug(slug, trimmedIgdbSlug)) {
+                return false;
+            }
+
+            if (slug.equals(trimmedIgdbSlug) || slug.equals(collapsedIgdbSlug)) {
                 return true;
             }
 
             return SlugUtils.toIgdbPossessiveSlugVariant(slug)
-                    .map(variant -> variant.equals(igdbSlug.trim()))
+                    .map(variant -> variant.equals(trimmedIgdbSlug))
                     .orElse(false);
         }
 
         return false;
+    }
+
+    private static boolean isSequelOrEditionSlug(String catalogSlug, String candidateSlug) {
+        if (catalogSlug == null || candidateSlug == null || catalogSlug.isBlank() || candidateSlug.isBlank()) {
+            return false;
+        }
+
+        return candidateSlug.startsWith(catalogSlug + "-") || candidateSlug.startsWith(catalogSlug + "--");
     }
 
     private void resolveAllSteamAppIds(Game game) {

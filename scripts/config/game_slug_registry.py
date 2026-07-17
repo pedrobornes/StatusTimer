@@ -57,6 +57,8 @@ KNOWN_STEAM_APP_IDS: dict[str, int] = {
     "arma-reforger": 1874880,
     "sea-of-thieves": 1172620,
     "resident-evil-village": 1196590,
+    "path-of-exile": 238960,
+    "path-of-exile-2": 2694490,
 }
 
 
@@ -122,6 +124,32 @@ PINNED_GAMES: dict[str, PinnedGame] = {
         ),
         "fallback_cover_url": (
             "https://images.igdb.com/igdb/image/upload/t_cover_big/co5zky.jpg"
+        ),
+    },
+    "path-of-exile": {
+        "igdb_slug": "path-of-exile",
+        "igdb_game_id": 19164,
+        "steam_app_id": 238960,
+        "blocked_steam_app_ids": frozenset({2694490}),
+        "blocked_igdb_slugs": frozenset({"path-of-exile-2"}),
+        "fallback_logo_url": (
+            "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/ar12fj.jpg"
+        ),
+        "fallback_cover_url": (
+            "https://images.igdb.com/igdb/image/upload/t_cover_big/co1r7h.jpg"
+        ),
+    },
+    "path-of-exile-2": {
+        "igdb_slug": "path-of-exile-2",
+        "igdb_game_id": 125642,
+        "steam_app_id": 2694490,
+        "blocked_steam_app_ids": frozenset({238960}),
+        "blocked_igdb_slugs": frozenset({"path-of-exile"}),
+        "fallback_logo_url": (
+            "https://images.igdb.com/igdb/image/upload/t_screenshot_huge/ar37ie.jpg"
+        ),
+        "fallback_cover_url": (
+            "https://images.igdb.com/igdb/image/upload/t_cover_big/co8ae0.jpg"
         ),
     },
 }
