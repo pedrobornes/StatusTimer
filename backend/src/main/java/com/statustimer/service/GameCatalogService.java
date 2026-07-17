@@ -43,6 +43,7 @@ import com.statustimer.util.SlugUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -897,13 +898,78 @@ public class GameCatalogService {
         return reloadGameWithPlatforms(saved);
     }
 
+    @Transactional
+    public int reconcileDuplicateIgdbGameIds() {
+        Map<Long, List<Game>> byIgdbId = new java.util.LinkedHashMap<>();
+        for (Game game : gameRepository.findAllWithIgdbGameId()) {
+            Long igdbId = game.getIgdbGameId();
+            if (igdbId == null || igdbId <= 0) {
+                continue;
+            }
+            byIgdbId.computeIfAbsent(igdbId, ignored -> new ArrayList<>()).add(game);
+        }
+
+        int reconciled = 0;
+        for (Map.Entry<Long, List<Game>> entry : byIgdbId.entrySet()) {
+            List<Game> duplicates = entry.getValue();
+            if (duplicates.size() < 2) {
+                continue;
+            }
+
+            Game keeper = pickPreferredIgdbDuplicate(duplicates);
+            for (Game duplicate : duplicates) {
+                if (duplicate.getId() == null || duplicate.getId().equals(keeper.getId())) {
+                    continue;
+                }
+                mergeDuplicateIntoCanonical(keeper, duplicate);
+                deleteDuplicateCatalogGame(keeper, duplicate);
+                reconciled++;
+            }
+        }
+
+        if (reconciled > 0) {
+            log.info("Reconciled {} duplicate igdbGameId catalog row(s)", reconciled);
+        }
+
+        return reconciled;
+    }
+
+    private Optional<Game> findPreferredGameByIgdbId(long igdbGameId) {
+        List<Game> matches = gameRepository.findAllByIgdbGameId(igdbGameId);
+        if (matches.isEmpty()) {
+            return Optional.empty();
+        }
+        if (matches.size() == 1) {
+            return Optional.of(matches.getFirst());
+        }
+
+        log.warn(
+                "Multiple catalog rows share igdbGameId={}: {}",
+                igdbGameId,
+                matches.stream().map(Game::getSlug).toList()
+        );
+        return Optional.of(pickPreferredIgdbDuplicate(matches));
+    }
+
+    private Game pickPreferredIgdbDuplicate(List<Game> candidates) {
+        return candidates.stream()
+                .min(Comparator
+                        .comparingInt((Game game) -> gameSlugMapper.isCanonicalCatalogSlug(game.getSlug()) ? 0 : 1)
+                        .thenComparing((Game game) -> game.getHypeCount() == null ? 0L : game.getHypeCount(),
+                                Comparator.reverseOrder())
+                        .thenComparing((Game game) -> game.getPlatforms() == null ? 0 : game.getPlatforms().size(),
+                                Comparator.reverseOrder())
+                        .thenComparing(game -> game.getId() == null ? Long.MAX_VALUE : game.getId()))
+                .orElse(candidates.getFirst());
+    }
+
     private Optional<Game> resolveExistingGameForIgdbMatch(IgdbGameMatch match) {
         return resolveExistingGameForIgdbMatch(match, resolveDiscoverySlug(match));
     }
 
     private Optional<Game> resolveExistingGameForIgdbMatch(IgdbGameMatch match, String slug) {
         if (match.igdbId() > 0) {
-            Optional<Game> byIgdbId = gameRepository.findByIgdbGameId(match.igdbId());
+            Optional<Game> byIgdbId = findPreferredGameByIgdbId(match.igdbId());
             if (byIgdbId.isPresent()) {
                 return byIgdbId;
             }

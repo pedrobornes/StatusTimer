@@ -48,6 +48,12 @@ public class CatalogLifecycleMigrationRunner implements CommandLineRunner {
         }
 
         try {
+            gameCatalogService.reconcileDuplicateIgdbGameIds();
+        } catch (RuntimeException exception) {
+            log.warn("Failed to reconcile duplicate igdbGameId rows during startup", exception);
+        }
+
+        try {
             gameCatalogService.reconcileProtectedTitleSpinoffs();
         } catch (RuntimeException exception) {
             log.warn("Failed to quarantine protected-title spinoffs during startup", exception);

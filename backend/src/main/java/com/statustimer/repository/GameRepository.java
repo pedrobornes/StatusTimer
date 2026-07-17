@@ -20,7 +20,10 @@ public interface GameRepository extends JpaRepository<Game, Long> {
     @Query("SELECT DISTINCT g FROM Game g LEFT JOIN FETCH g.platforms WHERE g.slug = :slug")
     Optional<Game> findBySlugWithPlatforms(@Param("slug") String slug);
 
-    Optional<Game> findByIgdbGameId(Long igdbGameId);
+    List<Game> findAllByIgdbGameId(Long igdbGameId);
+
+    @Query("SELECT g FROM Game g WHERE g.igdbGameId IS NOT NULL")
+    List<Game> findAllWithIgdbGameId();
 
     @Override
     @EntityGraph(attributePaths = {"platforms"})

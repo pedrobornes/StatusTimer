@@ -97,7 +97,7 @@ public class GameSyncService {
 
     private Game resolveGameForUpsert(GameReleasePayload payload, String canonicalSlug) {
         if (payload.igdbGameId() != null && payload.igdbGameId() > 0) {
-            Optional<Game> byIgdbId = gameRepository.findByIgdbGameId(payload.igdbGameId());
+            Optional<Game> byIgdbId = findPreferredGameByIgdbId(payload.igdbGameId());
             if (byIgdbId.isPresent()) {
                 Game existing = byIgdbId.get();
                 if (canonicalSlug != null
@@ -130,6 +130,24 @@ public class GameSyncService {
                 .slug(canonicalSlug != null && !canonicalSlug.isBlank() ? canonicalSlug : payload.slug())
                 .hypeCount(resolveInitialHypeCount(payload.hypeCount()))
                 .build();
+    }
+
+    private Optional<Game> findPreferredGameByIgdbId(long igdbGameId) {
+        List<Game> matches = gameRepository.findAllByIgdbGameId(igdbGameId);
+        if (matches.isEmpty()) {
+            return Optional.empty();
+        }
+        if (matches.size() == 1) {
+            return Optional.of(matches.getFirst());
+        }
+
+        return matches.stream()
+                .min(java.util.Comparator
+                        .comparing((Game game) -> game.getHypeCount() == null ? 0L : game.getHypeCount(),
+                                java.util.Comparator.reverseOrder())
+                        .thenComparing(game -> game.getId() == null ? Long.MAX_VALUE : game.getId()))
+                .map(Optional::of)
+                .orElseGet(Optional::empty);
     }
 
     private void syncPlatforms(Game game, List<PlatformReleasePayload> platforms) {
