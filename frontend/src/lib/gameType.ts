@@ -21,14 +21,9 @@ export function canTrackSteamPlayers(
 
 export function shouldShowSearchLiveMetrics(
   game: {
-    steamAppId?: number | null;
     livePlayers?: number | null;
     twitchViewers?: number | null;
   },
 ): boolean {
-  return (
-    game.livePlayers != null ||
-    game.twitchViewers != null ||
-    canTrackSteamPlayers({ appId: game.steamAppId })
-  );
+  return game.livePlayers != null || game.twitchViewers != null;
 }

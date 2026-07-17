@@ -128,31 +128,30 @@ export default memo(function GameTelemetryCard({
     </div>
   );
 
+  const hasLiveMetrics =
+    (showLivePlayers && telemetry.livePlayers != null) ||
+    telemetry.twitchViewers != null;
+
+  const metricsRow = hasLiveMetrics ? (
+    <GameLiveMetricsRow
+      livePlayers={telemetry.livePlayers}
+      twitchViewers={telemetry.twitchViewers}
+      orientation={relocateMetricsForMaintenance ? "horizontal" : "vertical"}
+      className="mt-0"
+      unifiedColors={unifiedMetricsColors}
+      showLivePlayers={showLivePlayers}
+    />
+  ) : null;
+
   const metricsBlock = (
     <div className="flex min-w-0 flex-1 flex-col justify-center">
-      <GameLiveMetricsRow
-        livePlayers={telemetry.livePlayers}
-        twitchViewers={telemetry.twitchViewers}
-        orientation="vertical"
-        className="mt-0"
-        unifiedColors={unifiedMetricsColors}
-        showLivePlayers={showLivePlayers}
-      />
+      {metricsRow}
     </div>
   );
 
-  const maintenanceMetricsBlock = (
-    <div className="mt-3.5">
-      <GameLiveMetricsRow
-        livePlayers={telemetry.livePlayers}
-        twitchViewers={telemetry.twitchViewers}
-        orientation="horizontal"
-        className="mt-0"
-        unifiedColors={unifiedMetricsColors}
-        showLivePlayers={showLivePlayers}
-      />
-    </div>
-  );
+  const maintenanceMetricsBlock = metricsRow ? (
+    <div className="mt-3.5">{metricsRow}</div>
+  ) : null;
 
   const titleHeading = (
     <h3 className="line-clamp-2 break-words whitespace-normal text-xl font-bold tracking-tight text-white transition-colors duration-200 group-hover:text-emerald-400 sm:text-2xl">
