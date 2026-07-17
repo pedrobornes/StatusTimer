@@ -125,6 +125,26 @@ class TextUtilsTests(unittest.TestCase):
         self.assertIn("/english.png)", markdown)
         self.assertIn("Event announcement body.", markdown)
 
+    def test_markdown_from_html_converts_steam_youtube_previews(self) -> None:
+        raw_html = """
+        <p class="bb_paragraph">Tune in for the reveal.</p>
+        <div onclick="javascript:ReplaceWithYouTubeEmbed( this );" data-youtube="&quot;zWUrJCGIp18" class="sharedFilePreviewYouTubeVideo">
+          <img class="sharedFilePreviewYouTubeVideo" src="https://steamcommunity.com/public/shared/images/responsive/youtube_16x9_placeholder.gif"/>
+          <iframe src="https://www.youtube-nocookie.com/embed/&quot;zWUrJCGIp18?fs=1" allowFullScreen="1"></iframe>
+        </div>
+        <div class="bb_h2"><b>How to Participate</b></div>
+        """
+        markdown = markdown_from_html(raw_html)
+        self.assertIn("https://www.youtube.com/watch?v=zWUrJCGIp18", markdown)
+        self.assertIn("## How to Participate", markdown)
+        self.assertNotIn("youtube_16x9_placeholder", markdown)
+
+    def test_markdown_from_html_converts_previewyoutube_bbcode(self) -> None:
+        raw = '[previewyoutube="ARFSbodxJZU;full"][/previewyoutube]<p>Expansion trailer.</p>'
+        markdown = markdown_from_html(raw)
+        self.assertIn("https://www.youtube.com/watch?v=ARFSbodxJZU", markdown)
+        self.assertIn("Expansion trailer.", markdown)
+
     def test_clean_news_title_removes_source_tag_and_duplicate_game_name(self) -> None:
         title = clean_news_title(
             "[STEAM NEWS] PUBG: Battlegrounds: PUBG: BATTLEGROUNDS Weekly Bans Notice",

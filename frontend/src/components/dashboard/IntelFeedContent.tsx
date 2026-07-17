@@ -35,14 +35,14 @@ function inlinePartClassName(part: IntelInlinePart): string {
 
 function headingClassName(level: 1 | 2 | 3): string {
   if (level === 1) {
-    return "text-xl font-bold tracking-tight text-white";
+    return "text-2xl font-bold tracking-tight text-white sm:text-3xl";
   }
 
   if (level === 2) {
-    return "text-lg font-semibold text-violet-100";
+    return "text-xl font-semibold tracking-tight text-white sm:text-2xl";
   }
 
-  return "text-sm font-semibold uppercase tracking-[0.14em] text-violet-200/90";
+  return "text-lg font-semibold text-violet-100 sm:text-xl";
 }
 
 function IntelInlineText({ text }: { text: string }) {
@@ -101,6 +101,25 @@ export default function IntelFeedContent({ content }: IntelFeedContentProps) {
                 className="max-w-full rounded-xl border border-white/10"
               />
             </figure>
+          );
+        }
+
+        if (block.kind === "youtube") {
+          return (
+            <div
+              key={`youtube-${index}`}
+              className="overflow-hidden rounded-xl border border-white/10 bg-black/40"
+            >
+              <div className="aspect-video w-full">
+                <iframe
+                  title="News video"
+                  src={`https://www.youtube.com/embed/${block.videoId}`}
+                  className="h-full w-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            </div>
           );
         }
 

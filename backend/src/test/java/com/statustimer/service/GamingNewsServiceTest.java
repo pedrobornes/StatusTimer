@@ -142,10 +142,42 @@ class GamingNewsServiceTest {
                 .thenReturn(List.of(existing));
         when(gameCatalogService.resolveGameName("palworld")).thenReturn("Palworld");
         when(gameCatalogService.resolveCoverUrl("palworld", null)).thenReturn(null);
+        when(gamingNewsRepository.save(any(GamingNews.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         var response = gamingNewsService.create(new CreateGamingNewsRequest(
                 "Important: About MODs and 1.0!",
                 "New ingest attempt",
+                "palworld",
+                NOW
+        ));
+
+        assertThat(response.id()).isEqualTo(9L);
+        assertThat(response.content()).isEqualTo("New ingest attempt");
+        verify(gamingNewsRepository).save(existing);
+    }
+
+    @Test
+    void createSkipsSaveWhenDuplicateContentIsUnchanged() {
+        Game palworld = Game.builder().slug("palworld").gameName("Palworld").build();
+        GamingNews existing = GamingNews.builder()
+                .id(9L)
+                .title("Important: About MODs and 1.0!!")
+                .content("Same copy")
+                .newsSlug("palworld-important-about-mods-and-10")
+                .game(palworld)
+                .gameTag("palworld")
+                .createdAt(NOW)
+                .publishedAt(NOW)
+                .build();
+
+        when(gamingNewsRepository.findAllForGameSlug("palworld", "palworld", Pageable.unpaged()))
+                .thenReturn(List.of(existing));
+        when(gameCatalogService.resolveGameName("palworld")).thenReturn("Palworld");
+        when(gameCatalogService.resolveCoverUrl("palworld", null)).thenReturn(null);
+
+        var response = gamingNewsService.create(new CreateGamingNewsRequest(
+                "Important: About MODs and 1.0!",
+                "Same copy",
                 "palworld",
                 NOW
         ));
@@ -177,6 +209,7 @@ class GamingNewsServiceTest {
                 .thenReturn(java.util.Optional.of(existing));
         when(gameCatalogService.resolveGameName("teamfight-tactics")).thenReturn("Teamfight Tactics");
         when(gameCatalogService.resolveCoverUrl("teamfight-tactics", null)).thenReturn(null);
+        when(gamingNewsRepository.save(any(GamingNews.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         var response = gamingNewsService.create(new CreateGamingNewsRequest(
                 "Space Gods Tactician's Crown Primer",
@@ -188,7 +221,8 @@ class GamingNewsServiceTest {
         assertThat(response.id()).isEqualTo(11L);
         assertThat(response.slug())
                 .isEqualTo("teamfight-tactics-space-gods-tactician-s-crown-primer");
-        verify(gamingNewsRepository, never()).save(any(GamingNews.class));
+        assertThat(response.content()).isEqualTo("Re-ingest attempt");
+        verify(gamingNewsRepository).save(existing);
         verify(gamingNewsRepository, never()).existsByNewsSlug(any());
     }
 

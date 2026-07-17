@@ -94,7 +94,7 @@ public class GamingNewsService {
     public GamingNewsResponse create(CreateGamingNewsRequest request) {
         Optional<GamingNews> existing = findDuplicateNews(request.gameTag(), request.title());
         if (existing.isPresent()) {
-            return GamingNewsResponse.fromEntity(existing.get(), gameCatalogService);
+            return refreshExistingNewsContent(existing.get(), request);
         }
 
         LocalDateTime ingestedAt = LocalDateTime.now();
@@ -103,7 +103,7 @@ public class GamingNewsService {
         Optional<GamingNews> baseSlugMatch = gamingNewsRepository.findByNewsSlug(baseSlug);
         if (baseSlugMatch.isPresent()
                 && dedupKey.equals(buildNewsDedupKey(baseSlugMatch.get()))) {
-            return GamingNewsResponse.fromEntity(baseSlugMatch.get(), gameCatalogService);
+            return refreshExistingNewsContent(baseSlugMatch.get(), request);
         }
 
         String resolvedSlug = baseSlugMatch.isPresent()
@@ -121,6 +121,22 @@ public class GamingNewsService {
                 gamingNewsRepository.save(
                         normalized.toEntity(ingestedAt, resolvedSlug, linkedGame)
                 ),
+                gameCatalogService
+        );
+    }
+
+    private GamingNewsResponse refreshExistingNewsContent(
+            GamingNews entity,
+            CreateGamingNewsRequest request
+    ) {
+        String newContent = normalizeContent(request.content());
+        if (newContent.equals(entity.getContent())) {
+            return GamingNewsResponse.fromEntity(entity, gameCatalogService);
+        }
+
+        entity.setContent(newContent);
+        return GamingNewsResponse.fromEntity(
+                gamingNewsRepository.save(entity),
                 gameCatalogService
         );
     }

@@ -234,7 +234,17 @@ const TABLE_DIVIDER_LINE_PATTERN = /^\|(\s*:?-+:?\s*\|)+\s*$/;
 const STANDALONE_IMAGE_LINK_LINE_PATTERN =
   /^\[(https?:\/\/[^\]]+\.(?:png|jpe?g|gif|webp|avif)(?:\?[^\]]*)?)\]\([^)]+\)$/i;
 
-const DECORATIVE_IMAGE_HINTS = ["bar-red.png", "bar_blue.png", "spacer", "pixel.gif"];
+const DECORATIVE_IMAGE_HINTS = [
+  "bar-red.png",
+  "bar_blue.png",
+  "spacer",
+  "pixel.gif",
+  "youtube_16x9_placeholder",
+];
+
+const YOUTUBE_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
+const YOUTUBE_URL_LINE_PATTERN =
+  /^(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?(?:[^#\s]*&)?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})(?:[^\s]*)?$/i;
 
 export type IntelContentBlock =
   | { kind: "heading"; level: 1 | 2 | 3; text: string }
@@ -242,6 +252,7 @@ export type IntelContentBlock =
   | { kind: "ul"; items: string[] }
   | { kind: "ol"; items: string[] }
   | { kind: "image"; src: string; alt: string }
+  | { kind: "youtube"; videoId: string }
   | { kind: "table"; headers: string[]; rows: string[][] };
 
 export type IntelInlinePart =
@@ -274,6 +285,48 @@ export function isImageUrl(url: string): boolean {
 export function isDecorativeNewsImage(url: string): boolean {
   const lowered = url.toLowerCase();
   return DECORATIVE_IMAGE_HINTS.some((hint) => lowered.includes(hint));
+}
+
+export function extractYoutubeVideoId(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const lineMatch = trimmed.match(YOUTUBE_URL_LINE_PATTERN);
+  if (lineMatch?.[1] && YOUTUBE_VIDEO_ID_PATTERN.test(lineMatch[1])) {
+    return lineMatch[1];
+  }
+
+  try {
+    const parsed = new URL(trimmed.startsWith("http") ? trimmed : `https://${trimmed}`);
+    const host = parsed.hostname.replace(/^www\./, "").toLowerCase();
+    if (host === "youtu.be") {
+      const id = parsed.pathname.split("/").filter(Boolean)[0] ?? "";
+      return YOUTUBE_VIDEO_ID_PATTERN.test(id) ? id : null;
+    }
+
+    if (host === "youtube.com" || host === "youtube-nocookie.com" || host === "m.youtube.com") {
+      const fromQuery = parsed.searchParams.get("v");
+      if (fromQuery && YOUTUBE_VIDEO_ID_PATTERN.test(fromQuery)) {
+        return fromQuery;
+      }
+
+      const segments = parsed.pathname.split("/").filter(Boolean);
+      if (
+        segments[0] &&
+        ["embed", "shorts", "live", "v"].includes(segments[0]) &&
+        segments[1] &&
+        YOUTUBE_VIDEO_ID_PATTERN.test(segments[1])
+      ) {
+        return segments[1];
+      }
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
 }
 
 export function resolveNewsImageUrl(url: string): string {
@@ -379,12 +432,22 @@ function tryParseTableBlock(
 }
 
 function parseLineKind(line: string): {
-  kind: "heading" | "bullet" | "numbered" | "paragraph" | "image";
+  kind: "heading" | "bullet" | "numbered" | "paragraph" | "image" | "youtube";
   level?: 1 | 2 | 3;
   text: string;
   imageSrc?: string;
   imageAlt?: string;
+  videoId?: string;
 } {
+  const youtubeId = extractYoutubeVideoId(line);
+  if (youtubeId) {
+    return {
+      kind: "youtube",
+      text: "",
+      videoId: youtubeId,
+    };
+  }
+
   const imageMatch = line.match(IMAGE_LINE_PATTERN);
   if (imageMatch) {
     const src = resolveNewsImageUrl(imageMatch[2].trim());
@@ -484,6 +547,15 @@ export function parseIntelContentBlocks(content: string): IntelContentBlock[] {
     }
 
     const parsed = parseLineKind(line);
+
+    if (parsed.kind === "youtube" && parsed.videoId) {
+      flushLists();
+      blocks.push({
+        kind: "youtube",
+        videoId: parsed.videoId,
+      });
+      continue;
+    }
 
     if (parsed.kind === "image" && parsed.imageSrc) {
       flushLists();

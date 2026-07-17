@@ -46,7 +46,36 @@ _BB_HEADING_PATTERN = re.compile(
 _IMAGE_LINK_LINE_PATTERN = re.compile(r"^\[([^\]]+)\]\(([^)]+)\)\s*$")
 _IMAGE_MARKDOWN_LINE_PATTERN = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)\s*$")
 _EMPTY_BULLET_LINE_PATTERN = re.compile(r"^-\s*$")
-_DECORATIVE_IMAGE_HINTS = ("bar-red.png", "bar_blue.png", "1x1", "spacer", "pixel.gif")
+_DECORATIVE_IMAGE_HINTS = (
+    "bar-red.png",
+    "bar_blue.png",
+    "1x1",
+    "spacer",
+    "pixel.gif",
+    "youtube_16x9_placeholder",
+)
+_YOUTUBE_VIDEO_ID_PATTERN = re.compile(r"[A-Za-z0-9_-]{11}")
+_PREVIEW_YOUTUBE_BB_PATTERN = re.compile(
+    r'\[previewyoutube="([^";\]]+)(?:;[^"]*)?"\](?:\s*\[/previewyoutube\])?',
+    re.IGNORECASE,
+)
+_STEAM_YOUTUBE_DIV_PATTERN = re.compile(
+    r"<div\b[^>]*(?:data-youtube\s*=|sharedFilePreviewYouTubeVideo|PreviewYouTubeVideo)[^>]*>",
+    re.IGNORECASE,
+)
+_YOUTUBE_IFRAME_PATTERN = re.compile(
+    r"<iframe\b[^>]*(?:youtube(?:-nocookie)?\.com/embed/)[^>]*(?:/>|>.*?</iframe>)",
+    re.IGNORECASE | re.DOTALL,
+)
+_YOUTUBE_EMBED_ID_PATTERN = re.compile(
+    r"(?:youtube(?:-nocookie)?\.com/embed/|youtu\.be/)(?:&(?:amp;)?quot;|&#34;|\"|&quot;)*"
+    r"([A-Za-z0-9_-]{11})",
+    re.IGNORECASE,
+)
+_DATA_YOUTUBE_ID_PATTERN = re.compile(
+    r"data-youtube\s*=\s*(?:&(?:amp;)?quot;|&#34;|\"|&quot;|'|)*([A-Za-z0-9_-]{11})",
+    re.IGNORECASE,
+)
 
 
 class _PlainTextExtractor(HTMLParser):
@@ -237,6 +266,17 @@ class _MarkdownExtractor(HTMLParser):
                 self._flush_block_break()
                 alt = next((value for key, value in attrs if key == "alt" and value), "") or "Patch notes image"
                 self._append(f"![{alt}]({src.strip()})")
+                self._append("\n\n")
+            return
+
+        if normalized == "iframe":
+            if self._in_table_cell:
+                return
+            src = next((value for key, value in attrs if key == "src" and value), None) or ""
+            video_id = _extract_youtube_id_from_markup(src)
+            if video_id:
+                self._flush_block_break()
+                self._append(f"https://www.youtube.com/watch?v={video_id}")
                 self._append("\n\n")
             return
 
@@ -497,6 +537,54 @@ def _is_decorative_image_url(url: str) -> bool:
     return any(hint in lowered for hint in _DECORATIVE_IMAGE_HINTS)
 
 
+def _clean_youtube_video_id(raw_value: str | None) -> str | None:
+    if not raw_value:
+        return None
+
+    cleaned = unescape(raw_value).strip().strip("\"'")
+    cleaned = cleaned.replace("&quot;", "").replace("&#34;", "").strip("\"'")
+    if ";" in cleaned:
+        cleaned = cleaned.split(";", 1)[0].strip()
+
+    match = _YOUTUBE_VIDEO_ID_PATTERN.fullmatch(cleaned)
+    return match.group(0) if match else None
+
+
+def _youtube_watch_markdown(video_id: str) -> str:
+    return f"\n\nhttps://www.youtube.com/watch?v={video_id}\n\n"
+
+
+def _extract_youtube_id_from_markup(value: str) -> str | None:
+    data_match = _DATA_YOUTUBE_ID_PATTERN.search(value)
+    if data_match:
+        video_id = _clean_youtube_video_id(data_match.group(1))
+        if video_id:
+            return video_id
+
+    embed_match = _YOUTUBE_EMBED_ID_PATTERN.search(value)
+    if embed_match:
+        return _clean_youtube_video_id(embed_match.group(1))
+
+    return None
+
+
+def _rewrite_steam_youtube_markup(value: str) -> str:
+    """Convert Steam YouTube previews into standalone watch URLs before HTML parsing."""
+
+    def replace_bbcode(match: re.Match[str]) -> str:
+        video_id = _clean_youtube_video_id(match.group(1))
+        return _youtube_watch_markdown(video_id) if video_id else ""
+
+    def replace_div(match: re.Match[str]) -> str:
+        video_id = _extract_youtube_id_from_markup(match.group(0))
+        return _youtube_watch_markdown(video_id) if video_id else match.group(0)
+
+    rewritten = _PREVIEW_YOUTUBE_BB_PATTERN.sub(replace_bbcode, value)
+    rewritten = _STEAM_YOUTUBE_DIV_PATTERN.sub(replace_div, rewritten)
+    rewritten = _YOUTUBE_IFRAME_PATTERN.sub("", rewritten)
+    return rewritten
+
+
 def _strip_empty_bullets(markdown: str) -> str:
     lines: list[str] = []
     for raw_line in markdown.splitlines():
@@ -580,6 +668,8 @@ def _normalize_feed_markup(value: str) -> str:
     normalized = value.strip()
     if not normalized:
         return ""
+
+    normalized = _rewrite_steam_youtube_markup(normalized)
 
     for pattern, replacement in _BB_CODE_PATTERNS:
         normalized = pattern.sub(replacement, normalized)
