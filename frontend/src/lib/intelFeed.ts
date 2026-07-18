@@ -182,6 +182,22 @@ export function normalizeMarkdownSpacing(text: string): string {
     .replace(/(\[([^\]]+)\]\([^)]+\))([A-Za-z0-9])/g, "$1 $2");
 }
 
+/** Truncate without splitting UTF-16 surrogate pairs (e.g. emoji). */
+function truncateUtf16Safe(text: string, maxLength: number): string {
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  let end = maxLength;
+  const code = text.charCodeAt(end - 1);
+  // High surrogate left without its low pair → back up one code unit.
+  if (code >= 0xd800 && code <= 0xdbff) {
+    end -= 1;
+  }
+
+  return text.slice(0, end).trimEnd();
+}
+
 export function buildNewsExcerpt(content: string, maxLength = 180): string {
   const plain = normalizeMarkdownSpacing(content)
     .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
@@ -197,7 +213,7 @@ export function buildNewsExcerpt(content: string, maxLength = 180): string {
     return plain;
   }
 
-  return `${plain.slice(0, maxLength).trimEnd()}…`;
+  return `${truncateUtf16Safe(plain, maxLength)}…`;
 }
 
 export function resolveNewsGameName(
