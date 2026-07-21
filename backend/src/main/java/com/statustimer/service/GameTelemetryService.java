@@ -12,6 +12,8 @@ import com.statustimer.dto.response.GameTelemetryResponse;
 import com.statustimer.dto.response.SyncTelemetryResponse;
 import com.statustimer.dto.response.TelemetryHistorySnapshotResponse;
 import com.statustimer.dto.response.TelemetryIncidentResponse;
+import com.statustimer.entity.Game;
+import com.statustimer.entity.GameType;
 import com.statustimer.entity.GameTelemetry;
 import com.statustimer.entity.LifecycleState;
 import com.statustimer.entity.ScrapeJobStatus;
@@ -492,7 +494,13 @@ public class GameTelemetryService {
             return TelemetryStatus.UPCOMING;
         }
 
-        return payload.status();
+        TelemetryStatus status = payload.status();
+        if (game.getGameType() == GameType.SINGLE_PLAYER
+                && (status == TelemetryStatus.DOWN || status == TelemetryStatus.MAINTENANCE)) {
+            return TelemetryStatus.ONLINE;
+        }
+
+        return status;
     }
 
     private boolean shouldSuppressIncidentHistory(

@@ -136,11 +136,15 @@ public class GameCatalogService {
             return trackedAppId;
         }
 
+        Optional<Integer> knownAppId = knownSteamAppRegistry.resolveAppId(canonicalSlug);
+        if (knownAppId.isPresent()) {
+            return knownAppId.get();
+        }
+
         return findBySlug(slug)
                 .map(Game::getSteamAppId)
                 .filter(appId -> appId != null && appId > 0)
                 .filter(appId -> !PinnedGamePolicy.isBlockedSteamAppId(canonicalSlug, appId))
-                .or(() -> knownSteamAppRegistry.resolveAppId(canonicalSlug))
                 .orElse(null);
     }
 
@@ -272,6 +276,10 @@ public class GameCatalogService {
                     () -> CatalogMatureContentPolicy.applyQuarantineIfMature(game)
             );
             return;
+        }
+
+        if (Integer.valueOf(failedAppId).equals(game.getSteamAppId())) {
+            game.setSteamAppId(null);
         }
 
         CatalogMatureContentPolicy.applyQuarantineIfMature(game);

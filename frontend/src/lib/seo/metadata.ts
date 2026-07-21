@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { buildGameStatusKeywords } from "@/config/routes";
 import { resolveGameDisplayName } from "@/lib/gameAssets";
+import { isSinglePlayerGame, resolvePublicTelemetryStatus } from "@/lib/gameType";
 import { buildRobotsDirective, isIndexableTelemetry } from "@/lib/seo/indexability";
 import {
   buildGameStatusMetaDescription,
@@ -42,12 +43,14 @@ export async function buildStatusPageMetadata(gameSlug: string): Promise<Metadat
   let liveStatus: TelemetryStatus | null = null;
   let lastChecked: string | null = null;
   let indexable = false;
+  let isSinglePlayerProfile = false;
 
   try {
     const detail = await getGameStatusDetail(gameSlug);
     gameName = resolveStatusPageGameName(gameSlug, detail);
     if (detail.telemetry) {
-      liveStatus = detail.telemetry.status;
+      isSinglePlayerProfile = isSinglePlayerGame(detail.telemetry);
+      liveStatus = resolvePublicTelemetryStatus(detail.telemetry);
       lastChecked = detail.telemetry.lastChecked ?? null;
       indexable = isIndexableTelemetry(detail.telemetry);
     }
@@ -57,12 +60,12 @@ export async function buildStatusPageMetadata(gameSlug: string): Promise<Metadat
     indexable = false;
   }
 
-  const title = buildGameStatusTitle(gameName, liveStatus);
-  const description = buildGameStatusMetaDescription(
-    gameName,
-    liveStatus,
-    lastChecked,
-  );
+  const title = isSinglePlayerProfile
+    ? gameName
+    : buildGameStatusTitle(gameName, liveStatus);
+  const description = isSinglePlayerProfile
+    ? `Latest news and live audience data for ${gameName}.`
+    : buildGameStatusMetaDescription(gameName, liveStatus, lastChecked);
 
   return {
     title: {

@@ -1,9 +1,31 @@
+import type { TelemetryStatus } from "@/types/telemetry";
+
 export type GameType = "multiplayer" | "single_player";
 
 export function isSinglePlayerGame(
   telemetry?: { type?: GameType | null } | null,
 ): boolean {
   return telemetry?.type === "single_player";
+}
+
+export function resolvePublicTelemetryStatus(
+  telemetry?: {
+    type?: GameType | null;
+    status?: TelemetryStatus | null;
+  } | null,
+): TelemetryStatus | null {
+  if (!telemetry?.status) {
+    return null;
+  }
+
+  if (
+    isSinglePlayerGame(telemetry) &&
+    (telemetry.status === "MAINTENANCE" || telemetry.status === "DOWN")
+  ) {
+    return "ONLINE";
+  }
+
+  return telemetry.status;
 }
 
 export function canTrackSteamPlayers(

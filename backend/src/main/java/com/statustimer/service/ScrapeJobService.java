@@ -115,8 +115,7 @@ public class ScrapeJobService {
 
         if (existing.getStatus() == ScrapeJobStatus.FAILED) {
             Game game = gameRepository.findBySlug(existing.getSlug()).orElse(null);
-            Integer steamAppId = game != null ? game.getSteamAppId() : null;
-            if (!CatalogMonitoringPolicy.supportsServerProbe(existing.getSlug(), steamAppId)) {
+            if (!CatalogMonitoringPolicy.supportsServerProbe(game)) {
                 return false;
             }
         }

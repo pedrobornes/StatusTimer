@@ -26,7 +26,7 @@ import { buildStatusPageJsonLd } from "@/lib/seo/jsonLd";
 import { buildStatusPageMetadata } from "@/lib/seo/metadata";
 import { resolveCanonicalGameSlug } from "@/lib/gameSlugs";
 import { isUpcomingGameTelemetry } from "@/lib/gameLifecycle";
-import { isSinglePlayerGame } from "@/lib/gameType";
+import { isSinglePlayerGame, resolvePublicTelemetryStatus } from "@/lib/gameType";
 import { resolveGenres } from "@/lib/genres";
 import { hasGameMedia, resolveGameMedia } from "@/lib/gameMedia";
 import { getConfirmedPlatforms, resolveReleaseBoxArtUrl } from "@/lib/releases";
@@ -306,9 +306,11 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
       notFound();
     }
 
+    const publicStatus = resolvePublicTelemetryStatus(telemetry) ?? telemetry.status;
+
     const faqItems = buildGameStatusFaq({
       gameName,
-      status: telemetry.status,
+      status: publicStatus,
       lastChecked: telemetry.lastChecked,
       livePlayers: telemetry.livePlayers,
       twitchViewers: telemetry.twitchViewers,
@@ -321,7 +323,7 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
     const jsonLd = buildStatusPageJsonLd({
       gameSlug: slug,
       gameName,
-      status: telemetry.status,
+      status: publicStatus,
       lastChecked: telemetry.lastChecked,
       pageUrl,
       siteUrl,
@@ -336,7 +338,7 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
       ? `Live Twitch audience, IGDB ratings, trailers, and news for ${gameName}.`
       : isSinglePlayerProfile
         ? `Latest news and live audience data for ${gameName}.`
-        : buildStatusPageSubtitle(gameName, telemetry.status);
+        : buildStatusPageSubtitle(gameName, publicStatus);
     const sidebarStatusLabel = isCatalogProfile
       ? `${gameName} live audience`
       : `${gameName} server status`;

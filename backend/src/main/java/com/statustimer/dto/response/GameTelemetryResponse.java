@@ -71,9 +71,8 @@ public record GameTelemetryResponse(
                 .orElse(null);
         boolean isUpcoming = entity.getStatus() == TelemetryStatus.UPCOMING
                 || (releaseDate != null && releaseDate.isAfter(LocalDate.now()));
-        String status = isUpcoming
-                ? TelemetryStatus.UPCOMING.name()
-                : entity.getStatus().name();
+        GameType gameType = catalogService.resolveGameType(slug);
+        String status = resolvePublicStatus(entity.getStatus(), isUpcoming, gameType);
         Integer twitchRank = catalogService.resolveTwitchRank(slug);
         String twitchGameId = catalogService.resolveTwitchGameId(slug);
         LocalDate steamReleaseDate = catalogService.resolveSteamReleaseDate(slug);
@@ -105,7 +104,6 @@ public record GameTelemetryResponse(
                 .map(Game::getTrailerVideoIds)
                 .filter(ids -> ids != null && !ids.isEmpty())
                 .orElse(List.of());
-        GameType gameType = catalogService.resolveGameType(slug);
         boolean playersTrackable = catalogService.canTrackSteamPlayers(slug);
 
         return new GameTelemetryResponse(
@@ -196,6 +194,23 @@ public record GameTelemetryResponse(
                 gameType.toApiValue(),
                 playersTrackable
         );
+    }
+
+    private static String resolvePublicStatus(
+            TelemetryStatus rawStatus,
+            boolean isUpcoming,
+            GameType gameType
+    ) {
+        if (isUpcoming) {
+            return TelemetryStatus.UPCOMING.name();
+        }
+
+        if (gameType == GameType.SINGLE_PLAYER
+                && (rawStatus == TelemetryStatus.DOWN || rawStatus == TelemetryStatus.MAINTENANCE)) {
+            return TelemetryStatus.ONLINE.name();
+        }
+
+        return rawStatus.name();
     }
 
 }

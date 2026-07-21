@@ -36,6 +36,11 @@ class KnownSteamAppRegistryTest {
     }
 
     @Test
+    void resolvesFalloutNewVegas() {
+        assertEquals(22380, registry.resolveAppId("fallout-new-vegas").orElseThrow());
+    }
+
+    @Test
     void returnsEmptyForUnknownSlug() {
         assertTrue(registry.resolveAppId("minecraft").isEmpty());
     }

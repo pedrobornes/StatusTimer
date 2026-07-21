@@ -70,13 +70,11 @@ def _query_app_details(
         return None
 
     if not app_payload.get("success"):
-        return ProbeOutcome(
-            status=TelemetryStatus.MAINTENANCE,
-            latency_ms=latency_ms,
-            data_source=TelemetrySource.STEAM_API,
-            context=f"Steam appdetails success=false for appId={app_id}",
-            ambiguous=True,
+        logger.warning(
+            "Steam appdetails success=false for appId=%s (invalid or unavailable listing)",
+            app_id,
         )
+        return None
 
     data = app_payload.get("data", {})
     if not isinstance(data, dict):

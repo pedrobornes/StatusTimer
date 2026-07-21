@@ -68,7 +68,9 @@ class SteamProbeTests(unittest.TestCase):
         self.assertEqual(outcome.status, TelemetryStatus.UPCOMING)
         self.assertFalse(outcome.ambiguous)
 
-    def test_appdetails_failure_marks_maintenance(self) -> None:
+    @patch("scrapers.steam_probe.settings")
+    def test_appdetails_failure_returns_none(self, settings_mock: Mock) -> None:
+        settings_mock.steam_api_key = None
         session = Mock()
         session.get.return_value = Mock(
             status_code=200,
@@ -83,10 +85,7 @@ class SteamProbeTests(unittest.TestCase):
             timeout=5,
         )
 
-        self.assertIsNotNone(outcome)
-        assert outcome is not None
-        self.assertEqual(outcome.status, TelemetryStatus.MAINTENANCE)
-        self.assertTrue(outcome.ambiguous)
+        self.assertIsNone(outcome)
 
 
 if __name__ == "__main__":

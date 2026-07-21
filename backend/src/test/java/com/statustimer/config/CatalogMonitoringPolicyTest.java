@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.statustimer.entity.Game;
+import com.statustimer.entity.GameType;
 import org.junit.jupiter.api.Test;
 
 class CatalogMonitoringPolicyTest {
@@ -47,5 +48,18 @@ class CatalogMonitoringPolicyTest {
         assertFalse(CatalogMonitoringPolicy.isCatalogOnlyProfile(
                 Game.builder().slug("teamfight-tactics").build()
         ));
+    }
+
+    @Test
+    void singlePlayerTitlesDoNotSupportServerProbe() {
+        Game game = Game.builder()
+                .slug("fallout-new-vegas")
+                .gameName("Fallout: New Vegas")
+                .steamAppId(22380)
+                .gameType(GameType.SINGLE_PLAYER)
+                .build();
+
+        assertFalse(CatalogMonitoringPolicy.supportsServerProbe(game));
+        assertTrue(CatalogMonitoringPolicy.isCatalogOnlyProfile(game));
     }
 }
