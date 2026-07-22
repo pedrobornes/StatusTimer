@@ -7,6 +7,16 @@ spring:
     username: ${DB_USER:${MYSQLUSER:statustimer}}
     password: ${DB_PASSWORD:${MYSQLPASSWORD:}}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      # MySQL/proxy often closes idle sockets before Hikari's default maxLifetime (30m).
+      # Keep lifetime below typical wait_timeout and refresh idle connections early.
+      maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:10}
+      minimum-idle: ${HIKARI_MIN_IDLE:2}
+      connection-timeout: 10000
+      validation-timeout: 5000
+      idle-timeout: 300000
+      max-lifetime: 480000
+      keepalive-time: 60000
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:

@@ -105,7 +105,11 @@ public interface GameRepository extends JpaRepository<Game, Long> {
     @Query("SELECT g FROM Game g WHERE g.twitchRank IS NOT NULL")
     List<Game> findAllWithTwitchRank();
 
-    @EntityGraph(attributePaths = {"platforms"})
+    /**
+     * Catalog listing must paginate in SQL. Do not EntityGraph/JOIN FETCH
+     * {@code platforms} here: Hibernate would load the full match set into memory
+     * and apply LIMIT afterwards (HHH90003004).
+     */
     @Query("""
             SELECT g FROM Game g
             WHERE (:genre IS NULL
