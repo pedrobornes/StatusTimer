@@ -4,12 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   CircleHelp,
+  Coffee,
   Gamepad2,
   Home,
   Rocket,
 } from "lucide-react";
 import StatusTimerSonarLogo from "@/components/ui/StatusTimerSonarLogo";
 import { APP_ROUTES } from "@/config/routes";
+import { KOFI_URL } from "@/config/site";
 
 interface NavItem {
   href: string;
@@ -75,6 +77,16 @@ export default function Navigation() {
                 </Link>
               );
             })}
+            <a
+              href={KOFI_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl px-2.5 py-2 text-[10px] font-medium uppercase tracking-[0.14em] text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-white sm:gap-2 sm:px-3 sm:text-xs"
+              title="Support StatusTimer on Ko-fi"
+            >
+              <Coffee className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span className="hidden sm:inline">Support</span>
+            </a>
           </div>
         </div>
 

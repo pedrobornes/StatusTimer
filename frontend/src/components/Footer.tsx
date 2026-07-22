@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Scale } from "lucide-react";
 import { APP_ROUTES } from "@/config/routes";
 import { TRADEMARK_FOOTER_NOTICE } from "@/config/legal";
-import { CONTACT_EMAIL, SITE_NAME } from "@/config/site";
+import { CONTACT_EMAIL, KOFI_URL, SITE_NAME } from "@/config/site";
 
 const PRODUCT_LINKS = [
   { href: APP_ROUTES.home, label: "Monitor" },
@@ -14,6 +14,7 @@ const PRODUCT_LINKS = [
 const SUPPORT_LINKS = [
   { href: APP_ROUTES.faq, label: "FAQ" },
   { href: APP_ROUTES.contact, label: "Contact" },
+  { href: KOFI_URL, label: "Support on Ko-fi", external: true },
 ] as const;
 
 const LEGAL_LINKS = [
@@ -23,12 +24,18 @@ const LEGAL_LINKS = [
   { href: APP_ROUTES.cookies, label: "Cookie Policy" },
 ] as const;
 
+type FooterLink = {
+  href: string;
+  label: string;
+  external?: boolean;
+};
+
 function FooterLinkGroup({
   title,
   links,
 }: {
   title: string;
-  links: ReadonlyArray<{ href: string; label: string }>;
+  links: ReadonlyArray<FooterLink>;
 }) {
   return (
     <div>
@@ -38,12 +45,23 @@ function FooterLinkGroup({
       <ul className="space-y-2">
         {links.map((link) => (
           <li key={link.href}>
-            <Link
-              href={link.href}
-              className="text-sm text-slate-400 transition hover:text-white"
-            >
-              {link.label}
-            </Link>
+            {link.external ? (
+              <a
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-slate-400 transition hover:text-white"
+              >
+                {link.label}
+              </a>
+            ) : (
+              <Link
+                href={link.href}
+                className="text-sm text-slate-400 transition hover:text-white"
+              >
+                {link.label}
+              </Link>
+            )}
           </li>
         ))}
       </ul>

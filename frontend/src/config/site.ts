@@ -4,6 +4,9 @@
 
 export const SITE_NAME = "StatusTimer";
 
+/** Public Ko-fi tip jar for independent hosting support. */
+export const KOFI_URL = "https://ko-fi.com/statustimer";
+
 export const DEFAULT_CONTACT_EMAIL = "info@status-timer.com";
 
 export const CONTACT_EMAIL =
