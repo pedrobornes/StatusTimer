@@ -32,7 +32,18 @@ ARTICLE_HTML = """
   "datePublished": "2026-06-11T17:00:00+00:00",
   "image": ["https://bnetcmsus-a.akamaihd.net/cms/blog_header/example.jpg"]
 }</script>
-<h2>Balance Updates</h2><p>Card changes are live across Standard and Battlegrounds modes with ranked ladder updates.</p><p>More details here for players including new cards, balance changes, and bug fixes across all platforms.</p>
+<header><blz-image src="https://example.com/hero.png" alt="Hero"></blz-image></header>
+<section class="blog">
+<p>Heed the final call before the doors close. These lead changes matter for players.</p>
+<ul>
+  <li>Hiders will no longer be automatically revealed.</li>
+  <li>Players will earn double the rate of Illusionary Coins.</li>
+</ul>
+<h2>Balance Updates</h2>
+<p>Card changes are live across Standard and Battlegrounds modes with ranked ladder updates.</p>
+<p>More details here for players including new cards, balance changes, and bug fixes across all platforms.</p>
+</section>
+<script src="https://navbar.blizzard.com/example.js"></script>
 """
 
 
@@ -50,6 +61,17 @@ class BlizzardNewsTests(unittest.TestCase):
         self.assertEqual(resolve_blizzard_news_target("overwatch-2").game_tag, "overwatch")
         self.assertEqual(resolve_blizzard_news_target("diablo-iv").game_tag, "diablo-4")
         self.assertIsNone(resolve_blizzard_news_target("fortnite"))
+
+    def test_extract_article_markdown_keeps_lead_before_first_heading(self) -> None:
+        from scrapers.blizzard_news import _extract_article_markdown, _extract_json_ld
+
+        metadata = _extract_json_ld(ARTICLE_HTML)
+        markdown = _extract_article_markdown(ARTICLE_HTML, metadata, "Hearthstone")
+
+        self.assertIn("Heed the final call", markdown)
+        self.assertIn("Hiders will no longer be automatically revealed", markdown)
+        self.assertIn("Balance Updates", markdown)
+        self.assertNotIn("navbar.blizzard.com", markdown)
 
     @patch("scrapers.blizzard_news.fetch_text")
     @patch("scrapers.blizzard_news.fetch_json")
@@ -70,6 +92,7 @@ class BlizzardNewsTests(unittest.TestCase):
         self.assertEqual(len(events), 1)
         self.assertEqual(events[0].game_tag, "hearthstone")
         self.assertEqual(events[0].external_id, "hearthstone-news-24287640")
+        self.assertIn("Heed the final call", events[0].plain_text)
         self.assertIn("Balance Updates", events[0].plain_text)
 
 

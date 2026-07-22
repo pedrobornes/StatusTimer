@@ -19,6 +19,11 @@ from scrapers.text_utils import clean_news_title, is_relevant_gaming_news, is_us
 logger = logging.getLogger(__name__)
 
 BLIZZARD_NEWS_API_TEMPLATE = "https://news.blizzard.com/en-us/api/feed/{feed_slug}"
+_BODY_START_MARKERS = (
+    '<section class="blog">',
+    '<section class="blog" ',
+    'class="blog">',
+)
 _BODY_END_MARKERS = ("<footer", 'id="social"', "Stay Connected", "<script")
 
 _BLIZZARD_SLUG_ALIASES: dict[str, str] = {
@@ -225,7 +230,7 @@ def _extract_article_markdown(
     metadata: dict[str, object],
     game_name: str,
 ) -> str:
-    start = html.find("<h2")
+    start = _find_article_body_start(html)
     if start < 0:
         return ""
 
@@ -253,6 +258,17 @@ def _extract_article_markdown(
             markdown = f"![{headline}]({normalized})\n\n{markdown}"
 
     return markdown
+
+
+def _find_article_body_start(html: str) -> int:
+    """Prefer the blog body so lead paragraphs before the first <h2> are kept."""
+    for marker in _BODY_START_MARKERS:
+        index = html.find(marker)
+        if index >= 0:
+            return index
+
+    # Older Blizzard layouts sometimes only expose body content from the first h2.
+    return html.find("<h2")
 
 
 def _parse_json_ld_date(raw_value: object) -> datetime | None:

@@ -62,6 +62,7 @@ class NewsPushStore:
         )
 
     def fingerprint(self, event: ScrapedFeedEvent) -> str:
+        content_hash = hashlib.md5(event.plain_text.encode("utf-8")).hexdigest()
         canonical = "|".join(
             [
                 event.source.value,
@@ -69,6 +70,7 @@ class NewsPushStore:
                 event.external_id,
                 event.game_tag,
                 event.title,
+                content_hash,
             ]
         )
         return hashlib.md5(canonical.encode("utf-8")).hexdigest()
