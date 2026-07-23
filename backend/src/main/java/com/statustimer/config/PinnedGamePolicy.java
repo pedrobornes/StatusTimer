@@ -90,13 +90,31 @@ public final class PinnedGamePolicy {
             "https://images.igdb.com/igdb/image/upload/t_cover_big/co8ae0.jpg"
     );
 
+    private static final Pin ALONE_IN_THE_DARK_2024 = new Pin(
+            "alone-in-the-dark",
+            "alone-in-the-dark--1",
+            213_237L,
+            1_310_410,
+            // Legacy remasters / wrong franchise bindings seen in catalog pollution.
+            Set.of(548_090),
+            Set.of(
+                    "alone-in-the-dark",
+                    "alone-in-the-dark--3",
+                    "alone-in-the-dark-3",
+                    "alone-in-the-dark-1"
+            ),
+            "https://images.igdb.com/igdb/image/upload/t_cover_big/co52t8.jpg",
+            "https://images.igdb.com/igdb/image/upload/t_cover_big/co52t8.jpg"
+    );
+
     private static final Map<String, Pin> BY_SLUG = Map.of(
             COUNTER_STRIKE_2.slug(), COUNTER_STRIKE_2,
             GRAND_THEFT_AUTO_V.slug(), GRAND_THEFT_AUTO_V,
             OVERWATCH_2.slug(), OVERWATCH_2,
             DEAD_BY_DAYLIGHT.slug(), DEAD_BY_DAYLIGHT,
             PATH_OF_EXILE.slug(), PATH_OF_EXILE,
-            PATH_OF_EXILE_2.slug(), PATH_OF_EXILE_2
+            PATH_OF_EXILE_2.slug(), PATH_OF_EXILE_2,
+            ALONE_IN_THE_DARK_2024.slug(), ALONE_IN_THE_DARK_2024
     );
 
     private PinnedGamePolicy() {

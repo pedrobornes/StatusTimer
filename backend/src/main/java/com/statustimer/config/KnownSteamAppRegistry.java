@@ -19,7 +19,8 @@ public class KnownSteamAppRegistry {
             Map.entry("resident-evil-village", 1196590),
             Map.entry("path-of-exile", 238960),
             Map.entry("path-of-exile-2", 2694490),
-            Map.entry("fallout-new-vegas", 22380)
+            Map.entry("fallout-new-vegas", 22380),
+            Map.entry("alone-in-the-dark", 1310410)
     );
 
     public Optional<Integer> resolveAppId(String slug) {

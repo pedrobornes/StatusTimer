@@ -41,6 +41,11 @@ class KnownSteamAppRegistryTest {
     }
 
     @Test
+    void resolvesAloneInTheDark2024() {
+        assertEquals(1310410, registry.resolveAppId("alone-in-the-dark").orElseThrow());
+    }
+
+    @Test
     void returnsEmptyForUnknownSlug() {
         assertTrue(registry.resolveAppId("minecraft").isEmpty());
     }

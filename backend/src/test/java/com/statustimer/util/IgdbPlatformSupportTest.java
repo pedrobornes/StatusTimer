@@ -46,6 +46,28 @@ class IgdbPlatformSupportTest {
     }
 
     @Test
+    void rejectsMobileOnlyAndroidIos() {
+        ArrayNode platforms = objectMapper.createArrayNode();
+        platforms.add(34);
+        platforms.add(39);
+
+        assertTrue(IgdbPlatformSupport.isMobileOnly(platforms));
+        assertFalse(IgdbPlatformSupport.hasSupportedPlatform(platforms));
+        assertFalse(IgdbPlatformSupport.isEligibleForDiscovery(platforms));
+    }
+
+    @Test
+    void acceptsMobilePlusPc() {
+        ArrayNode platforms = objectMapper.createArrayNode();
+        platforms.add(39);
+        platforms.add(6);
+
+        assertFalse(IgdbPlatformSupport.isMobileOnly(platforms));
+        assertTrue(IgdbPlatformSupport.hasSupportedPlatform(platforms));
+        assertTrue(IgdbPlatformSupport.isEligibleForDiscovery(platforms));
+    }
+
+    @Test
     void acceptsMissingPlatformsForDiscovery() {
         assertTrue(IgdbPlatformSupport.isEligibleForDiscovery(null));
         assertTrue(IgdbPlatformSupport.isEligibleForDiscovery(objectMapper.createArrayNode()));

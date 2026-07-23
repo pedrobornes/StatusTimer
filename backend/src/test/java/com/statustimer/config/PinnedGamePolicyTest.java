@@ -108,4 +108,54 @@ class PinnedGamePolicyTest {
 
         assertTrue(PinnedGamePolicy.needsAssetRefresh(game));
     }
+
+    @Test
+    void pinsAloneInTheDark2024AndBlocksLegacyBindings() {
+        IgdbGameMatch remake = new IgdbGameMatch(
+                213_237L,
+                "Alone in the Dark",
+                "alone-in-the-dark--1",
+                "https://images.igdb.com/igdb/image/upload/t_cover_big/co52t8.jpg",
+                "https://images.igdb.com/igdb/image/upload/t_cover_big/co52t8.jpg",
+                1_310_410,
+                70,
+                68,
+                List.of("Adventure"),
+                List.of(),
+                0,
+                null,
+                List.of(),
+                List.of(),
+                null,
+                Map.of()
+        );
+        IgdbGameMatch mobileOrLegacy = new IgdbGameMatch(
+                1L,
+                "Alone in the Dark",
+                "alone-in-the-dark--3",
+                "https://images.igdb.com/igdb/image/upload/t_cover_big/co82bd.jpg",
+                "https://images.igdb.com/igdb/image/upload/t_cover_big/co82bd.jpg",
+                548_090,
+                50,
+                40,
+                List.of("Adventure"),
+                List.of(),
+                0,
+                null,
+                List.of(),
+                List.of(),
+                null,
+                Map.of()
+        );
+
+        assertTrue(PinnedGamePolicy.matchesIgdbGame("alone-in-the-dark", remake));
+        assertFalse(PinnedGamePolicy.matchesIgdbGame("alone-in-the-dark", mobileOrLegacy));
+        assertTrue(PinnedGamePolicy.isBlockedSteamAppId("alone-in-the-dark", 548_090));
+        assertTrue(PinnedGamePolicy.needsAssetRefresh(Game.builder()
+                .slug("alone-in-the-dark")
+                .gameName("Alone in the Dark")
+                .steamAppId(548_090)
+                .igdbGameId(1L)
+                .build()));
+    }
 }
