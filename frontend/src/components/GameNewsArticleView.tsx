@@ -4,6 +4,7 @@ import GameStatusSubNav from "@/components/GameStatusSubNav";
 import IntelFeedContent from "@/components/dashboard/IntelFeedContent";
 import PageShell from "@/components/PageShell";
 import GameAssetImage from "@/components/ui/GameAssetImage";
+import LocalizedTime from "@/components/ui/LocalizedTime";
 import type { NewsGameContext } from "@/lib/newsRoutes";
 import {
   cleanNewsDisplayTitle,
@@ -12,7 +13,6 @@ import {
 import { hasGameMedia, resolveGameMedia } from "@/lib/gameMedia";
 import type { GamingNews } from "@/types/api";
 import type { GameStatusDetail } from "@/types/telemetry";
-import { formatLocalizedTimestamp } from "@/utils/dateFormatter";
 
 interface GameNewsArticleViewProps {
   article: GamingNews;
@@ -20,10 +20,6 @@ interface GameNewsArticleViewProps {
   heroUrl?: string | null;
   boxArtUrl?: string | null;
   statusDetail?: GameStatusDetail | null;
-}
-
-function resolveNewsTime(publishedAt?: string, createdAt?: string): string {
-  return formatLocalizedTimestamp(publishedAt ?? createdAt ?? "");
 }
 
 export default function GameNewsArticleView({
@@ -92,9 +88,11 @@ export default function GameNewsArticleView({
             >
               {gameName}
             </Link>
-            <span className="mt-2 block text-xs text-slate-400">
-              Published: {resolveNewsTime(article.publishedAt, article.createdAt)}
-            </span>
+            <LocalizedTime
+              value={article.publishedAt ?? article.createdAt ?? ""}
+              prefix="Published: "
+              className="mt-2 block text-xs text-slate-400"
+            />
           </div>
         </div>
 

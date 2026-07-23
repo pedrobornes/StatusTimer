@@ -267,6 +267,19 @@ public class Game {
         return hasUpcomingReleaseSignals();
     }
 
+    /**
+     * Titles that should use a release profile (including undated IGDB TBA
+     * announcements that lack hype/platform seed signals yet). Not used for the
+     * public /releases index — only for by-slug lookup and status routing.
+     */
+    public boolean isReleaseProfileCandidate(LocalDate today) {
+        if (isUpcomingRelease(today)) {
+            return true;
+        }
+
+        return igdbGameId != null && resolveEarliestKnownReleaseDate().isEmpty();
+    }
+
     public boolean hasUpcomingReleaseSignals() {
         boolean hasPlatformTargets = !platforms.isEmpty();
         boolean hasHype = hypeCount != null && hypeCount > 0L;

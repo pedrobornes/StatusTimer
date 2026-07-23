@@ -30,6 +30,7 @@ import { isSinglePlayerGame, resolvePublicTelemetryStatus } from "@/lib/gameType
 import { resolveGenres } from "@/lib/genres";
 import { hasGameMedia, resolveGameMedia } from "@/lib/gameMedia";
 import { getConfirmedPlatforms, resolveReleaseBoxArtUrl } from "@/lib/releases";
+import { redirectToReleaseIfUpcoming } from "@/lib/statusRoutes";
 import { getGameStatusDetail } from "@/services/telemetryService";
 import { getUpcomingReleases } from "@/services/releasesService";
 import type { GameTelemetry, TelemetryStatus } from "@/types/telemetry";
@@ -104,7 +105,7 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
     const hasNews = news.length > 0;
     const hasMedia = hasGameMedia(gameMedia);
 
-    if (isUpcomingGameTelemetry(telemetry)) {
+    if (isUpcomingGameTelemetry(telemetry) || releaseEntry) {
       redirect(APP_ROUTES.release(canonicalSlug));
     }
 
@@ -303,6 +304,7 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
     }
 
     if (telemetry === null) {
+      await redirectToReleaseIfUpcoming(canonicalSlug);
       notFound();
     }
 
@@ -451,6 +453,7 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
       </>
     );
   } catch {
+    await redirectToReleaseIfUpcoming(canonicalSlug);
     notFound();
   }
 }

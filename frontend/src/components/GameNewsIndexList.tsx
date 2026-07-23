@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { ArrowRight, CalendarDays } from "lucide-react";
 import GameNewsPagination from "@/components/GameNewsPagination";
+import RelativeTime from "@/components/ui/RelativeTime";
 import { APP_ROUTES } from "@/config/routes";
 import { buildNewsExcerpt, cleanNewsDisplayTitle } from "@/lib/intelFeed";
 import { paginateNews } from "@/lib/newsFeed";
 import type { GamingNews } from "@/types/api";
-import { formatRelativeTime } from "@/utils/dateFormatter";
 
 interface GameNewsIndexListProps {
   news: GamingNews[];
@@ -40,11 +40,9 @@ export default function GameNewsIndexList({
                 <div className="mb-2">
                   <span className="inline-flex items-center gap-1 text-xs text-slate-400">
                     <CalendarDays className="h-3.5 w-3.5" aria-hidden />
-                    <time dateTime={article.publishedAt ?? article.createdAt}>
-                      {formatRelativeTime(
-                        article.publishedAt ?? article.createdAt,
-                      )}
-                    </time>
+                    <RelativeTime
+                      value={article.publishedAt ?? article.createdAt}
+                    />
                   </span>
                 </div>
 

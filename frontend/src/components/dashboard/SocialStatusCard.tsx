@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Radio } from "lucide-react";
-import { formatLocalizedTimestamp } from "@/utils/dateFormatter";
+import StatusCheckTime from "@/components/ui/StatusCheckTime";
 import { resolveSocialServiceBrand } from "@/lib/socialServices";
 import type { ServerStatus } from "@/types/api";
 
@@ -53,15 +53,13 @@ export default function SocialStatusCard({
 
         <div className="min-w-0 flex-1">
           <h4 className="truncate text-sm font-semibold text-white">{label}</h4>
-          <time
-            dateTime={status.lastChecked}
-            className="flex items-center gap-1 text-[11px] text-slate-400"
-          >
+          <div className="flex items-center gap-1 text-[11px] text-slate-400">
             <Radio className="h-3 w-3 shrink-0" />
-            <span className="truncate">
-              {formatLocalizedTimestamp(status.lastChecked)}
-            </span>
-          </time>
+            <StatusCheckTime
+              value={status.lastChecked}
+              className="truncate"
+            />
+          </div>
         </div>
 
         <span
@@ -144,9 +142,7 @@ export default function SocialStatusCard({
 
       <div className="flex items-center gap-2 text-xs text-slate-400">
         <Radio className="h-3.5 w-3.5" />
-        <time dateTime={status.lastChecked}>
-          Last checked {formatLocalizedTimestamp(status.lastChecked)}
-        </time>
+        <StatusCheckTime value={status.lastChecked} />
       </div>
     </article>
   );

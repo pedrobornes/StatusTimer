@@ -2,17 +2,23 @@ import Link from "next/link";
 import PageShell from "@/components/PageShell";
 import { APP_ROUTES } from "@/config/routes";
 
-export default function GlobalNotFoundPage() {
+/**
+ * Shown only when /status/[slug] has no catalog/status payload and no
+ * upcoming release to redirect to. Keep copy soft — unknown slugs should
+ * not feel like a flood of "not tracked" dead-ends.
+ */
+export default function StatusNotFoundPage() {
   return (
     <PageShell
-      title="PAGE NOT FOUND"
-      subtitle="This page does not exist or is not available yet."
-      badge="StatusTimer"
+      title="STATUS UNAVAILABLE"
+      subtitle="We could not open a live status page for this game."
+      badge="Status"
     >
       <section className="glass-panel rounded-3xl p-8 text-center">
         <p className="mx-auto max-w-lg text-sm leading-6 text-slate-300">
-          Check the URL, or go back to the monitor to search for a game or
-          upcoming release.
+          The game may not be in our catalog yet, the URL may be mistyped, or
+          it may still be unreleased. Upcoming titles use release pages instead
+          of live server status.
         </p>
 
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">

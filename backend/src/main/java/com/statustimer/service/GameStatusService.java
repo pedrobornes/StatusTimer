@@ -62,7 +62,14 @@ public class GameStatusService {
         catalogActivationService.activateOnDemand(slug);
 
         Optional<Game> gameOpt = gameRepository.findBySlug(canonicalSlug);
-        boolean catalogOnly = gameOpt.map(CatalogMonitoringPolicy::isCatalogOnlyProfile).orElse(false);
+        if (gameOpt.isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Game not found for slug: " + slug
+            );
+        }
+
+        boolean catalogOnly = CatalogMonitoringPolicy.isCatalogOnlyProfile(gameOpt.get());
         boolean telemetryReady = catalogOnly || catalogActivationService.isTelemetryReady(slug);
 
         List<GamingNewsResponse> news = gamingNewsService.findByGameTag(slug, NEWS_LIMIT);
@@ -94,6 +101,7 @@ public class GameStatusService {
         }
 
         GameTelemetryResponse telemetry = resolveReadyTelemetry(slug, catalogOnly)
+                .or(() -> resolvePartialTelemetry(slug))
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Game not found for slug: " + slug

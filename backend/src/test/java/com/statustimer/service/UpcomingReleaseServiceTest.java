@@ -97,6 +97,28 @@ class UpcomingReleaseServiceTest {
     assertThat(pastIgdbRelease.isUpcomingRelease(today)).isFalse();
   }
 
+  @Test
+  void treatsUndatedIgdbAnnouncementsAsReleaseProfileCandidates() {
+    LocalDate today = LocalDate.of(2026, 7, 8);
+
+    Game tba = Game.builder()
+        .slug("silver-palace")
+        .gameName("Silver Palace")
+        .igdbGameId(343335L)
+        .build();
+
+    Game datedPast = Game.builder()
+        .slug("elden-ring")
+        .gameName("Elden Ring")
+        .igdbGameId(119133L)
+        .igdbFirstReleaseDate(LocalDate.of(2022, 2, 25))
+        .build();
+
+    assertThat(tba.isUpcomingRelease(today)).isFalse();
+    assertThat(tba.isReleaseProfileCandidate(today)).isTrue();
+    assertThat(datedPast.isReleaseProfileCandidate(today)).isFalse();
+  }
+
   private Game gameWithReleaseDate(String slug, LocalDate releaseDate) {
     Game game = Game.builder()
         .slug(slug)

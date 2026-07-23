@@ -3,10 +3,11 @@ import { AlertTriangle } from "lucide-react";
 import SidebarPanelHeader, {
   SidebarEmptyState,
 } from "@/components/dashboard/SidebarPanelHeader";
+import RelativeTime from "@/components/ui/RelativeTime";
+import StatusCheckTime from "@/components/ui/StatusCheckTime";
 import { APP_ROUTES } from "@/config/routes";
 import {
   formatIncidentMessage,
-  formatTimeAgo,
   getIncidentAccentClass,
   getTimelineBlockClass,
   resolveIncidentDateIso,
@@ -14,7 +15,6 @@ import {
 import { resolveSocialServiceBrand } from "@/lib/socialServices";
 import type { ServerStatus } from "@/types/api";
 import type { TelemetryIncident } from "@/types/telemetry";
-import { formatLocalizedTimestamp } from "@/utils/dateFormatter";
 
 interface IncidentLogProps {
   incidents: TelemetryIncident[];
@@ -129,12 +129,10 @@ export default function IncidentLog({
                       <span className="inline-flex rounded-full border border-rose-400/35 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-rose-200">
                         OUTAGE
                       </span>
-                      <time
-                        dateTime={status.lastChecked}
+                      <StatusCheckTime
+                        value={status.lastChecked}
                         className="text-[11px] text-slate-300/80"
-                      >
-                        Last checked {formatLocalizedTimestamp(status.lastChecked)}
-                      </time>
+                      />
                     </div>
                   </div>
                 </div>
@@ -166,12 +164,11 @@ export default function IncidentLog({
                         >
                           {incident.status}
                         </span>
-                        <time
-                          dateTime={publishedIso ?? undefined}
+                        <RelativeTime
+                          value={publishedIso}
+                          prefix="Last detected "
                           className="text-[11px] text-slate-500"
-                        >
-                          Last detected {formatTimeAgo(incident)}
-                        </time>
+                        />
                       </div>
                     </div>
                   </div>

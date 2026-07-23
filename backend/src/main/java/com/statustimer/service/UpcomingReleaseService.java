@@ -2,6 +2,7 @@ package com.statustimer.service;
 
 import com.statustimer.config.CacheConfig;
 import com.statustimer.config.CatalogMatureContentPolicy;
+import com.statustimer.config.GameSlugMapper;
 import com.statustimer.dto.response.UpcomingReleaseResponse;
 import com.statustimer.entity.Game;
 import com.statustimer.repository.GameRepository;
@@ -22,6 +23,8 @@ import org.springframework.web.server.ResponseStatusException;
 public class UpcomingReleaseService {
 
     private final GameRepository gameRepository;
+    private final CatalogActivationService catalogActivationService;
+    private final GameSlugMapper gameSlugMapper;
 
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE, key = "'upcomingReleases'")
@@ -38,16 +41,25 @@ public class UpcomingReleaseService {
                 .toList();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public Optional<UpcomingReleaseResponse> findBySlug(String slug) {
         if (slug == null || slug.isBlank()) {
             return Optional.empty();
         }
 
+        String canonicalSlug = gameSlugMapper.resolveCanonicalSlug(slug.trim());
+        if (canonicalSlug == null || canonicalSlug.isBlank()) {
+            return Optional.empty();
+        }
+
+        // Materialize from IGDB when the title is not in catalog yet so
+        // /status/{slug} can rescue to /release/{slug} for real upcoming games.
+        catalogActivationService.activateOnDemand(canonicalSlug);
+
         LocalDate today = LocalDate.now();
-        return gameRepository.findBySlug(slug.trim())
+        return gameRepository.findBySlug(canonicalSlug)
                 .filter(game -> !CatalogMatureContentPolicy.shouldSkipCatalogSurfacing(game))
-                .filter(game -> game.isUpcomingRelease(today))
+                .filter(game -> game.isReleaseProfileCandidate(today))
                 .map(UpcomingReleaseResponse::fromEntity);
     }
 
