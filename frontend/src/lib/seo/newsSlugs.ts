@@ -35,27 +35,14 @@ export function buildNewsDedupKey(gameTag: string, title: string): string {
   return `${resolveNewsGroupingKey(gameTag)}|${normalizeNewsTitleForDedup(title)}`;
 }
 
-export async function resolveCanonicalNewsArticleSlug(
+/**
+ * Backend findBySlug resolves aliases / retired -N suffixes to the canonical article
+ * and always returns article.slug as the primary news_slug.
+ */
+export function resolveCanonicalNewsArticleSlug(
   requestedSlug: string,
   article: GamingNews,
-  fetchBySlug: (slug: string) => Promise<GamingNews>,
-): Promise<string> {
-  const baseSlug = stripNumericNewsSlugSuffix(requestedSlug);
-  if (!baseSlug) {
-    return requestedSlug;
-  }
-
-  try {
-    const baseArticle = await fetchBySlug(baseSlug);
-    const requestedKey = buildNewsDedupKey(article.gameTag, article.title);
-    const baseKey = buildNewsDedupKey(baseArticle.gameTag, baseArticle.title);
-
-    if (requestedKey === baseKey) {
-      return baseSlug;
-    }
-  } catch {
-    return requestedSlug;
-  }
-
-  return requestedSlug;
+): string {
+  const canonical = article.slug?.trim();
+  return canonical && canonical.length > 0 ? canonical : requestedSlug;
 }

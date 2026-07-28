@@ -21,11 +21,7 @@ export default async function LegacyStatusNewsArticlePage({
 
   try {
     const article = await getGamingNewsBySlug(newsSlug);
-    const canonicalNewsSlug = await resolveCanonicalNewsArticleSlug(
-      newsSlug,
-      article,
-      getGamingNewsBySlug,
-    );
+    const canonicalNewsSlug = resolveCanonicalNewsArticleSlug(newsSlug, article);
     permanentRedirect(APP_ROUTES.newsArticle(canonicalNewsSlug));
   } catch {
     permanentRedirect(APP_ROUTES.newsArticle(newsSlug));

@@ -28,11 +28,7 @@ interface NewsArticlePageProps {
 
 async function loadNewsArticle(slug: string) {
   const article = await getGamingNewsBySlug(slug);
-  const canonicalSlug = await resolveCanonicalNewsArticleSlug(
-    slug,
-    article,
-    getGamingNewsBySlug,
-  );
+  const canonicalSlug = resolveCanonicalNewsArticleSlug(slug, article);
 
   return { article, canonicalSlug };
 }

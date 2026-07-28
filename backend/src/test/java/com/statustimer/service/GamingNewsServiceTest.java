@@ -9,13 +9,17 @@ import static org.mockito.Mockito.when;
 import com.statustimer.dto.request.CreateGamingNewsRequest;
 import com.statustimer.entity.Game;
 import com.statustimer.entity.GamingNews;
+import com.statustimer.entity.GamingNewsSlugAlias;
 import com.statustimer.repository.GameRepository;
 import com.statustimer.repository.GamingNewsRepository;
+import com.statustimer.repository.GamingNewsSlugAliasRepository;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
@@ -29,6 +33,9 @@ class GamingNewsServiceTest {
     private GamingNewsRepository gamingNewsRepository;
 
     @Mock
+    private GamingNewsSlugAliasRepository gamingNewsSlugAliasRepository;
+
+    @Mock
     private GameRepository gameRepository;
 
     @Mock
@@ -40,6 +47,7 @@ class GamingNewsServiceTest {
     void setUp() {
         gamingNewsService = new GamingNewsService(
                 gamingNewsRepository,
+                gamingNewsSlugAliasRepository,
                 gameRepository,
                 gameCatalogService
         );
@@ -251,6 +259,8 @@ class GamingNewsServiceTest {
                 .thenReturn(true);
         when(gamingNewsRepository.existsByNewsSlug("world-of-warcraft-hotfixes-july-7-2026-2"))
                 .thenReturn(false);
+        when(gamingNewsSlugAliasRepository.existsByAliasSlug("world-of-warcraft-hotfixes-july-7-2026-2"))
+                .thenReturn(false);
         when(gameRepository.findBySlug("world-of-warcraft")).thenReturn(java.util.Optional.of(wow));
         when(gameCatalogService.resolveGameName("world-of-warcraft")).thenReturn("World of Warcraft");
         when(gameCatalogService.resolveCoverUrl("world-of-warcraft", null)).thenReturn(null);
@@ -272,7 +282,7 @@ class GamingNewsServiceTest {
     }
 
     @Test
-    void reconcileDuplicateNewsDeletesExtraRows() {
+    void reconcileDuplicateNewsDeletesExtraRowsAndRegistersAlias() {
         Game palworld = Game.builder().slug("palworld").gameName("Palworld").build();
         GamingNews keeper = GamingNews.builder()
                 .id(1L)
@@ -295,10 +305,109 @@ class GamingNewsServiceTest {
 
         when(gamingNewsRepository.findAllByOrderByCreatedAtDesc())
                 .thenReturn(List.of(keeper, duplicate));
+        when(gamingNewsRepository.existsByNewsSlug("palworld-patch-update-2")).thenReturn(false);
+        when(gamingNewsSlugAliasRepository.findByAliasSlugWithNews("palworld-patch-update-2"))
+                .thenReturn(Optional.empty());
+        when(gamingNewsSlugAliasRepository.findByNews_Id(2L)).thenReturn(List.of());
+        when(gamingNewsSlugAliasRepository.save(any(GamingNewsSlugAlias.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         int removed = gamingNewsService.reconcileDuplicateNews();
 
         assertThat(removed).isEqualTo(1);
+        ArgumentCaptor<GamingNewsSlugAlias> aliasCaptor =
+                ArgumentCaptor.forClass(GamingNewsSlugAlias.class);
+        verify(gamingNewsSlugAliasRepository).save(aliasCaptor.capture());
+        assertThat(aliasCaptor.getValue().getAliasSlug()).isEqualTo("palworld-patch-update-2");
+        assertThat(aliasCaptor.getValue().getNews().getId()).isEqualTo(1L);
         verify(gamingNewsRepository).deleteAll(List.of(duplicate));
+    }
+
+    @Test
+    void findBySlugResolvesRegisteredAliasToCanonicalArticle() {
+        Game palworld = Game.builder().slug("palworld").gameName("Palworld").build();
+        GamingNews keeper = GamingNews.builder()
+                .id(1L)
+                .title("Patch update")
+                .content("Keeper")
+                .newsSlug("palworld-patch-update")
+                .game(palworld)
+                .gameTag("palworld")
+                .createdAt(NOW)
+                .publishedAt(NOW)
+                .build();
+        GamingNewsSlugAlias alias = GamingNewsSlugAlias.builder()
+                .id(10L)
+                .aliasSlug("palworld-patch-update-2")
+                .news(keeper)
+                .createdAt(NOW)
+                .build();
+
+        when(gamingNewsRepository.findByNewsSlug("palworld-patch-update-2"))
+                .thenReturn(Optional.empty());
+        when(gamingNewsSlugAliasRepository.findByAliasSlugWithNews("palworld-patch-update-2"))
+                .thenReturn(Optional.of(alias));
+        when(gameCatalogService.resolveGameName("palworld")).thenReturn("Palworld");
+        when(gameCatalogService.resolveCoverUrl("palworld", null)).thenReturn(null);
+
+        var response = gamingNewsService.findBySlug("palworld-patch-update-2");
+
+        assertThat(response.slug()).isEqualTo("palworld-patch-update");
+        assertThat(response.id()).isEqualTo(1L);
+    }
+
+    @Test
+    void findBySlugFallsBackToBaseSlugWhenRetiredSuffixHasNoAlias() {
+        Game rust = Game.builder().slug("rust").gameName("Rust").build();
+        GamingNews keeper = GamingNews.builder()
+                .id(3L)
+                .title("Common Ground")
+                .content("Body")
+                .newsSlug("rust-common-ground")
+                .game(rust)
+                .gameTag("rust")
+                .createdAt(NOW)
+                .publishedAt(NOW)
+                .build();
+
+        when(gamingNewsRepository.findByNewsSlug("rust-common-ground-2"))
+                .thenReturn(Optional.empty());
+        when(gamingNewsSlugAliasRepository.findByAliasSlugWithNews("rust-common-ground-2"))
+                .thenReturn(Optional.empty());
+        when(gamingNewsRepository.findByNewsSlug("rust-common-ground"))
+                .thenReturn(Optional.of(keeper));
+        when(gameCatalogService.resolveGameName("rust")).thenReturn("Rust");
+        when(gameCatalogService.resolveCoverUrl("rust", null)).thenReturn(null);
+
+        var response = gamingNewsService.findBySlug("rust-common-ground-2");
+
+        assertThat(response.slug()).isEqualTo("rust-common-ground");
+    }
+
+    @Test
+    void findBySlugKeepsLiveFarCryStylePrimarySlug() {
+        Game wot = Game.builder().slug("world-of-tanks").gameName("World of Tanks").build();
+        GamingNews farCryCrossover = GamingNews.builder()
+                .id(4L)
+                .title("Battle Pass Special: Far Cry 2")
+                .content("Body")
+                .newsSlug("world-of-tanks-battle-pass-special-far-cry-2")
+                .game(wot)
+                .gameTag("world-of-tanks")
+                .createdAt(NOW)
+                .publishedAt(NOW)
+                .build();
+
+        when(gamingNewsRepository.findByNewsSlug("world-of-tanks-battle-pass-special-far-cry-2"))
+                .thenReturn(Optional.of(farCryCrossover));
+        when(gameCatalogService.resolveGameName("world-of-tanks")).thenReturn("World of Tanks");
+        when(gameCatalogService.resolveCoverUrl("world-of-tanks", null)).thenReturn(null);
+
+        var response = gamingNewsService.findBySlug(
+                "world-of-tanks-battle-pass-special-far-cry-2"
+        );
+
+        assertThat(response.slug()).isEqualTo("world-of-tanks-battle-pass-special-far-cry-2");
+        verify(gamingNewsSlugAliasRepository, never()).findByAliasSlugWithNews(any());
     }
 }

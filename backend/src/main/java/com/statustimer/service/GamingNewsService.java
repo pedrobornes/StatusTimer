@@ -5,8 +5,10 @@ import com.statustimer.dto.request.CreateGamingNewsRequest;
 import com.statustimer.dto.response.GamingNewsResponse;
 import com.statustimer.entity.Game;
 import com.statustimer.entity.GamingNews;
+import com.statustimer.entity.GamingNewsSlugAlias;
 import com.statustimer.repository.GameRepository;
 import com.statustimer.repository.GamingNewsRepository;
+import com.statustimer.repository.GamingNewsSlugAliasRepository;
 import com.statustimer.util.SlugUtils;
 import java.text.Normalizer;
 import java.time.LocalDateTime;
@@ -40,6 +42,7 @@ public class GamingNewsService {
     private static final Pattern NEWS_SLUG_NUMERIC_SUFFIX = Pattern.compile("-(\\d+)$");
 
     private final GamingNewsRepository gamingNewsRepository;
+    private final GamingNewsSlugAliasRepository gamingNewsSlugAliasRepository;
     private final GameRepository gameRepository;
     private final GameCatalogService gameCatalogService;
 
@@ -161,6 +164,16 @@ public class GamingNewsService {
             duplicates.add(duplicate);
         }
 
+        for (GamingNews duplicate : duplicates) {
+            GamingNews keeper = keepers.get(buildNewsDedupKey(duplicate));
+            if (keeper == null || keeper.getId() == null || keeper.getId().equals(duplicate.getId())) {
+                continue;
+            }
+
+            registerSlugAlias(duplicate.getNewsSlug(), keeper);
+            reassignAliasesToCanonical(duplicate, keeper);
+        }
+
         if (!duplicates.isEmpty()) {
             gamingNewsRepository.deleteAll(duplicates);
         }
@@ -271,7 +284,9 @@ public class GamingNewsService {
     @Transactional(readOnly = true)
     public GamingNewsResponse findBySlug(String slug) {
         GamingNews entity = gamingNewsRepository.findByNewsSlug(slug)
+                .or(() -> tryResolveAliasSlug(slug))
                 .or(() -> tryResolveLegacySlug(slug))
+                .or(() -> tryResolveRetiredNumericSuffix(slug))
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "News item not found: slug=" + slug
@@ -306,7 +321,7 @@ public class GamingNewsService {
         String candidate = normalizedBase;
         int suffix = 2;
 
-        while (gamingNewsRepository.existsByNewsSlug(candidate)) {
+        while (isNewsSlugTaken(candidate)) {
             candidate = normalizedBase + "-" + suffix;
             suffix++;
         }
@@ -314,14 +329,95 @@ public class GamingNewsService {
         return candidate;
     }
 
-    private java.util.Optional<GamingNews> tryResolveLegacySlug(String slug) {
+    private boolean isNewsSlugTaken(String slug) {
+        return gamingNewsRepository.existsByNewsSlug(slug)
+                || gamingNewsSlugAliasRepository.existsByAliasSlug(slug);
+    }
+
+    private void registerSlugAlias(String aliasSlug, GamingNews canonical) {
+        if (aliasSlug == null || aliasSlug.isBlank() || canonical == null || canonical.getId() == null) {
+            return;
+        }
+
+        String normalizedAlias = aliasSlug.trim();
+        if (normalizedAlias.equals(canonical.getNewsSlug())) {
+            return;
+        }
+
+        if (gamingNewsRepository.existsByNewsSlug(normalizedAlias)) {
+            // Another live article owns this slug (e.g. a real "Far Cry 2" title).
+            return;
+        }
+
+        Optional<GamingNewsSlugAlias> existing =
+                gamingNewsSlugAliasRepository.findByAliasSlugWithNews(normalizedAlias);
+        if (existing.isPresent()) {
+            GamingNewsSlugAlias alias = existing.get();
+            if (canonical.getId().equals(alias.getNews().getId())) {
+                return;
+            }
+            alias.setNews(canonical);
+            gamingNewsSlugAliasRepository.save(alias);
+            return;
+        }
+
+        gamingNewsSlugAliasRepository.save(GamingNewsSlugAlias.builder()
+                .aliasSlug(normalizedAlias)
+                .news(canonical)
+                .createdAt(LocalDateTime.now())
+                .build());
+    }
+
+    private void reassignAliasesToCanonical(GamingNews duplicate, GamingNews canonical) {
+        if (duplicate.getId() == null || canonical.getId() == null) {
+            return;
+        }
+
+        for (GamingNewsSlugAlias alias : gamingNewsSlugAliasRepository.findByNews_Id(duplicate.getId())) {
+            alias.setNews(canonical);
+            gamingNewsSlugAliasRepository.save(alias);
+        }
+    }
+
+    private Optional<GamingNews> tryResolveAliasSlug(String slug) {
+        if (slug == null || slug.isBlank()) {
+            return Optional.empty();
+        }
+
+        return gamingNewsSlugAliasRepository.findByAliasSlugWithNews(slug.trim())
+                .map(GamingNewsSlugAlias::getNews);
+    }
+
+    /**
+     * Recovers retired collision URLs (foo-2) after duplicates were deleted without an alias row.
+     * Safe for real titles like "Far Cry 2": those keep a live primary slug and resolve earlier.
+     */
+    private Optional<GamingNews> tryResolveRetiredNumericSuffix(String slug) {
+        if (slug == null || slug.isBlank()) {
+            return Optional.empty();
+        }
+
+        Matcher matcher = NEWS_SLUG_NUMERIC_SUFFIX.matcher(slug);
+        if (!matcher.find()) {
+            return Optional.empty();
+        }
+
+        String baseSlug = slug.substring(0, matcher.start());
+        if (baseSlug.isBlank()) {
+            return Optional.empty();
+        }
+
+        return gamingNewsRepository.findByNewsSlug(baseSlug);
+    }
+
+    private Optional<GamingNews> tryResolveLegacySlug(String slug) {
         if (slug == null || !slug.startsWith("news-")) {
-            return java.util.Optional.empty();
+            return Optional.empty();
         }
 
         String rawId = slug.substring("news-".length()).trim();
         if (!rawId.matches("\\d+")) {
-            return java.util.Optional.empty();
+            return Optional.empty();
         }
 
         return gamingNewsRepository.findById(Long.valueOf(rawId));
