@@ -156,6 +156,39 @@ class TextUtilsTests(unittest.TestCase):
         self.assertNotIn("previewyoutube", markdown)
         self.assertNotIn("youtube_16x9_placeholder", markdown)
 
+    def test_markdown_from_html_strips_style_leaked_into_image_src(self) -> None:
+        raw = (
+            '<p>Apartment complex.</p>'
+            '<img src="https://files.facepunch.com/kaantasan/1b0111b1/rust_apartment_complex_1080-7.jpg '
+            "style=box-sizing: inherit; cursor: pointer; box-shadow: rgba(0, 0, 0, 0.3) 0px 5px 15px; "
+            'border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2); '
+            'transition: 0.2s; transform: scale(1); max-width: 100%; display: block; margin: 16px auto;" '
+            'alt="Apartment">'
+        )
+        markdown = markdown_from_html(raw)
+        self.assertIn(
+            "![Apartment](https://files.facepunch.com/kaantasan/1b0111b1/rust_apartment_complex_1080-7.jpg)",
+            markdown,
+        )
+        self.assertNotIn("border-radius", markdown)
+        self.assertNotIn("box-shadow", markdown)
+
+    def test_markdown_from_html_repairs_corrupted_markdown_image_with_style(self) -> None:
+        raw = (
+            "Intro\n\n"
+            "![Patch notes image](https://files.facepunch.com/Alistair/102/07/2026/7f63/img.jpg "
+            "style=box-sizing: inherit; box-shadow: rgba(0, 0, 0, 0.3) 0px 5px 15px; "
+            "border-radius: 8px; max-width: 100%; display: block;)\n\n"
+            "Outro"
+        )
+        markdown = markdown_from_html(raw)
+        self.assertIn(
+            "![Patch notes image](https://files.facepunch.com/Alistair/102/07/2026/7f63/img.jpg)",
+            markdown,
+        )
+        self.assertNotIn("0px 5px 15px", markdown)
+        self.assertIn("Outro", markdown)
+
     def test_markdown_from_html_converts_steam_rss_youtube_preview_block(self) -> None:
         raw = (
             "Embrace the slow side of..things below:<br><br>"

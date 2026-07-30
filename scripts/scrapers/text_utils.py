@@ -268,10 +268,11 @@ class _MarkdownExtractor(HTMLParser):
             if self._in_table_cell:
                 return
             src = next((value for key, value in attrs if key == "src" and value), None)
-            if src and not _is_decorative_image_url(src):
+            cleaned_src = _clean_image_src(src) if src else None
+            if cleaned_src and not _is_decorative_image_url(cleaned_src):
                 self._flush_block_break()
                 alt = next((value for key, value in attrs if key == "alt" and value), "") or "Patch notes image"
-                self._append(f"![{alt}]({src.strip()})")
+                self._append(f"![{alt}]({cleaned_src})")
                 self._append("\n\n")
             return
 
@@ -661,10 +662,73 @@ def _normalize_bold_spacing(markdown: str) -> str:
     return re.sub(r"(\*\*[^*]+\*\*)([A-Za-z0-9])", r"\1 \2", normalized)
 
 
+def _clean_image_src(src: str | None) -> str | None:
+    """Strip leaked HTML style attributes / junk from image URLs."""
+    if not src:
+        return None
+
+    cleaned = unescape(src).strip().strip("\"'")
+    if not cleaned:
+        return None
+
+    # Facepunch/CMS sometimes embeds `style=...` inside the src value.
+    style_split = re.split(r"\s+style\s*=", cleaned, maxsplit=1, flags=re.IGNORECASE)
+    cleaned = style_split[0].strip()
+
+    # Keep only the first token if whitespace remains.
+    cleaned = cleaned.split()[0] if cleaned else cleaned
+
+    extension_match = re.match(
+        r"(https?://\S+?\.(?:png|jpe?g|gif|webp|avif)(?:\?[^\s)#]*)?)",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    if extension_match:
+        return extension_match.group(1)
+
+    return cleaned or None
+
+
+_CORRUPTED_MARKDOWN_IMAGE_PATTERN = re.compile(
+    r"!\[([^\]]*)\]\((https?://\S+?\.(?:png|jpe?g|gif|webp|avif)(?:\?[^\s)]*)?)"
+    r"(?:\s+style\s*=.*)?(?:\)|$)",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+_CSS_RESIDUE_LINE_PATTERN = re.compile(
+    r"^(?:[0-9.]+px\b|border-radius\s*:|max-width\s*:|display\s*:\s*block|"
+    r"box-shadow\s*:|transition\s*:|transform\s*:|object-fit\s*:|flex-grow\s*:)",
+    re.IGNORECASE,
+)
+
+
+def _sanitize_markdown_images(markdown: str) -> str:
+    """Repair markdown images where HTML style attrs leaked into the URL parentheses.
+
+    Parentheses inside ``rgba(...)`` otherwise truncate markdown early and leave
+    raw CSS visible in the article body.
+    """
+
+    def replace(match: re.Match[str]) -> str:
+        alt = match.group(1)
+        url = _clean_image_src(match.group(2)) or match.group(2)
+        return f"![{alt}]({url})"
+
+    repaired = _CORRUPTED_MARKDOWN_IMAGE_PATTERN.sub(replace, markdown)
+    lines: list[str] = []
+    for raw_line in repaired.splitlines():
+        stripped = raw_line.strip()
+        if stripped and _CSS_RESIDUE_LINE_PATTERN.match(stripped) and "http" not in stripped.lower():
+            continue
+        lines.append(raw_line)
+    return "\n".join(lines)
+
+
 def _finalize_markdown(markdown: str) -> str:
     normalized = _normalize_markdown_bullets(markdown)
     normalized = _strip_empty_bullets(normalized)
     normalized = _promote_image_links(normalized)
+    normalized = _sanitize_markdown_images(normalized)
     normalized = _drop_decorative_image_lines(normalized)
     normalized = _normalize_link_spacing(normalized)
     normalized = _normalize_bold_spacing(normalized)

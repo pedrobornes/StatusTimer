@@ -346,9 +346,10 @@ export function extractYoutubeVideoId(value: string): string | null {
 }
 
 export function resolveNewsImageUrl(url: string): string {
-  const decoded = decodeSteamLinkfilter(url);
+  const cleaned = cleanNewsImageSrc(url);
+  const decoded = decodeSteamLinkfilter(cleaned);
   if (!isImageUrl(decoded)) {
-    return url;
+    return cleaned;
   }
 
   if (/steamstatic\.com/i.test(decoded) && /\/english\.png$/i.test(decoded)) {
@@ -357,6 +358,28 @@ export function resolveNewsImageUrl(url: string): string {
 
   return decoded;
 }
+
+const IMAGE_EXTENSION_URL_PATTERN =
+  /^(https?:\/\/\S+?\.(?:png|jpe?g|gif|webp|avif)(?:\?[^\s)#]*)?)/i;
+
+/** Strip leaked HTML `style=` attrs that Facepunch embeds into image src/markdown. */
+export function cleanNewsImageSrc(raw: string): string {
+  let url = raw.trim().replace(/^["']+|["']+$/g, "");
+  const styleIdx = url.search(/\s+style\s*=/i);
+  if (styleIdx >= 0) {
+    url = url.slice(0, styleIdx).trim();
+  }
+
+  const firstToken = url.split(/\s+/)[0] ?? url;
+  const extensionMatch = firstToken.match(IMAGE_EXTENSION_URL_PATTERN);
+  return extensionMatch?.[1] ?? firstToken;
+}
+
+const CORRUPTED_MARKDOWN_IMAGE_PATTERN =
+  /!\[([^\]]*)\]\((https?:\/\/\S+?\.(?:png|jpe?g|gif|webp|avif)(?:\?[^\s)]*)?)(?:\s+style\s*=[^\n]*)/gi;
+
+const CSS_RESIDUE_LINE_PATTERN =
+  /^(?:[0-9.]+px\b|border-radius\s*:|max-width\s*:|display\s*:\s*block|box-shadow\s*:|transition\s*:|transform\s*:|object-fit\s*:|flex-grow\s*:)/i;
 
 const PREVIEW_YOUTUBE_BB_PATTERN =
   /\[previewyoutube="?([^";\]]+?)(?:;[^\]"]*)?"?\](?:\s*\[\/previewyoutube\])?/gi;
@@ -372,6 +395,10 @@ function sanitizeNewsContent(content: string): string {
       return YOUTUBE_VIDEO_ID_PATTERN.test(videoId)
         ? `\n\nhttps://www.youtube.com/watch?v=${videoId}\n\n`
         : "";
+    })
+    .replace(CORRUPTED_MARKDOWN_IMAGE_PATTERN, (_match, alt: string, rawUrl: string) => {
+      const url = cleanNewsImageSrc(rawUrl);
+      return `![${alt}](${url})`;
     });
 
   return withYoutube
@@ -379,6 +406,14 @@ function sanitizeNewsContent(content: string): string {
     .filter((line) => {
       const trimmed = line.trim();
       if (trimmed === "-" || trimmed === "*") {
+        return false;
+      }
+
+      if (
+        CSS_RESIDUE_LINE_PATTERN.test(trimmed) &&
+        !/^https?:\/\//i.test(trimmed) &&
+        !trimmed.startsWith("![")
+      ) {
         return false;
       }
 
