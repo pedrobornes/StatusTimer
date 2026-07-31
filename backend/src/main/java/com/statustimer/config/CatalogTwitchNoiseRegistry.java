@@ -39,6 +39,8 @@ public final class CatalogTwitchNoiseRegistry {
             "streamer university",
             "la velada",
             "la velada del año",
+            "kings league",
+            "king's league",
             "мир танков"
     );
 
@@ -71,6 +73,7 @@ public final class CatalogTwitchNoiseRegistry {
             "streamer-university",
             "la-velada",
             "la-velada-del-ano",
+            "kings-league",
             "mir-tankov"
     );
 

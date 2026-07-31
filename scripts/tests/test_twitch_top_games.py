@@ -20,6 +20,8 @@ class TwitchTopGamesTests(unittest.TestCase):
         self.assertTrue(is_non_game_category("Virtual Casino"))
         self.assertTrue(is_non_game_category("Poker"))
         self.assertTrue(is_non_game_category("Food & Drink"))
+        self.assertTrue(is_non_game_category("Kings League"))
+        self.assertTrue(is_non_game_category("King's League"))
         self.assertFalse(is_non_game_category("VALORANT"))
 
     def test_parse_twitch_top_game_builds_ranked_entry(self) -> None:

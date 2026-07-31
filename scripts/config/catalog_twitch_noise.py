@@ -34,6 +34,8 @@ NON_GAME_CATEGORY_NAMES = frozenset(
         "streamer university",
         "la velada",
         "la velada del año",
+        "kings league",
+        "king's league",
         "мир танков",
     }
 )
@@ -68,6 +70,7 @@ QUARANTINED_CATEGORY_SLUGS = frozenset(
         "streamer-university",
         "la-velada",
         "la-velada-del-ano",
+        "kings-league",
         "mir-tankov",
     }
 )
