@@ -3,12 +3,14 @@ package com.statustimer.service;
 import com.statustimer.config.CacheConfig;
 import com.statustimer.dto.request.CreateGamingNewsRequest;
 import com.statustimer.dto.response.GamingNewsResponse;
+import com.statustimer.dto.response.NewsSitemapEntryResponse;
 import com.statustimer.entity.Game;
 import com.statustimer.entity.GamingNews;
 import com.statustimer.entity.GamingNewsSlugAlias;
 import com.statustimer.repository.GameRepository;
 import com.statustimer.repository.GamingNewsRepository;
 import com.statustimer.repository.GamingNewsSlugAliasRepository;
+import com.statustimer.util.NewsIndexabilitySupport;
 import com.statustimer.util.SlugUtils;
 import java.text.Normalizer;
 import java.time.LocalDateTime;
@@ -26,6 +28,7 @@ import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -39,6 +42,8 @@ public class GamingNewsService {
     private static final int MAX_ITEMS_PER_GAME_IN_LATEST = 2;
     /** Safety cap while legacy MySQL columns may still be TEXT (64 KB). */
     private static final int MAX_CONTENT_CHARS = 60_000;
+    private static final int MAX_SITEMAP_ENTRIES = 1000;
+    private static final int SITEMAP_CANDIDATE_WINDOW = 3000;
     private static final Pattern NEWS_SLUG_NUMERIC_SUFFIX = Pattern.compile("-(\\d+)$");
 
     private final GamingNewsRepository gamingNewsRepository;
@@ -73,6 +78,27 @@ public class GamingNewsService {
                     return true;
                 })
                 .map(entity -> GamingNewsResponse.fromEntity(entity, gameCatalogService))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    @Cacheable(
+            cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE,
+            key = "'gamingNewsSitemap:' + #limit"
+    )
+    public List<NewsSitemapEntryResponse> findSitemapEntries(int limit) {
+        int safeLimit = Math.max(1, Math.min(limit, MAX_SITEMAP_ENTRIES));
+        int candidateWindow = Math.min(Math.max(safeLimit * 3, safeLimit), SITEMAP_CANDIDATE_WINDOW);
+
+        List<GamingNews> candidates = gamingNewsRepository.findAllByOrderByCreatedAtDesc(
+                PageRequest.of(0, candidateWindow)
+        );
+
+        return deduplicateNews(candidates).stream()
+                .sorted(Comparator.comparing(this::resolveSortTime).reversed())
+                .filter(this::isSitemapEligible)
+                .limit(safeLimit)
+                .map(NewsSitemapEntryResponse::fromEntity)
                 .toList();
     }
 
@@ -430,6 +456,19 @@ public class GamingNewsService {
         }
 
         return gameRepository.findBySlug(normalized).orElse(null);
+    }
+
+    private boolean isSitemapEligible(GamingNews entity) {
+        String slug = entity.getNewsSlug();
+        if (slug == null || slug.isBlank()) {
+            return false;
+        }
+
+        if (NEWS_SLUG_NUMERIC_SUFFIX.matcher(slug).find()) {
+            return false;
+        }
+
+        return NewsIndexabilitySupport.isIndexableNewsContent(entity.getContent());
     }
 
     private LocalDateTime resolveSortTime(GamingNews entity) {

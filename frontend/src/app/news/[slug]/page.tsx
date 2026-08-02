@@ -6,7 +6,6 @@ import { APP_ROUTES } from "@/config/routes";
 import { getSiteUrl } from "@/config/site";
 import { resolveCanonicalGameSlug } from "@/lib/gameSlugs";
 import {
-  buildNewsExcerpt,
   cleanNewsDisplayTitle,
   resolveNewsGameName,
 } from "@/lib/intelFeed";
@@ -14,13 +13,17 @@ import { resolveNewsArticleAssets } from "@/lib/newsArticleAssets";
 import { resolveNewsGameContext } from "@/lib/newsRoutes";
 import { buildNewsArticleJsonLd } from "@/lib/seo/jsonLd";
 import { isIndexableNewsContent } from "@/lib/seo/newsIndexability";
-import { buildNewsArticleMetadata } from "@/lib/seo/newsMetadata";
+import {
+  buildNewsArticleDescription,
+  buildNewsArticleMetadata,
+  buildNewsArticleTitle,
+} from "@/lib/seo/newsMetadata";
 import { resolveCanonicalNewsArticleSlug } from "@/lib/seo/newsSlugs";
 import { getGamingNewsBySlug } from "@/services/newsService";
 import { getUpcomingReleases } from "@/services/releasesService";
 import { getGameStatusDetail } from "@/services/telemetryService";
 
-export const revalidate = 18000;
+export const revalidate = 1800;
 
 interface NewsArticlePageProps {
   params: Promise<{ slug: string }>;
@@ -62,6 +65,8 @@ export default async function NewsArticlePage({ params }: NewsArticlePageProps) 
     const displayTitle = cleanNewsDisplayTitle(article.title, article.gameTag);
     const pageUrl = `${siteUrl}${APP_ROUTES.newsArticle(canonicalSlug)}`;
     const indexable = isIndexableNewsContent(article.content);
+    const pageTitle = buildNewsArticleTitle(article, gameName, displayTitle);
+    const pageDescription = buildNewsArticleDescription(article, gameName);
 
     const [releases, statusDetail] = await Promise.all([
       getUpcomingReleases().catch(() => []),
@@ -84,10 +89,8 @@ export default async function NewsArticlePage({ params }: NewsArticlePageProps) 
 
     const jsonLd = indexable
       ? buildNewsArticleJsonLd({
-          headline: displayTitle,
-          description:
-            buildNewsExcerpt(article.content, 160) ||
-            `${gameName} patch notes and developer updates.`,
+          headline: pageTitle,
+          description: pageDescription,
           pageUrl,
           siteUrl,
           gameName,

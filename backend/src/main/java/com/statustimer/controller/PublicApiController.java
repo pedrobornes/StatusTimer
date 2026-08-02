@@ -8,6 +8,7 @@ import com.statustimer.dto.response.GameIndexableSlugResponse;
 import com.statustimer.dto.response.GameStatusDetailResponse;
 import com.statustimer.dto.response.GameTelemetryResponse;
 import com.statustimer.dto.response.GamingNewsResponse;
+import com.statustimer.dto.response.NewsSitemapEntryResponse;
 import com.statustimer.dto.response.ServerStatusResponse;
 import com.statustimer.dto.response.TelemetryHistorySnapshotResponse;
 import com.statustimer.dto.response.TelemetryIncidentResponse;
@@ -131,6 +132,13 @@ public class PublicApiController {
             @RequestParam(name = "tier", required = false) Integer tier
     ) {
         return gamingNewsService.findLatest(tier);
+    }
+
+    @GetMapping("/news/sitemap-entries")
+    public List<NewsSitemapEntryResponse> getNewsSitemapEntries(
+            @RequestParam(name = "limit", defaultValue = "1000") int limit
+    ) {
+        return gamingNewsService.findSitemapEntries(limit);
     }
 
     @GetMapping("/news/game/{gameSlug}")

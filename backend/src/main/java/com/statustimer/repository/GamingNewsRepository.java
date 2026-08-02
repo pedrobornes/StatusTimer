@@ -13,6 +13,8 @@ public interface GamingNewsRepository extends JpaRepository<GamingNews, Long> {
 
     List<GamingNews> findAllByOrderByCreatedAtDesc();
 
+    List<GamingNews> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
     List<GamingNews> findByGame_SlugOrderByCreatedAtDesc(String gameSlug, Pageable pageable);
 
     List<GamingNews> findByGameTagOrderByCreatedAtDesc(String gameTag, Pageable pageable);

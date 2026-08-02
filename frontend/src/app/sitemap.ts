@@ -16,7 +16,7 @@ import {
 
 const siteUrl = getSiteUrl();
 
-export const revalidate = 3600;
+export const revalidate = 1800;
 
 function buildStaticSitemapEntries(): MetadataRoute.Sitemap {
   const now = new Date();

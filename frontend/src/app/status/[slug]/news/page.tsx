@@ -15,7 +15,7 @@ import { getGamingNewsByGame } from "@/services/newsService";
 import { getGameStatusDetail } from "@/services/telemetryService";
 import type { GameTelemetry } from "@/types/telemetry";
 
-export const revalidate = 18000;
+export const revalidate = 1800;
 
 interface GameNewsIndexPageProps {
   params: Promise<{ slug: string }>;

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.statustimer.dto.request.CreateGamingNewsRequest;
+import com.statustimer.dto.response.NewsSitemapEntryResponse;
 import com.statustimer.entity.Game;
 import com.statustimer.entity.GamingNews;
 import com.statustimer.entity.GamingNewsSlugAlias;
@@ -14,6 +15,7 @@ import com.statustimer.repository.GameRepository;
 import com.statustimer.repository.GamingNewsRepository;
 import com.statustimer.repository.GamingNewsSlugAliasRepository;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -409,5 +411,114 @@ class GamingNewsServiceTest {
 
         assertThat(response.slug()).isEqualTo("world-of-tanks-battle-pass-special-far-cry-2");
         verify(gamingNewsSlugAliasRepository, never()).findByAliasSlugWithNews(any());
+    }
+
+    @Test
+    void findSitemapEntriesIncludesMoreThanTwoArticlesPerGame() {
+        Game rust = Game.builder().slug("rust").gameName("Rust").build();
+        String body = substantiveBody("Rust update body");
+        String[] slugs = {
+                "rust-common-ground",
+                "rust-softcore-update",
+                "rust-monument-rework",
+                "rust-combat-update",
+                "rust-oil-rig-changes"
+        };
+        List<GamingNews> candidates = new ArrayList<>();
+        for (int i = 0; i < slugs.length; i++) {
+            candidates.add(GamingNews.builder()
+                    .id((long) (i + 1))
+                    .title("Rust update " + (i + 1))
+                    .content(body)
+                    .newsSlug(slugs[i])
+                    .game(rust)
+                    .gameTag("rust")
+                    .createdAt(NOW.minusHours(i + 1))
+                    .publishedAt(NOW.minusHours(i + 1))
+                    .build());
+        }
+
+        when(gamingNewsRepository.findAllByOrderByCreatedAtDesc(any(Pageable.class)))
+                .thenReturn(candidates);
+
+        List<NewsSitemapEntryResponse> entries = gamingNewsService.findSitemapEntries(100);
+
+        assertThat(entries).hasSize(5);
+        assertThat(entries).extracting(NewsSitemapEntryResponse::slug)
+                .containsExactly(
+                        "rust-common-ground",
+                        "rust-softcore-update",
+                        "rust-monument-rework",
+                        "rust-combat-update",
+                        "rust-oil-rig-changes"
+                );
+    }
+
+    @Test
+    void findSitemapEntriesRespectsLimitAndExcludesThinOrSuffixedSlugs() {
+        Game rust = Game.builder().slug("rust").gameName("Rust").build();
+        Game wow = Game.builder().slug("world-of-warcraft").gameName("World of Warcraft").build();
+        String body = substantiveBody("Eligible patch notes body");
+
+        GamingNews eligibleA = GamingNews.builder()
+                .id(1L)
+                .title("Eligible A")
+                .content(body)
+                .newsSlug("rust-eligible-a")
+                .game(rust)
+                .createdAt(NOW)
+                .publishedAt(NOW)
+                .build();
+        GamingNews eligibleB = GamingNews.builder()
+                .id(2L)
+                .title("Eligible B")
+                .content(body)
+                .newsSlug("wow-eligible-b")
+                .game(wow)
+                .createdAt(NOW.minusHours(1))
+                .publishedAt(NOW.minusHours(1))
+                .build();
+        GamingNews thin = GamingNews.builder()
+                .id(3L)
+                .title("Thin teaser")
+                .content("Read the full announcement here.")
+                .newsSlug("rust-thin-teaser")
+                .game(rust)
+                .createdAt(NOW.minusHours(2))
+                .publishedAt(NOW.minusHours(2))
+                .build();
+        GamingNews collisionSuffix = GamingNews.builder()
+                .id(4L)
+                .title("Collision copy")
+                .content(body)
+                .newsSlug("rust-eligible-a-2")
+                .game(rust)
+                .createdAt(NOW.minusHours(3))
+                .publishedAt(NOW.minusHours(3))
+                .build();
+        GamingNews farCryStyle = GamingNews.builder()
+                .id(5L)
+                .title("Far Cry crossover")
+                .content(body)
+                .newsSlug("world-of-tanks-battle-pass-special-far-cry-2")
+                .game(wow)
+                .createdAt(NOW.minusHours(4))
+                .publishedAt(NOW.minusHours(4))
+                .build();
+
+        when(gamingNewsRepository.findAllByOrderByCreatedAtDesc(any(Pageable.class)))
+                .thenReturn(List.of(eligibleA, eligibleB, thin, collisionSuffix, farCryStyle));
+
+        List<NewsSitemapEntryResponse> entries = gamingNewsService.findSitemapEntries(2);
+
+        assertThat(entries).hasSize(2);
+        assertThat(entries).extracting(NewsSitemapEntryResponse::slug)
+                .containsExactly("rust-eligible-a", "wow-eligible-b");
+    }
+
+    private static String substantiveBody(String prefix) {
+        return prefix + " "
+                + "This article includes enough detail for indexing with balance changes, "
+                + "bug fixes, and server improvements that players should review carefully.";
     }
 }

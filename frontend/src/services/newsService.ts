@@ -7,6 +7,11 @@ export type GamingNewsQueryOptions = ApiRequestOptions & {
   tier?: number;
 };
 
+export interface NewsSitemapEntry {
+  slug: string;
+  publishedAt: string;
+}
+
 export function getGamingNews(
   options: GamingNewsQueryOptions = {},
 ): Promise<GamingNews[]> {
@@ -17,6 +22,20 @@ export function getGamingNews(
     revalidate: FETCH_REVALIDATE_NEWS,
     ...fetchOptions,
   });
+}
+
+export function getNewsSitemapEntries(
+  limit = 1000,
+  options: ApiRequestOptions = {},
+): Promise<NewsSitemapEntry[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  return fetchJson<NewsSitemapEntry[]>(
+    `/api/v1/news/sitemap-entries?${params.toString()}`,
+    {
+      revalidate: FETCH_REVALIDATE_NEWS,
+      ...options,
+    },
+  );
 }
 
 export function getGamingNewsById(
