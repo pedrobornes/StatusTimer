@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     "Browse live game server status — online, down, or maintenance — with patch notes, game updates, player counts, and recent outages for every tracked title.",
 };
 
-export const revalidate = 600;
+export const revalidate = 3600;
 
 export default async function GamesPage() {
   try {

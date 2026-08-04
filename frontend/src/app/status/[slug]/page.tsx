@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import AdSlot from "@/components/ads/AdSlot";
-import GameTelemetryCard from "@/components/dashboard/GameTelemetryCard";
 import IncidentLog from "@/components/dashboard/telemetry/IncidentLog";
+import LiveStatusTelemetryCard from "@/components/dashboard/telemetry/LiveStatusTelemetryCard";
 import PendingTelemetryGate from "@/components/dashboard/telemetry/PendingTelemetryGate";
 import TelemetryRefreshBanner from "@/components/dashboard/telemetry/TelemetryRefreshBanner";
 import SteamStoreWidget from "@/components/dashboard/SteamStoreWidget";
@@ -33,9 +33,9 @@ import { getConfirmedPlatforms, resolveReleaseBoxArtUrl } from "@/lib/releases";
 import { redirectToReleaseIfUpcoming } from "@/lib/statusRoutes";
 import { getGameStatusDetail } from "@/services/telemetryService";
 import { getUpcomingReleases } from "@/services/releasesService";
-import type { GameTelemetry, TelemetryStatus } from "@/types/telemetry";
+import type { TelemetryStatus } from "@/types/telemetry";
 
-export const revalidate = 600;
+export const revalidate = 3600;
 
 export function generateStaticParams() {
   return TRACKED_GAME_SLUGS.map((slug) => ({ slug }));
@@ -79,7 +79,7 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
       },
       releases,
     ] = await Promise.all([
-      getGameStatusDetail(slug, { revalidate: 600 }),
+      getGameStatusDetail(slug, { revalidate: 3600 }),
       getUpcomingReleases().catch(() => []),
     ]);
 
@@ -173,13 +173,11 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
                   </h2>
                   <PendingTelemetryGate gameSlug={slug} />
                   {hasPartialTelemetry ? (
-                    <GameTelemetryCard
-                      telemetry={telemetry}
-                      linkToStatusPage={false}
-                      linkToProfile={false}
+                    <LiveStatusTelemetryCard
+                      initialTelemetry={telemetry}
                       platforms={releasePlatforms}
                       serverStatusPending
-                      embedded
+                      enableLiveRefresh={false}
                     />
                   ) : null}
                 </section>
@@ -266,13 +264,11 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
                     {gameName} server status
                   </h2>
                   <TelemetryRefreshBanner gameSlug={slug} />
-                  <GameTelemetryCard
-                    telemetry={telemetry}
-                    linkToStatusPage={false}
-                    linkToProfile={false}
+                  <LiveStatusTelemetryCard
+                    initialTelemetry={telemetry}
                     platforms={releasePlatforms}
                     serverStatusPending
-                    embedded
+                    enableLiveRefresh={false}
                   />
                 </section>
                 {steamAppId ? (
@@ -403,13 +399,11 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
                   <h2 id="server-status-heading" className="sr-only">
                     {sidebarStatusLabel}
                   </h2>
-                  <GameTelemetryCard
-                    telemetry={telemetry}
-                    linkToStatusPage={false}
-                    linkToProfile={false}
+                  <LiveStatusTelemetryCard
+                    initialTelemetry={telemetry}
                     platforms={releasePlatforms}
                     catalogOnly={isCatalogProfile}
-                    embedded
+                    enableLiveRefresh={!isCatalogProfile && !isSinglePlayerProfile}
                   />
                 </section>
                 {steamAppId ? (
@@ -466,13 +460,6 @@ function buildStatusPageSubtitle(
     return `${gameName} hasn't launched yet. See the release date and latest news below.`;
   }
 
-  if (status === "DOWN") {
-    return `${gameName} servers look down right now. Check the live report and recent alerts below.`;
-  }
-
-  if (status === "MAINTENANCE") {
-    return `${gameName} is in maintenance. Follow the live report and alerts below.`;
-  }
-
+  // Neutral copy: live UP/DOWN refreshes client-side; ISR shell can lag up to 1h.
   return `See if ${gameName} servers are up, check recent outages, and read the latest game news.`;
 }
