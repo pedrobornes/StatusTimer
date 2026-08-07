@@ -8,7 +8,9 @@ public record HarvestScheduleProperties(
         int maxMetricsPerCycle,
         int maxCatalogMetricsPerCycle,
         int maxNewsPerCycle,
+        int maxCatalogNewsPerCycle,
         int catalogMetricsFreshnessMinutes,
+        int catalogNewsFreshnessMinutes,
         int telemetryMinutesTier1,
         int telemetryMinutesTier2,
         int telemetryMinutesTier3,
@@ -28,13 +30,19 @@ public record HarvestScheduleProperties(
             maxMetricsPerCycle = 50;
         }
         if (maxCatalogMetricsPerCycle <= 0) {
-            maxCatalogMetricsPerCycle = 5;
+            maxCatalogMetricsPerCycle = 15;
         }
         if (catalogMetricsFreshnessMinutes <= 0) {
             catalogMetricsFreshnessMinutes = 60;
         }
         if (maxNewsPerCycle <= 0) {
             maxNewsPerCycle = 20;
+        }
+        if (maxCatalogNewsPerCycle <= 0) {
+            maxCatalogNewsPerCycle = 10;
+        }
+        if (catalogNewsFreshnessMinutes <= 0) {
+            catalogNewsFreshnessMinutes = 360;
         }
         if (telemetryMinutesTier1 <= 0) {
             telemetryMinutesTier1 = 10;

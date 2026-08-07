@@ -60,7 +60,7 @@ class CatalogActivationServiceTest {
         assertThat(response.jobQueued()).isTrue();
         assertThat(game.getLifecycleState()).isEqualTo(LifecycleState.CATALOG);
         verify(harvestScheduleService, never()).ensureScheduleInitialized(any());
-        verify(harvestScheduleService, never()).bumpScheduleAfterUserInterest(any());
+        verify(harvestScheduleService).bumpScheduleAfterUserInterest(eq("random-steam-game"));
         verify(gameCatalogService).ensureCatalogMetricsScheduleReady(eq("random-steam-game"));
     }
 
@@ -92,7 +92,7 @@ class CatalogActivationServiceTest {
     }
 
     @Test
-    void activationQueuesCatalogMetricsOnVisitWithoutMonitoredBump() {
+    void activationQueuesCatalogSteamHarvestOnVisit() {
         Game game = Game.builder()
                 .slug("resident-evil-village")
                 .gameName("Resident Evil Village")
@@ -107,7 +107,7 @@ class CatalogActivationServiceTest {
         var response = catalogActivationService.activateOnDemand("resident-evil-village");
 
         assertThat(response.telemetryReady()).isFalse();
-        verify(harvestScheduleService, never()).bumpScheduleAfterUserInterest(any());
+        verify(harvestScheduleService).bumpScheduleAfterUserInterest(eq("resident-evil-village"));
         verify(gameCatalogService).ensureCatalogMetricsScheduleReady(eq("resident-evil-village"));
     }
 
@@ -154,7 +154,7 @@ class CatalogActivationServiceTest {
         assertThat(response.jobQueued()).isTrue();
         assertThat(response.telemetryReady()).isTrue();
         assertThat(game.getLifecycleState()).isEqualTo(LifecycleState.CATALOG);
-        verify(harvestScheduleService, never()).bumpScheduleAfterUserInterest(any());
+        verify(harvestScheduleService).bumpScheduleAfterUserInterest(eq("stale-steam-game"));
         verify(gameCatalogService).ensureCatalogMetricsScheduleReady(eq("stale-steam-game"));
     }
 }

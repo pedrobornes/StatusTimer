@@ -63,9 +63,8 @@ public class CatalogActivationService {
 
         gameRepository.save(game);
 
-        if (alreadyMonitored) {
-            harvestScheduleService.bumpScheduleAfterUserInterest(canonicalSlug);
-        }
+        // Visited Steam catalog titles get metrics + news on the next harvest cycle.
+        harvestScheduleService.bumpScheduleAfterUserInterest(canonicalSlug);
 
         return new GameActivationResponse(
                 canonicalSlug,

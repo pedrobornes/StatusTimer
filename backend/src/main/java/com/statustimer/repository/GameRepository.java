@@ -80,17 +80,46 @@ public interface GameRepository extends JpaRepository<Game, Long> {
             Pageable pageable
     );
 
+    /**
+     * Visited catalog profiles only ({@code nextMetricsAt} set by activation).
+     * Prefer Steam titles still missing {@code livePlayers}.
+     */
     @Query("""
             SELECT g FROM Game g
             WHERE g.lifecycleState = :catalogState
+              AND g.nextMetricsAt IS NOT NULL
               AND g.nextMetricsAt <= :cutoff
               AND (
                     (g.steamAppId IS NOT NULL AND g.steamAppId > 0)
                     OR (g.twitchGameId IS NOT NULL AND g.twitchGameId <> '')
               )
-            ORDER BY g.scrapeTier ASC, g.twitchRank ASC
+            ORDER BY
+              CASE
+                WHEN g.steamAppId IS NOT NULL AND g.steamAppId > 0 AND g.livePlayers IS NULL THEN 0
+                ELSE 1
+              END,
+              g.scrapeTier ASC,
+              g.twitchRank ASC
             """)
     List<Game> findCatalogMetricsDue(
+            @Param("catalogState") LifecycleState catalogState,
+            @Param("cutoff") LocalDateTime cutoff,
+            Pageable pageable
+    );
+
+    /**
+     * Visited Steam catalog profiles only ({@code nextNewsAt} set on page visit).
+     */
+    @Query("""
+            SELECT g FROM Game g
+            WHERE g.lifecycleState = :catalogState
+              AND g.steamAppId IS NOT NULL
+              AND g.steamAppId > 0
+              AND g.nextNewsAt IS NOT NULL
+              AND g.nextNewsAt <= :cutoff
+            ORDER BY g.twitchRank ASC, g.scrapeTier ASC
+            """)
+    List<Game> findCatalogSteamNewsDue(
             @Param("catalogState") LifecycleState catalogState,
             @Param("cutoff") LocalDateTime cutoff,
             Pageable pageable

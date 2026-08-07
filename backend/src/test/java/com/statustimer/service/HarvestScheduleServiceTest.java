@@ -47,17 +47,40 @@ class HarvestScheduleServiceTest {
     private HarvestScheduleService harvestScheduleService;
 
     @Test
-    void bumpScheduleAfterUserInterestIgnoresCatalogProfiles() {
+    void bumpScheduleAfterUserInterestQueuesSteamCatalogMetricsAndNews() {
         Game game = Game.builder()
-                .slug("resident-evil-village")
+                .slug("mistfall-hunter")
                 .lifecycleState(LifecycleState.CATALOG)
-                .steamAppId(1196590)
+                .steamAppId(3282300)
+                .nextMetricsAt(LocalDateTime.now().plusHours(6))
+                .nextNewsAt(LocalDateTime.now().plusDays(2))
+                .build();
+
+        when(gameRepository.findBySlug("mistfall-hunter")).thenReturn(Optional.of(game));
+
+        harvestScheduleService.bumpScheduleAfterUserInterest("mistfall-hunter");
+
+        ArgumentCaptor<Game> saved = ArgumentCaptor.forClass(Game.class);
+        verify(gameRepository).save(saved.capture());
+
+        Game updated = saved.getValue();
+        assertThat(updated.getNextMetricsAt()).isBeforeOrEqualTo(LocalDateTime.now().plusSeconds(2));
+        assertThat(updated.getNextNewsAt()).isBeforeOrEqualTo(LocalDateTime.now().plusSeconds(2));
+        assertThat(updated.getNextTelemetryAt()).isNull();
+    }
+
+    @Test
+    void bumpScheduleAfterUserInterestIgnoresNonSteamCatalogProfiles() {
+        Game game = Game.builder()
+                .slug("console-only-title")
+                .lifecycleState(LifecycleState.CATALOG)
                 .nextMetricsAt(LocalDateTime.now().plusHours(6))
                 .build();
 
-        when(gameRepository.findBySlug("resident-evil-village")).thenReturn(Optional.of(game));
+        when(gameRepository.findBySlug("console-only-title")).thenReturn(Optional.of(game));
+        when(gameCatalogService.resolveAppId("console-only-title")).thenReturn(null);
 
-        harvestScheduleService.bumpScheduleAfterUserInterest("resident-evil-village");
+        harvestScheduleService.bumpScheduleAfterUserInterest("console-only-title");
 
         verify(gameRepository, never()).save(any());
     }
@@ -92,7 +115,9 @@ class HarvestScheduleServiceTest {
     }
 
     @Test
-    void completeWorkCatalogMetricsFailureClearsScheduleForNextVisit() {
+    void completeWorkCatalogMetricsFailureRetriesInsteadOfClearingSchedule() {
+        when(harvestScheduleProperties.failedRetryMinutes()).thenReturn(5);
+
         Game game = Game.builder()
                 .slug("resident-evil-village")
                 .lifecycleState(LifecycleState.CATALOG)
@@ -113,22 +138,26 @@ class HarvestScheduleServiceTest {
         ArgumentCaptor<Game> saved = ArgumentCaptor.forClass(Game.class);
         verify(gameRepository).save(saved.capture());
 
-        assertThat(saved.getValue().getNextMetricsAt()).isNull();
+        Game updated = saved.getValue();
+        assertThat(updated.getNextMetricsAt()).isAfter(LocalDateTime.now().plusMinutes(4));
+        assertThat(updated.getNextMetricsAt()).isBefore(LocalDateTime.now().plusMinutes(6));
     }
 
     @Test
-    void getDueWorkloadIncludesCatalogMetricsProfilesAfterMonitoredGames() {
+    void getDueWorkloadIncludesVisitedCatalogMetricsAndNews() {
         when(harvestScheduleProperties.maxTelemetryPerCycle()).thenReturn(50);
         when(harvestScheduleProperties.maxMetricsPerCycle()).thenReturn(50);
-        when(harvestScheduleProperties.maxCatalogMetricsPerCycle()).thenReturn(5);
+        when(harvestScheduleProperties.maxCatalogMetricsPerCycle()).thenReturn(15);
         when(harvestScheduleProperties.maxNewsPerCycle()).thenReturn(20);
+        when(harvestScheduleProperties.maxCatalogNewsPerCycle()).thenReturn(10);
 
         Game catalogGame = Game.builder()
-                .slug("resident-evil-village")
-                .gameName("Resident Evil Village")
+                .slug("mistfall-hunter")
+                .gameName("Mistfall Hunter")
                 .lifecycleState(LifecycleState.CATALOG)
-                .steamAppId(1196590)
+                .steamAppId(3282300)
                 .nextMetricsAt(LocalDateTime.now().minusMinutes(5))
+                .nextNewsAt(LocalDateTime.now().minusMinutes(5))
                 .build();
 
         when(gameRepository.findByLifecycleStateInAndNextTelemetryAtLessThanEqualOrderByScrapeTierAsc(
@@ -156,12 +185,19 @@ class HarvestScheduleServiceTest {
                 any(),
                 any(Pageable.class)
         )).thenReturn(List.of());
-        when(gameCatalogService.resolveAppId("resident-evil-village")).thenReturn(1196590);
+        when(gameRepository.findCatalogSteamNewsDue(
+                eq(LifecycleState.CATALOG),
+                any(LocalDateTime.class),
+                any(Pageable.class)
+        )).thenReturn(List.of(catalogGame));
+        when(gameCatalogService.resolveAppId("mistfall-hunter")).thenReturn(3282300);
 
         var workload = harvestScheduleService.getDueWorkload();
 
-        assertThat(workload.metricsDue()).hasSize(1);
-        assertThat(workload.metricsDue().getFirst().slug()).isEqualTo("resident-evil-village");
+        assertThat(workload.metricsDue()).extracting(item -> item.slug())
+                .containsExactly("mistfall-hunter");
+        assertThat(workload.newsDue()).extracting(item -> item.slug())
+                .containsExactly("mistfall-hunter");
     }
 
     @Test
@@ -224,8 +260,9 @@ class HarvestScheduleServiceTest {
     void getDueWorkloadIncludesDegradedGamesEvenWhenNextTelemetryIsLater() {
         when(harvestScheduleProperties.maxTelemetryPerCycle()).thenReturn(50);
         when(harvestScheduleProperties.maxMetricsPerCycle()).thenReturn(50);
-        when(harvestScheduleProperties.maxCatalogMetricsPerCycle()).thenReturn(5);
+        when(harvestScheduleProperties.maxCatalogMetricsPerCycle()).thenReturn(15);
         when(harvestScheduleProperties.maxNewsPerCycle()).thenReturn(20);
+        when(harvestScheduleProperties.maxCatalogNewsPerCycle()).thenReturn(10);
 
         Game degradedGame = Game.builder()
                 .slug("teamfight-tactics")
@@ -267,10 +304,45 @@ class HarvestScheduleServiceTest {
                 any(),
                 any(Pageable.class)
         )).thenReturn(List.of());
+        when(gameRepository.findCatalogSteamNewsDue(
+                eq(LifecycleState.CATALOG),
+                any(LocalDateTime.class),
+                any(Pageable.class)
+        )).thenReturn(List.of());
 
         var workload = harvestScheduleService.getDueWorkload();
 
         assertThat(workload.telemetryDue()).hasSize(1);
         assertThat(workload.telemetryDue().getFirst().slug()).isEqualTo("teamfight-tactics");
+    }
+
+    @Test
+    void completeWorkCatalogSteamNewsUsesCatalogFreshnessWindow() {
+        when(harvestScheduleProperties.catalogNewsFreshnessMinutes()).thenReturn(360);
+
+        Game game = Game.builder()
+                .slug("mistfall-hunter")
+                .lifecycleState(LifecycleState.CATALOG)
+                .steamAppId(3282300)
+                .nextNewsAt(LocalDateTime.now())
+                .build();
+
+        when(gameRepository.findBySlug("mistfall-hunter")).thenReturn(Optional.of(game));
+
+        harvestScheduleService.completeWork(new CompleteHarvestWorkRequest(List.of(
+                new CompleteHarvestWorkRequest.HarvestWorkResultPayload(
+                        "mistfall-hunter",
+                        HarvestWorkType.NEWS,
+                        true
+                )
+        )));
+
+        ArgumentCaptor<Game> saved = ArgumentCaptor.forClass(Game.class);
+        verify(gameRepository).save(saved.capture());
+
+        Game updated = saved.getValue();
+        assertThat(updated.getLastNewsAt()).isNotNull();
+        assertThat(updated.getNextNewsAt()).isAfter(LocalDateTime.now().plusMinutes(359));
+        assertThat(updated.getNextNewsAt()).isBefore(LocalDateTime.now().plusMinutes(361));
     }
 }

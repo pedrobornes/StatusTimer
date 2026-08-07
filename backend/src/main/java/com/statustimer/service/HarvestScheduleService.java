@@ -123,6 +123,10 @@ public class HarvestScheduleService {
         }
     }
 
+    /**
+     * Page visit / user interest: accelerate harvest for actively monitored games,
+     * or for visited Steam catalog titles (metrics + news only — not the whole Steam store).
+     */
     @Transactional
     public void bumpScheduleAfterUserInterest(String slug) {
         gameRepository.findBySlug(slug).ifPresent(game -> {
@@ -135,6 +139,11 @@ public class HarvestScheduleService {
                 return;
             }
 
+            if (hasSteamAppId(game)) {
+                game.setNextMetricsAt(now);
+                game.setNextNewsAt(now);
+                gameRepository.save(game);
+            }
         });
     }
 
@@ -224,15 +233,37 @@ public class HarvestScheduleService {
     }
 
     private List<HarvestWorkTargetResponse> findNewsDue(LocalDateTime now) {
-        return gameRepository
+        int limit = harvestScheduleProperties.maxNewsPerCycle();
+
+        List<Game> monitoredGames = gameRepository
                 .findByLifecycleStateInAndNextNewsAtLessThanEqualOrderByScrapeTierAsc(
                         ACTIVE_MONITORING,
                         now,
-                        PageRequest.of(0, harvestScheduleProperties.maxNewsPerCycle())
-                )
-                .stream()
-                .map(this::toTargetResponse)
-                .toList();
+                        PageRequest.of(0, limit)
+                );
+
+        List<HarvestWorkTargetResponse> targets = new ArrayList<>(monitoredGames.size());
+        for (Game game : monitoredGames) {
+            targets.add(toTargetResponse(game));
+        }
+
+        int catalogLimit = Math.min(
+                limit - monitoredGames.size(),
+                harvestScheduleProperties.maxCatalogNewsPerCycle()
+        );
+        if (catalogLimit <= 0) {
+            return targets;
+        }
+
+        for (Game game : gameRepository.findCatalogSteamNewsDue(
+                LifecycleState.CATALOG,
+                now,
+                PageRequest.of(0, catalogLimit)
+        )) {
+            targets.add(toTargetResponse(game));
+        }
+
+        return targets;
     }
 
     private void applyWorkResult(
@@ -265,7 +296,10 @@ public class HarvestScheduleService {
                             now.plusMinutes(harvestScheduleProperties.catalogMetricsFreshnessMinutes())
                     );
                 } else {
-                    game.setNextMetricsAt(null);
+                    // Keep retrying after a visit — do not clear the schedule.
+                    game.setNextMetricsAt(
+                            now.plusMinutes(harvestScheduleProperties.failedRetryMinutes())
+                    );
                 }
                 return;
             }
@@ -276,6 +310,20 @@ public class HarvestScheduleService {
                 );
             } else {
                 game.setNextMetricsAt(
+                        now.plusMinutes(harvestScheduleProperties.failedRetryMinutes())
+                );
+            }
+            return;
+        }
+
+        if (isCatalogSteamNewsCandidate(game)) {
+            if (success) {
+                game.setLastNewsAt(now);
+                game.setNextNewsAt(
+                        now.plusMinutes(harvestScheduleProperties.catalogNewsFreshnessMinutes())
+                );
+            } else {
+                game.setNextNewsAt(
                         now.plusMinutes(harvestScheduleProperties.failedRetryMinutes())
                 );
             }
@@ -320,13 +368,22 @@ public class HarvestScheduleService {
                 || game.getLifecycleState() == LifecycleState.INDEXABLE;
     }
 
+    private boolean hasSteamAppId(Game game) {
+        Integer steamAppId = game.getSteamAppId();
+        if (steamAppId != null && steamAppId > 0) {
+            return true;
+        }
+
+        Integer resolved = gameCatalogService.resolveAppId(game.getSlug());
+        return resolved != null && resolved > 0;
+    }
+
     private boolean isCatalogMetricsCandidate(Game game) {
         if (game == null || game.getLifecycleState() != LifecycleState.CATALOG) {
             return false;
         }
 
-        Integer steamAppId = game.getSteamAppId();
-        if (steamAppId != null && steamAppId > 0) {
+        if (hasSteamAppId(game)) {
             return true;
         }
 
@@ -334,11 +391,21 @@ public class HarvestScheduleService {
         return twitchGameId != null && !twitchGameId.isBlank();
     }
 
+    private boolean isCatalogSteamNewsCandidate(Game game) {
+        return game != null
+                && game.getLifecycleState() == LifecycleState.CATALOG
+                && hasSteamAppId(game);
+    }
+
     private boolean canApplyWorkResult(Game game, HarvestWorkType workType) {
         if (isActiveMonitoring(game)) {
             return true;
         }
 
-        return workType == HarvestWorkType.METRICS && isCatalogMetricsCandidate(game);
+        if (workType == HarvestWorkType.METRICS && isCatalogMetricsCandidate(game)) {
+            return true;
+        }
+
+        return workType == HarvestWorkType.NEWS && isCatalogSteamNewsCandidate(game);
     }
 }

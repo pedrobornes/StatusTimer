@@ -709,6 +709,15 @@ public class GameCatalogService {
                 game.setNextMetricsAt(now);
             }
 
+            // Visited Steam catalog titles also need a news pass (RSS), not only metrics.
+            if (hasSteamTracking) {
+                LocalDateTime nextNewsAt = game.getNextNewsAt();
+                boolean newsStillFresh = nextNewsAt != null && nextNewsAt.isAfter(now);
+                if (!newsStillFresh) {
+                    game.setNextNewsAt(now);
+                }
+            }
+
             gameRepository.save(game);
         });
     }
