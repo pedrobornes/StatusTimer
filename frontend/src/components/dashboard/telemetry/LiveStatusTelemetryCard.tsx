@@ -5,10 +5,10 @@ import GameTelemetryCard from "@/components/dashboard/GameTelemetryCard";
 import { getGameTelemetryBySlug } from "@/services/telemetryService";
 import type { PlatformDetail } from "@/types/api";
 import type { GameTelemetry } from "@/types/telemetry";
+import { parseBackendDate } from "@/utils/dateFormatter";
 
-/** Client poll so /status ISR can stay long without stale UP/DOWN for users. */
+/** Keep status ISR long; live card hydrates metrics without waiting for revalidate. */
 const LIVE_REFRESH_MS = 60_000;
-const FIRST_REFRESH_MS = 5_000;
 
 interface LiveStatusTelemetryCardProps {
   initialTelemetry: GameTelemetry;
@@ -17,6 +17,29 @@ interface LiveStatusTelemetryCardProps {
   serverStatusPending?: boolean;
   /** When false, render the SSR snapshot only (pending probe / catalog shells). */
   enableLiveRefresh?: boolean;
+}
+
+function timestampMs(value: GameTelemetry["lastChecked"]): number {
+  return parseBackendDate(value)?.getTime() ?? Number.NEGATIVE_INFINITY;
+}
+
+/** Prefer fresher lastChecked and keep any live metrics already on screen. */
+export function mergeLiveTelemetry(
+  previous: GameTelemetry,
+  latest: GameTelemetry,
+): GameTelemetry {
+  const preferPreviousChecked =
+    timestampMs(previous.lastChecked) > timestampMs(latest.lastChecked);
+
+  return {
+    ...previous,
+    ...latest,
+    lastChecked: preferPreviousChecked
+      ? previous.lastChecked
+      : (latest.lastChecked ?? previous.lastChecked),
+    livePlayers: latest.livePlayers ?? previous.livePlayers,
+    twitchViewers: latest.twitchViewers ?? previous.twitchViewers,
+  };
 }
 
 export default function LiveStatusTelemetryCard({
@@ -46,16 +69,15 @@ export default function LiveStatusTelemetryCard({
           cache: "no-store",
         });
         if (!cancelled) {
-          setTelemetry((previous) => ({ ...previous, ...latest }));
+          setTelemetry((previous) => mergeLiveTelemetry(previous, latest));
         }
       } catch {
         // Keep the SSR snapshot if the live refresh fails.
       }
     }
 
-    const firstRefreshId = window.setTimeout(() => {
-      void refresh();
-    }, FIRST_REFRESH_MS);
+    // Hydrate immediately so ISR-stale HTML does not flash soft "few hours" copy.
+    void refresh();
 
     const intervalId = window.setInterval(() => {
       void refresh();
@@ -63,7 +85,6 @@ export default function LiveStatusTelemetryCard({
 
     return () => {
       cancelled = true;
-      window.clearTimeout(firstRefreshId);
       window.clearInterval(intervalId);
     };
   }, [
