@@ -78,4 +78,15 @@ public interface GamingNewsRepository extends JpaRepository<GamingNews, Long> {
     Optional<GamingNews> findByNewsSlug(String newsSlug);
 
     boolean existsByNewsSlug(String newsSlug);
+
+    @Query("""
+            SELECT COUNT(n) FROM GamingNews n
+            LEFT JOIN n.game g
+            WHERE LOWER(COALESCE(g.slug, '')) = LOWER(:gameSlug)
+               OR LOWER(COALESCE(n.gameTag, '')) = LOWER(:gameTag)
+            """)
+    long countForGameSlug(
+            @Param("gameSlug") String gameSlug,
+            @Param("gameTag") String gameTag
+    );
 }

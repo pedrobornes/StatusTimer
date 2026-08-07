@@ -11,6 +11,7 @@ import com.statustimer.entity.TelemetrySource;
 import com.statustimer.entity.TelemetryStatus;
 import com.statustimer.repository.GameRepository;
 import com.statustimer.repository.GameTelemetryRepository;
+import com.statustimer.repository.GamingNewsRepository;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
@@ -25,6 +26,7 @@ public class IndexabilityService {
 
     private final GameRepository gameRepository;
     private final GameTelemetryRepository gameTelemetryRepository;
+    private final GamingNewsRepository gamingNewsRepository;
     private final IndexabilityProperties indexabilityProperties;
 
     @Transactional(readOnly = true)
@@ -91,7 +93,16 @@ public class IndexabilityService {
         }
 
         if (game.getLifecycleState() == LifecycleState.CATALOG) {
+            if (isLaunchIndexable(game)) {
+                return launchPositiveStatus(game);
+            }
+
             return negativeStatus(game, false, false, false, false, false, game.getStaleReason());
+        }
+
+        // Already promoted launch: keep index while grace lasts even if viewers dip below 5k.
+        if (isLaunchStickyIndexable(game)) {
+            return launchPositiveStatus(game);
         }
 
         if (!Boolean.TRUE.equals(game.getInitialTelemetryReady())) {
@@ -122,6 +133,72 @@ public class IndexabilityService {
                 liveMetrics,
                 monitoringAgeMet,
                 contentReady,
+                game.getStaleReason()
+        );
+    }
+
+    /**
+     * Steam catalog launches with real content: news + popular audience.
+     * Skips the CATALOG hard-block and 48h monitoring warmup.
+     */
+    private boolean isLaunchIndexable(Game game) {
+        return hasLaunchSteamAndNews(game) && hasLaunchEntryAudience(game);
+    }
+
+    /**
+     * After a launch is promoted, keep indexable for a grace window even if Twitch
+     * drops below the entry threshold (or livePlayers has not been sampled yet).
+     */
+    private boolean isLaunchStickyIndexable(Game game) {
+        if (game.getFirstMonitoredAt() == null) {
+            return false;
+        }
+
+        if (!hasLaunchSteamAndNews(game)) {
+            return false;
+        }
+
+        long hoursSincePromotion = ChronoUnit.HOURS.between(
+                game.getFirstMonitoredAt(),
+                LocalDateTime.now()
+        );
+        return hoursSincePromotion < indexabilityProperties.launchIndexGraceHours();
+    }
+
+    private boolean hasLaunchSteamAndNews(Game game) {
+        Integer steamAppId = game.getSteamAppId();
+        if (steamAppId == null || steamAppId <= 0) {
+            return false;
+        }
+
+        String slug = game.getSlug();
+        if (slug == null || slug.isBlank()) {
+            return false;
+        }
+
+        return gamingNewsRepository.countForGameSlug(slug, slug) > 0;
+    }
+
+    /** Entry gate: Twitch &gt; threshold, or a Steam livePlayers sample (including 0). */
+    private boolean hasLaunchEntryAudience(Game game) {
+        if (game.getLivePlayers() != null) {
+            return true;
+        }
+
+        Long twitchViewers = game.getTwitchViewers();
+        return twitchViewers != null
+                && twitchViewers > indexabilityProperties.launchTwitchViewersThreshold();
+    }
+
+    private IndexabilityStatusResponse launchPositiveStatus(Game game) {
+        return new IndexabilityStatusResponse(
+                game.getSlug(),
+                true,
+                true,
+                false,
+                hasLiveMetrics(game) || game.getLivePlayers() != null,
+                true,
+                true,
                 game.getStaleReason()
         );
     }
@@ -179,6 +256,7 @@ public class IndexabilityService {
     }
 
     private void applyIndexability(Game game, Optional<GameTelemetry> telemetry) {
+        boolean wasCatalog = game.getLifecycleState() == LifecycleState.CATALOG;
         boolean indexable = evaluateIndexability(game, telemetry);
         game.setIsIndexable(indexable);
 
@@ -188,11 +266,20 @@ public class IndexabilityService {
                 game.setStaleReason(null);
             }
             LocalDateTime now = LocalDateTime.now();
+            if (game.getFirstMonitoredAt() == null) {
+                game.setFirstMonitoredAt(now);
+            }
             if (game.getNextMetricsAt() == null) {
                 game.setNextMetricsAt(now);
             }
             if (game.getNextTelemetryAt() == null) {
                 game.setNextTelemetryAt(now);
+            }
+            if (wasCatalog && game.getNextNewsAt() == null) {
+                game.setNextNewsAt(now);
+            }
+            if (!Boolean.TRUE.equals(game.getInitialTelemetryReady())) {
+                game.setInitialTelemetryReady(true);
             }
             return;
         }

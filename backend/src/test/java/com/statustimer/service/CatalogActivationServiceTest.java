@@ -37,6 +37,9 @@ class CatalogActivationServiceTest {
     @Mock
     private GameCatalogService gameCatalogService;
 
+    @Mock
+    private IndexabilityService indexabilityService;
+
     @InjectMocks
     private CatalogActivationService catalogActivationService;
 
@@ -62,6 +65,7 @@ class CatalogActivationServiceTest {
         verify(harvestScheduleService, never()).ensureScheduleInitialized(any());
         verify(harvestScheduleService).bumpScheduleAfterUserInterest(eq("random-steam-game"));
         verify(gameCatalogService).ensureCatalogMetricsScheduleReady(eq("random-steam-game"));
+        verify(indexabilityService).recalculateForSlug(eq("random-steam-game"));
     }
 
     @Test
@@ -89,6 +93,7 @@ class CatalogActivationServiceTest {
         verify(gameCatalogService).materializeCatalogGameOnDemand(eq("brand-new-steam-title"));
         verify(gameCatalogService).enrichCatalogProfileOnDemand(eq("brand-new-steam-title"));
         verify(gameCatalogService).ensureCatalogMetricsScheduleReady(eq("brand-new-steam-title"));
+        verify(indexabilityService).recalculateForSlug(eq("brand-new-steam-title"));
     }
 
     @Test
@@ -109,6 +114,7 @@ class CatalogActivationServiceTest {
         assertThat(response.telemetryReady()).isFalse();
         verify(harvestScheduleService).bumpScheduleAfterUserInterest(eq("resident-evil-village"));
         verify(gameCatalogService).ensureCatalogMetricsScheduleReady(eq("resident-evil-village"));
+        verify(indexabilityService).recalculateForSlug(eq("resident-evil-village"));
     }
 
     @Test
@@ -131,6 +137,7 @@ class CatalogActivationServiceTest {
         assertThat(game.getLifecycleState()).isEqualTo(LifecycleState.MONITORED);
         verify(harvestScheduleService).bumpScheduleAfterUserInterest(eq("apex-legends"));
         verify(gameCatalogService).refreshSteamStoreMetadataOnVisit(eq("apex-legends"));
+        verify(indexabilityService).recalculateForSlug(eq("apex-legends"));
     }
 
     @Test
@@ -156,5 +163,6 @@ class CatalogActivationServiceTest {
         assertThat(game.getLifecycleState()).isEqualTo(LifecycleState.CATALOG);
         verify(harvestScheduleService).bumpScheduleAfterUserInterest(eq("stale-steam-game"));
         verify(gameCatalogService).ensureCatalogMetricsScheduleReady(eq("stale-steam-game"));
+        verify(indexabilityService).recalculateForSlug(eq("stale-steam-game"));
     }
 }

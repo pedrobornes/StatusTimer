@@ -55,6 +55,10 @@ indexability:
   freshness-hours-tier-3: 72
   guardian-interval-ms: 900000
   api-outage-grace-hours: 1
+  # CATALOG Steam launches need this Twitch floor (or a livePlayers sample) to enter index.
+  launch-twitch-viewers-threshold: 5000
+  # After entry, keep indexable this many days even if viewers drop below the floor.
+  launch-index-grace-days: 14
 
 lifecycle:
   monitor:

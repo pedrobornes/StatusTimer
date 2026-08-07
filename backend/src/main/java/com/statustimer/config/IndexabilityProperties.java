@@ -9,7 +9,9 @@ public record IndexabilityProperties(
         int freshnessHoursTier2,
         int freshnessHoursTier3,
         long guardianIntervalMs,
-        int apiOutageGraceHours
+        int apiOutageGraceHours,
+        int launchTwitchViewersThreshold,
+        int launchIndexGraceDays
 ) {
     public static final String STALE_REASON_API_OUTAGE = "API_OUTAGE";
     public static final String STALE_REASON_STALE_TELEMETRY = "STALE_TELEMETRY";
@@ -37,6 +39,12 @@ public record IndexabilityProperties(
         if (apiOutageGraceHours <= 0) {
             apiOutageGraceHours = 1;
         }
+        if (launchTwitchViewersThreshold <= 0) {
+            launchTwitchViewersThreshold = 5_000;
+        }
+        if (launchIndexGraceDays <= 0) {
+            launchIndexGraceDays = 14;
+        }
     }
 
     public int freshnessHoursForTier(int scrapeTier) {
@@ -45,5 +53,9 @@ public record IndexabilityProperties(
             case 2 -> freshnessHoursTier2;
             default -> freshnessHoursTier3;
         };
+    }
+
+    public long launchIndexGraceHours() {
+        return launchIndexGraceDays * 24L;
     }
 }

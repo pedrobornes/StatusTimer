@@ -23,6 +23,7 @@ public class CatalogActivationService {
     private final ScrapeJobService scrapeJobService;
     private final HarvestScheduleService harvestScheduleService;
     private final GameCatalogService gameCatalogService;
+    private final IndexabilityService indexabilityService;
 
     @Transactional
     public GameActivationResponse activateOnDemand(String slug) {
@@ -65,6 +66,8 @@ public class CatalogActivationService {
 
         // Visited Steam catalog titles get metrics + news on the next harvest cycle.
         harvestScheduleService.bumpScheduleAfterUserInterest(canonicalSlug);
+        // Launch-ready catalog pages can drop noindex immediately after visit.
+        indexabilityService.recalculateForSlug(canonicalSlug);
 
         return new GameActivationResponse(
                 canonicalSlug,
