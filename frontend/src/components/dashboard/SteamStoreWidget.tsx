@@ -2,11 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 
-/** Official Steam store widget design size. */
+/** Steam store widget native size. */
 const STEAM_WIDGET_WIDTH = 646;
 const STEAM_WIDGET_HEIGHT = 190;
-/** Cap so the green Buy/Wishlist bar stays readable (~400–450px). */
-const STEAM_WIDGET_MAX_WIDTH = 450;
 
 interface SteamStoreWidgetProps {
   steamAppId: number;
@@ -14,15 +12,15 @@ interface SteamStoreWidgetProps {
 }
 
 /**
- * Steam's embed is fixed ~646×190. Scale it into our column (sidebar ≤400px,
- * widget capped at 450px) so wishlist CTAs are not clipped or tiny.
+ * Keep the official Steam embed layout, scaled just enough to fit the sidebar
+ * so the green Buy / Wishlist bar is not clipped (no extra max-width caps).
  */
 export default function SteamStoreWidget({
   steamAppId,
   gameName,
 }: SteamStoreWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(STEAM_WIDGET_MAX_WIDTH / STEAM_WIDGET_WIDTH);
+  const [scale, setScale] = useState(1);
 
   useEffect(() => {
     const node = containerRef.current;
@@ -56,15 +54,14 @@ export default function SteamStoreWidget({
 
   const widgetUrl = `https://store.steampowered.com/widget/${steamAppId}/`;
   const title = gameName ? `Buy ${gameName} on Steam` : "Buy on Steam";
-  const scaledHeight = STEAM_WIDGET_HEIGHT * scale;
 
   return (
     <section
       ref={containerRef}
-      className="mx-auto w-full max-w-[450px] overflow-hidden rounded-3xl border border-white/10 bg-[#171a21]"
+      className="w-full overflow-hidden rounded-3xl border border-white/10 bg-[#171a21]"
       aria-label={title}
     >
-      <div className="relative w-full" style={{ height: scaledHeight }}>
+      <div className="relative w-full" style={{ height: STEAM_WIDGET_HEIGHT * scale }}>
         <iframe
           src={widgetUrl}
           title={title}
