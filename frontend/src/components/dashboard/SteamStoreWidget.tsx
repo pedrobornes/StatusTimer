@@ -2,9 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 
-/** Official Steam store widget design width (Buy / Wishlist banner). */
+/** Official Steam store widget design size. */
 const STEAM_WIDGET_WIDTH = 646;
 const STEAM_WIDGET_HEIGHT = 190;
+/**
+ * Wishlist CTAs (esp. localized) need roughly this much horizontal room.
+ * We scale the 646px embed down to the container, which should land near 400–450px
+ * in the status/release sidebar.
+ */
+const STEAM_WIDGET_COMFORT_WIDTH = 430;
 
 interface SteamStoreWidgetProps {
   steamAppId: number;
@@ -12,16 +18,16 @@ interface SteamStoreWidgetProps {
 }
 
 /**
- * Steam's embed is fixed ~646×190. Our status/release sidebar is ~280–360px,
- * so unreleased games (long "Wishlist" CTA, especially in ES) overflow and
- * clip. Scale the iframe to the container width instead of forcing 100% width.
+ * Steam's embed is fixed ~646×190. Sidebars are narrower, so unreleased games
+ * (long Wishlist CTA) overflow. Scale to the container width — comfort target
+ * ~430px so the green bar stays readable without shrinking to ~280px.
  */
 export default function SteamStoreWidget({
   steamAppId,
   gameName,
 }: SteamStoreWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
+  const [scale, setScale] = useState(STEAM_WIDGET_COMFORT_WIDTH / STEAM_WIDGET_WIDTH);
 
   useEffect(() => {
     const node = containerRef.current;
@@ -33,6 +39,8 @@ export default function SteamStoreWidget({
       if (width <= 0) {
         return;
       }
+      // Fill the sidebar (up to native 646). Comfort width is achieved by the
+      // layout column (~450px), not by over-shrinking inside a 280px rail.
       setScale(Math.min(1, width / STEAM_WIDGET_WIDTH));
     };
 
