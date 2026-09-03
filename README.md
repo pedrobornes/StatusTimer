@@ -83,3 +83,16 @@ La idea del proyecto es sencilla: en lugar de revisar varias fuentes por separad
 - Tests en backend (Maven).
 - Tests en scripts Python (`unittest` / `pytest`).
 - Contratos tipados entre backend y frontend para reducir drift.
+
+## Desarrollo local (resumen)
+
+1. MySQL local: `docker compose up -d` (ver `docker-compose.yml`).
+2. Backend: copiar `backend/.env.example` → `backend/.env`, luego arrancar Spring Boot (`backend/run-local.ps1` si aplica).
+3. Harvester: copiar `scripts/.env.example` → `scripts/.env` y ejecutar `python scripts/main.py` con las API keys que necesites.
+4. Frontend: copiar `frontend/.env.example` → `frontend/.env`, `npm install` y `npm run dev` en `frontend/`.
+
+Detalle de variables del front: `frontend/README.md`.
+
+## Nota sobre producción
+
+El proyecto se desplegó en Vercel (frontend) y Railway (API, MySQL y harvester). La monitorización continua en la nube puede estar pausada para reducir costes; el código de las tres capas permanece completo en este repositorio y se puede ejecutar en local.

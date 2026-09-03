@@ -43,8 +43,6 @@ NEXT_PUBLIC_API_BASE_URL=https://<backend-railway>
 NEXT_PUBLIC_CONTACT_EMAIL=info@status-timer.com
 ```
 
-Runbook completo: [docs/DEPLOY.md](../docs/DEPLOY.md)
-
 ## Estructura relevante
 
 ```
