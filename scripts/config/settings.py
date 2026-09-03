@@ -34,8 +34,8 @@ class Settings(BaseSettings):
     batch_size_catalog_sync: int = 50
     batch_size_dynamic_catalog_sync: int = 50
     batch_size_telemetry_sync: int = 50
-    harvest_interval_seconds: int = 900
-    on_demand_poll_interval_seconds: int = 120
+    harvest_interval_seconds: int = 600
+    on_demand_poll_interval_seconds: int = 60
     http_rate_limit_per_minute: int = 20
     http_jitter_min_seconds: float = 0.3
     http_jitter_max_seconds: float = 1.5
@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     twitch_games_lookup_batch_size: int = 20
     twitch_viewer_enrich_tier1_max_rank: int = 25
     twitch_viewer_enrich_tier2_max_rank: int = 50
-    twitch_metrics_max_tier3_per_cycle: int = 5
+    twitch_metrics_max_tier3_per_cycle: int = 25
     dedup_state_file: str = ".harvest_state/processed_hashes.json"
     tier_rank_history_file: str = ".harvest_state/tier_rank_history.json"
     tier_trend_state_file: str = ".harvest_state/tier_trend_state.json"

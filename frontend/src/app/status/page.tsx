@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   },
 };
 
-export const revalidate = 3600;
+export const revalidate = 180;
 
 export default async function StatusIndexPage() {
   const slugs = await fetchIndexableSlugs().catch(() => []);

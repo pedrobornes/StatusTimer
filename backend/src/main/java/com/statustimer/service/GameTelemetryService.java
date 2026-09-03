@@ -54,8 +54,9 @@ public class GameTelemetryService {
 
     private static final int RECENT_INCIDENT_FETCH_LIMIT = 50;
     private static final int RECENT_INCIDENT_RESPONSE_LIMIT = 5;
-    private static final int PUBLIC_HISTORY_RESPONSE_LIMIT = 6;
+    private static final int PUBLIC_HISTORY_RESPONSE_LIMIT = 48;
     private static final int DASHBOARD_TELEMETRY_CANDIDATE_LIMIT = 50;
+    private static final int DASHBOARD_TELEMETRY_RESPONSE_LIMIT = 12;
     private static final List<TelemetryStatus> INCIDENT_STATUSES = List.of(
             TelemetryStatus.DOWN,
             TelemetryStatus.MAINTENANCE
@@ -187,7 +188,7 @@ public class GameTelemetryService {
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = CacheConfig.PUBLIC_READ_MEDIUM_CACHE, key = "'dashboardTelemetry:' + #limit")
     public List<GameTelemetryResponse> findDashboardTopGames(int limit) {
-        int safeLimit = Math.max(1, Math.min(limit, 6));
+        int safeLimit = Math.max(1, Math.min(limit, DASHBOARD_TELEMETRY_RESPONSE_LIMIT));
         List<String> candidateSlugs = new ArrayList<>();
 
         gameRepository

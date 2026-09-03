@@ -29,7 +29,7 @@ export async function fetchJson<T>(
   path: string,
   options: ApiRequestOptions = {},
 ): Promise<T> {
-  const { revalidate = 3600, cache, signal } = options;
+  const { revalidate = 120, cache, signal } = options;
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     cache,

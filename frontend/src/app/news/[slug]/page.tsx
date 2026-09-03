@@ -23,7 +23,7 @@ import { getGamingNewsBySlug } from "@/services/newsService";
 import { getUpcomingReleases } from "@/services/releasesService";
 import { getGameStatusDetail } from "@/services/telemetryService";
 
-export const revalidate = 1800;
+export const revalidate = 120;
 
 interface NewsArticlePageProps {
   params: Promise<{ slug: string }>;

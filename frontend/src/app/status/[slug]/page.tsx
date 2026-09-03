@@ -35,7 +35,7 @@ import { getGameStatusDetail } from "@/services/telemetryService";
 import { getUpcomingReleases } from "@/services/releasesService";
 import type { TelemetryStatus } from "@/types/telemetry";
 
-export const revalidate = 3600;
+export const revalidate = 180;
 
 export function generateStaticParams() {
   return TRACKED_GAME_SLUGS.map((slug) => ({ slug }));
@@ -79,7 +79,7 @@ export default async function GameStatusPage({ params }: StatusPageProps) {
       },
       releases,
     ] = await Promise.all([
-      getGameStatusDetail(slug, { revalidate: 3600 }),
+      getGameStatusDetail(slug, { revalidate: 180 }),
       getUpcomingReleases().catch(() => []),
     ]);
 

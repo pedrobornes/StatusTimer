@@ -15,7 +15,7 @@ import { getUpcomingReleaseBySlug } from "@/services/releasesService";
 import { getGameStatusDetail } from "@/services/telemetryService";
 import type { GameTelemetry } from "@/types/telemetry";
 
-export const revalidate = 3600;
+export const revalidate = 180;
 
 interface GameMediaPageProps {
   params: Promise<{ slug: string }>;

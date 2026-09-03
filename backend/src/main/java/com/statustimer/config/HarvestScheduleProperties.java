@@ -30,16 +30,16 @@ public record HarvestScheduleProperties(
             maxMetricsPerCycle = 50;
         }
         if (maxCatalogMetricsPerCycle <= 0) {
-            maxCatalogMetricsPerCycle = 15;
+            maxCatalogMetricsPerCycle = 25;
         }
         if (catalogMetricsFreshnessMinutes <= 0) {
             catalogMetricsFreshnessMinutes = 60;
         }
         if (maxNewsPerCycle <= 0) {
-            maxNewsPerCycle = 20;
+            maxNewsPerCycle = 30;
         }
         if (maxCatalogNewsPerCycle <= 0) {
-            maxCatalogNewsPerCycle = 10;
+            maxCatalogNewsPerCycle = 15;
         }
         if (catalogNewsFreshnessMinutes <= 0) {
             catalogNewsFreshnessMinutes = 360;
@@ -48,28 +48,28 @@ public record HarvestScheduleProperties(
             telemetryMinutesTier1 = 10;
         }
         if (telemetryMinutesTier2 <= 0) {
-            telemetryMinutesTier2 = 90;
+            telemetryMinutesTier2 = 60;
         }
         if (telemetryMinutesTier3 <= 0) {
-            telemetryMinutesTier3 = 360;
+            telemetryMinutesTier3 = 300;
         }
         if (metricsMinutesTier1 <= 0) {
-            metricsMinutesTier1 = 22;
+            metricsMinutesTier1 = 15;
         }
         if (metricsMinutesTier2 <= 0) {
-            metricsMinutesTier2 = 90;
+            metricsMinutesTier2 = 60;
         }
         if (metricsMinutesTier3 <= 0) {
-            metricsMinutesTier3 = 900;
+            metricsMinutesTier3 = 720;
         }
         if (newsMinutesTier1 <= 0) {
-            newsMinutesTier1 = 480;
+            newsMinutesTier1 = 360;
         }
         if (newsMinutesTier2 <= 0) {
-            newsMinutesTier2 = 2160;
+            newsMinutesTier2 = 1440;
         }
         if (newsMinutesTier3 <= 0) {
-            newsMinutesTier3 = 10080;
+            newsMinutesTier3 = 7200;
         }
         if (failedRetryMinutes <= 0) {
             failedRetryMinutes = 5;

@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   },
 };
 
-export const revalidate = 3600;
+export const revalidate = 180;
 
 const DASHBOARD_NEWS_LIMIT = 4;
 const SERVER_FETCH_OPTIONS: ApiRequestOptions = {

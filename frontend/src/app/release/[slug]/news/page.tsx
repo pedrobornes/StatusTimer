@@ -15,7 +15,7 @@ import { getGamingNewsByGame } from "@/services/newsService";
 import { getUpcomingReleases } from "@/services/releasesService";
 import { getGameStatusDetail } from "@/services/telemetryService";
 
-export const revalidate = 1800;
+export const revalidate = 120;
 
 interface ReleaseNewsIndexPageProps {
   params: Promise<{ slug: string }>;

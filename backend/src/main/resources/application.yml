@@ -32,20 +32,20 @@ harvest:
     max-telemetry-per-cycle: 50
     max-metrics-per-cycle: 50
     # Visited CATALOG Steam/Twitch profiles (not the whole Steam store).
-    max-catalog-metrics-per-cycle: 15
-    max-news-per-cycle: 20
-    max-catalog-news-per-cycle: 10
+    max-catalog-metrics-per-cycle: 25
+    max-news-per-cycle: 30
+    max-catalog-news-per-cycle: 15
     catalog-metrics-freshness-minutes: 60
     catalog-news-freshness-minutes: 360
     telemetry-minutes-tier-1: 10
-    telemetry-minutes-tier-2: 90
-    telemetry-minutes-tier-3: 360
-    metrics-minutes-tier-1: 22
-    metrics-minutes-tier-2: 90
-    metrics-minutes-tier-3: 900
-    news-minutes-tier-1: 480
-    news-minutes-tier-2: 2160
-    news-minutes-tier-3: 10080
+    telemetry-minutes-tier-2: 60
+    telemetry-minutes-tier-3: 300
+    metrics-minutes-tier-1: 15
+    metrics-minutes-tier-2: 60
+    metrics-minutes-tier-3: 720
+    news-minutes-tier-1: 360
+    news-minutes-tier-2: 1440
+    news-minutes-tier-3: 7200
     failed-retry-minutes: 5
 
 indexability:

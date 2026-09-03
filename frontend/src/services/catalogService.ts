@@ -146,7 +146,7 @@ export async function searchGames(
 
 export function fetchIndexableSlugs(): Promise<GameIndexableSlug[]> {
   return fetchJson<GameIndexableSlug[]>("/api/v1/games/slugs", {
-    revalidate: 3600,
+    revalidate: 180,
   });
 }
 
